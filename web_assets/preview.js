@@ -7,8 +7,20 @@
     function schedule() {
       clearTimeout(timer);
       if (!paused && !document.hidden && !preview.querySelector('.preview-window').contains(document.activeElement)) {
-        timer = setTimeout(() => select((index + 1) % order.length), order[index] === 'ci' ? 6000 : 6000);
+        timer = setTimeout(advance, 6000);
       }
+    }
+    function advance() {
+      if (order[index] === 'ci' && !motion.matches) {
+        const pane = preview.querySelector('.preview-ci');
+        const checks = [...pane.querySelectorAll('.preview-check-step > svg')];
+        const complete = checks.every(check => Number(getComputedStyle(check).opacity) >= .99)
+          && getComputedStyle(pane.querySelector('.preview-ci-complete')).visibility === 'visible';
+        if (!complete) { timer = setTimeout(advance, 250); return; }
+        timer = setTimeout(() => select((index + 1) % order.length), 1500);
+        return;
+      }
+      select((index + 1) % order.length);
     }
     function select(next) {
       const focused = preview.querySelector('.preview-window').contains(document.activeElement);

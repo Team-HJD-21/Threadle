@@ -1,5 +1,5 @@
 {
-  "version": "2026.11.02.12",
+  "version": "2026.11.02.13",
   "baseline": "2026.11.02.8",
   "files": {
     "demo_web.py": {
@@ -22,11 +22,12 @@
     },
     "connect_web.py": {
       "before": "a10a26dc8a437897a74a705d18b2eed378b2ec30b7b95f9298d833ba91b81db9",
-      "after": "6a13c0e069becb5dbf9265c4fbbe5439ce5cf7fe41331b071e1a53a0acf92400",
+      "after": "19e6a586a669df88364a0d5cfd0e8b249c456b7abae40467db8435e3c443eb23",
       "previous": [
         "039da5474270896cb0d94cff9d8fbc012749be2cba8d41af02c9c38a98df280b",
         "c71b37f392a2f9bb79cbe8c361c5e7f45ea94591c0199f198598a1d360930c39",
-        "5d40c90b7792d09d8dd3b5c80253d54853b2d5bd1cc8191906dffe0104e03595"
+        "5d40c90b7792d09d8dd3b5c80253d54853b2d5bd1cc8191906dffe0104e03595",
+        "6a13c0e069becb5dbf9265c4fbbe5439ce5cf7fe41331b071e1a53a0acf92400"
       ]
     },
     "changelog.py": {
@@ -39,10 +40,11 @@
     },
     "web_assets/preview.js": {
       "before": "d083d67194af8e6a3a72ab647e522e1bdd941e36e49cbfe2ca5c2d51996cc262",
-      "after": "0b91d9b4d1887850f93fbbcf7897b3ef00b8e6e79d087a1233d67ff6d3bcd712",
+      "after": "d6909ae9f49619597c393e9c4e4537617e6f5092da9e55f43f7079915b11fbcf",
       "previous": [
         null,
-        "8ab1aedbe209fd96c3cca0412609e1e9821a72190079c429081694e66ed8dbae"
+        "8ab1aedbe209fd96c3cca0412609e1e9821a72190079c429081694e66ed8dbae",
+        "0b91d9b4d1887850f93fbbcf7897b3ef00b8e6e79d087a1233d67ff6d3bcd712"
       ]
     },
     "web_assets/threadle-banner.png": {
