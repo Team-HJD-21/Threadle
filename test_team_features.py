@@ -187,6 +187,20 @@ class NotificationTests(unittest.TestCase):
         notices.flush()
         self.assertEqual(len(self.api.messages), 1)
 
+    def test_ci_detail_is_immediate_but_alert_observes_quiet_hours(self):
+        self.now[0] += 23 * 3600
+        notices = self.notices(quiet=True, quiet_start=22, quiet_end=8, utc_offset=0)
+        notices.binding.config['ci_channel'] = '105'
+        payload = {'workflow_run': {'id': 1, 'event': 'workflow_dispatch', 'conclusion': 'failure',
+                   'name': 'Deploy', 'html_url': 'https://github.com/owner/repo/actions/runs/1'}}
+        notices.ci('owner/repo', payload, 'ci1')
+        notices.ci('owner/repo', payload, 'ci1')
+        self.assertEqual([path for path, _ in self.api.messages], ['/channels/105/messages'])
+        self.now[0] += 9 * 3600
+        notices.flush()
+        self.assertEqual([path for path, _ in self.api.messages], ['/channels/105/messages', '/channels/104/messages'])
+        self.assertIn('/10/105', self.api.messages[1][1]['embeds'][0]['description'])
+
     def test_critical_events_skip_batching_but_observe_quiet_hours(self):
         notices = self.notices(batch_seconds=300)
         notices.topic(self.topic, 'pull_request', {'action': 'closed'}, 'close', 'thread', ['201'])

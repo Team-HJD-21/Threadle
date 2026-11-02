@@ -20,12 +20,12 @@ class FakeAlertApi:
 
     def call(self, method, path, data=None):
         self.calls.append((method, path, copy.deepcopy(data)))
-        if method == 'GET' and path == '/channels/alerts':
+        if method == 'GET' and path in ('/channels/alerts', '/channels/ci'):
             return {'guild_id': 'guild', 'type': 0}
-        if method == 'GET' and path.startswith('/channels/alerts/messages?'):
-            return list(reversed(copy.deepcopy(self.posts)))
-        if method == 'POST' and path == '/channels/alerts/messages':
-            message = dict(copy.deepcopy(data), id=str(100 + len(self.posts)))
+        if method == 'GET' and path.split('?')[0] in ('/channels/alerts/messages', '/channels/ci/messages'):
+            return [row for row in reversed(copy.deepcopy(self.posts)) if row['channel_id'] == path.split('/')[2]]
+        if method == 'POST' and path in ('/channels/alerts/messages', '/channels/ci/messages'):
+            message = dict(copy.deepcopy(data), id=str(100 + len(self.posts)), channel_id=path.split('/')[2])
             self.posts.append(message)
             if self.accept_then_fail:
                 self.accept_then_fail = False
@@ -95,12 +95,24 @@ class AlertTests(unittest.TestCase):
                'head_branch': 'main', 'html_url': 'https://github.com/run'}
         self.feed.ci(REPO, {'workflow_run': run}, 'event')
         self.assertIn('CI 실패', self.api.posts[0]['content'])
-        self.assertIn('channels/guild/ci', self.api.posts[0]['embeds'][0]['description'])
+        self.assertEqual([row['channel_id'] for row in self.api.posts], ['ci', 'alerts'])
+        self.assertIn('channels/guild/ci', self.api.posts[1]['embeds'][0]['description'])
         for changed in ({'conclusion': 'success'}, {'event': 'pull_request'}):
             self.feed.ci(REPO, {'workflow_run': dict(run, **changed)}, 'other')
-        self.assertEqual(len(self.api.posts), 1)
-        self.feed.ci(REPO, {'workflow_run': dict(run, name='Other workflow')}, 'other')
         self.assertEqual(len(self.api.posts), 2)
+        self.feed.ci(REPO, {'workflow_run': dict(run, name='Other workflow')}, 'other')
+        self.assertEqual(len(self.api.posts), 4)
+
+    def test_ci_retry_recovers_detail_and_sends_alert_once(self):
+        payload = {'workflow_run': {'id': 123, 'name': 'Deploy', 'event': 'workflow_dispatch',
+                   'conclusion': 'failure', 'head_branch': 'main', 'html_url': 'https://github.com/run'}}
+        self.api.accept_then_fail = True
+        with self.assertRaises(RuntimeError):
+            self.feed.ci(REPO, payload, 'event')
+        self.feed = AlertFeed(self.api, self.config, Queue(self.path))
+        self.feed.ci(REPO, payload, 'event')
+        self.feed.ci(REPO, payload, 'event')
+        self.assertEqual([row['channel_id'] for row in self.api.posts], ['ci', 'alerts'])
 
     def test_finds_only_requested_alert_channel_in_existing_category(self):
         api = Mock()
