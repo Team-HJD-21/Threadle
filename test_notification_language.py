@@ -49,7 +49,7 @@ class NotificationLanguageTests(unittest.TestCase):
         feed.ci('team/repo', payload, 'event')
         self.assertIn('failed CI run', api.posts[0]['content'])
         self.assertIn('View run on GitHub', api.posts[0]['embeds'][0]['description'])
-        self.assertIn('CI failed', make_embed(self.topic, 'workflow_run', payload, 'en')['title'])
+        self.assertIn('CI Failed', make_embed(self.topic, 'workflow_run', payload, 'en')['title'])
         self.assertNotIn('실패', json.dumps(make_embed(self.topic, 'workflow_run', payload, 'en'), ensure_ascii=False))
 
     def test_review_notice_translates_bot_prefix_only(self):
@@ -60,6 +60,17 @@ class NotificationLanguageTests(unittest.TestCase):
         self.assertIn('Review: approved', en['description'])
         self.assertIn('검증 완료', en['description'])
         self.assertIn('리뷰 결과: approved', ko['description'])
+
+    def test_korean_guidance_keeps_english_developer_status(self):
+        from test_alert_feed import FakeAlertApi
+        api=FakeAlertApi()
+        feed=AlertFeed(api,{'guild_id':'guild','alert_channel':'alerts','language':'ko'},self.queue)
+        feed.topic(self.topic,'pull_request',{'action':'closed','pull_request':{'merged':True}},'technical-status','thread')
+        content=api.posts[0]['content']
+        self.assertIn('새 소식을 가져왔어요',content)
+        self.assertIn('Merged',content)
+        self.assertNotIn('병합',content)
+
 
 
 class ReviewRequestBodyTests(unittest.TestCase):

@@ -353,7 +353,7 @@ class TeamWebTests(WebFixture):
         self.assertIn('Notification language', preferences[2])
         self.assertIn('Titles and comments stay in their original language.', preferences[2])
         self.assertEqual(self.service.registry.get(original.id).config['language'], 'ko')
-        fields = {'review_hours': '24', 'batch_seconds': '60', 'digest': 'daily', 'digest_hour': '9',
+        fields = {'notification_language':'en', 'review_hours': '24', 'batch_seconds': '60', 'digest': 'daily', 'digest_hour': '9',
                   'digest_weekday': '0', 'utc_offset': '9', 'quiet_start': '22', 'quiet_end': '8'}
         self.assertEqual(self.post('/connect/team/options', fields)[0], 303)
         self.assertEqual(self.post('/connect/team/apply')[0], 303)
@@ -489,3 +489,25 @@ class TeamWebTests(WebFixture):
         other = self.service.registry.add('other', 22, 'other/repo', 202, 'app',
                    {'guild_id': '20', 'channels': {'issue': '201', 'pr': '202', 'discussion': '203'}})
         self.assertEqual(self.browser.request('GET', '/connect/team?binding=' + other)[0], 403)
+
+    def test_notification_language_survives_advanced_navigation_and_site_language_change(self):
+        self.configure()
+        self.assertEqual(self.post('/connect/team/start',{'notification_language':'en'})[0],303)
+        self.assertEqual(self.session().data['team_draft']['language'],'en')
+        self.browser.language='ko'
+        self.assertEqual(self.post('/connect/team/options',{'apply':'1'})[0],303)
+        saved=self.service.registry.active()[0]
+        self.assertEqual(saved.config['language'],'en')
+        self.browser.language='en'
+        self.browser.request('GET','/connect/team?binding='+saved.id)
+        self.assertEqual(self.post('/connect/team/options',{'apply':'1','batch_seconds':'60'})[0],303)
+        self.assertEqual(self.service.registry.get(saved.id).config['language'],'en')
+
+    def test_basic_connection_language_is_explicit_and_back_link_follows_advanced_card(self):
+        self.configure()
+        html=self.browser.request('GET','/connect/channels')[2]
+        self.assertLess(html.index('알림을 더 세밀하게 설정할까요?'),html.index('저장소 다시 선택'))
+        self.assertIn('formaction="/connect/team/start"',html)
+        self.assertEqual(self.post('/connect/save',{'notification_language':'en'})[0],303)
+        self.assertEqual(self.service.registry.active()[0].config['language'],'en')
+

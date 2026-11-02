@@ -35,6 +35,10 @@ EN = {
     'PR · Issue 현황 요약': 'PR and issue roundup',
 
     'GitHub 활동을 Discord 스레드로 정리하고 팀에 맞게 알림을 받아보세요.': 'Keep GitHub updates organized in Discord threads, with notifications that fit your team.',
+    '한국어 (KR)': 'Korean (KR)',
+    '이 저장소의 봇 알림에 사용할 언어입니다. 사이트 언어와 별개로 저장되며 제목과 댓글 원문은 번역하지 않습니다.': 'Choose this repository’s notification language independently of the website. Titles and comments stay in their original language.',
+    '사이트 언어와 별개로 이 저장소의 알림 언어를 설정합니다. 제목과 댓글 원문은 번역하지 않습니다.': 'Choose this repository’s notification language independently of the website. Titles and comments stay in their original language.',
+    '연결 이전 활동은 개별 알림으로 다시 보내지 않습니다. 봇과 앱의 접근 권한을 유지해 주세요.': 'Past activity is not replayed as individual notifications. Keep the bot and app permissions enabled.',
     '알림 언어': 'Notification language',
     '설정을 적용하면 현재 화면 언어로 이후 봇 안내를 보냅니다. 제목과 댓글 원문은 번역하지 않습니다.': 'Apply these settings to use this language for future bot messages. Titles and comments stay in their original language.',
     '개발 소식을 한곳에.': 'Keep your team in the loop.',

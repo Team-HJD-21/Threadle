@@ -451,9 +451,15 @@ class Onboarding:
             body = '<p><strong>' + esc(repo['full_name']) + '</strong> → <strong>' + esc(guild['name']) + '</strong></p><div class="card">'
             existing = next((b for b in self.service.registry.active()
                              if b.repo_id == repo_id and str(b.config['guild_id']) == str(guild['id'])), None)
+            from notification_language import selected_language
+            language = selected_language(session,str(guild['id'])+'|'+session.data['repository'],existing,LANGUAGE.get())
+            language_field = select('notification_language','알림 언어',[('ko','한국어 (KR)'),('en','English (EN)')],language)
+            language_field += '<p class="muted">이 저장소의 봇 알림에 사용할 언어입니다. 사이트 언어와 별개로 저장되며 제목과 댓글 원문은 번역하지 않습니다.</p>'
+            connection_form = False
             if existing:
                 body += '<p>이미 연결된 저장소입니다. 기존 알림 채널을 그대로 사용합니다.</p>'
-                body += form('/connect/save', session, legal_consent.fields(session) + '<button>기존 연결 확인하기</button>')
+                body += form('/connect/save', session, language_field + legal_consent.fields(session) + '<button>기존 연결 확인하기</button>').replace('<form ','<form id="connection-form" ',1)
+                connection_form = True
             elif not self.layouts.can_manage(self.service.discord(), str(guild['id'])):
                 body += '<p>카테고리와 알림 채널을 자동 생성하려면 봇의 채널 관리 권한이 필요합니다.</p>'
                 body += form('/connect/bot/permissions', session, '<button>채널 생성 권한 승인하기</button>')
@@ -461,12 +467,13 @@ class Onboarding:
                 body += '<p>아래 카테고리와 채널을 자동으로 생성하고 연결합니다. 이 봇이 이미 만든 채널이 있으면 재사용합니다.</p>'
                 body += '<strong>' + esc(self.layouts.name(guild['id'], repo_id, repo['full_name'])) + '</strong><ul>' + ''.join('<li>' + esc(name) + '</li>' for _, name in CHANNELS) + '</ul>'
                 body += '<p class="muted">연결 후 채널 이름은 원하는 대로 바꿔도 알림이 유지됩니다.</p>'
-                fields = legal_consent.fields(session)
+                fields = language_field + legal_consent.fields(session)
                 fields += '<label for="workflow">CI 워크플로 이름 필터 (선택)</label><input id="workflow" name="workflow" maxlength="1000" placeholder="비워두면 모든 워크플로, 여러 개는 쉼표로 구분">'
                 fields += '<p class="muted">새 카테고리는 서버의 기본 역할 권한을 따릅니다. 비공개 저장소의 알림도 이 채널을 볼 수 있는 서버 구성원에게 공개됩니다.</p><button>카테고리·채널 자동 생성하고 연결하기</button>'
-                body += form('/connect/save', session, fields)
-            body += '</div><a href="/connect/repositories">저장소 다시 선택</a>'
-            body += '<div class="card"><h2>알림을 더 세밀하게 설정할까요?</h2><p>기본 연결을 그대로 사용하거나, 디렉터리별 PR 채널과 리뷰 대기·묶음·요약 알림을 선택할 수 있습니다.</p><a class="button secondary" href="/connect/team">팀 알림 설정</a></div>'
+                body += form('/connect/save', session, fields).replace('<form ','<form id="connection-form" ',1)
+                connection_form = True
+            body += '</div>'
+            body += '<div class="card"><h2>알림을 더 세밀하게 설정할까요?</h2><p>기본 연결을 그대로 사용하거나, 디렉터리별 PR 채널과 리뷰 대기·묶음·요약 알림을 선택할 수 있습니다.</p>' + ('<button class="secondary" type="submit" form="connection-form" formaction="/connect/team/start" formnovalidate>팀 알림 설정</button>' if connection_form else '<a class="button secondary" href="/connect/team">팀 알림 설정</a>') + '</div><a href="/connect/repositories">저장소 다시 선택</a>'
             return self.send(request, 200, page('알림 채널 자동 설정', body))
         if path == '/connect/done':
             identity = session.data.get('completed')
@@ -476,7 +483,7 @@ class Onboarding:
             body = ('<div class="card"><p><strong>' + esc(binding.repo) + '</strong>의 새 활동을 <strong>'
                     + esc(guild['name']) + '</strong>으로 전달할 준비가 됐습니다.</p>'
                     '<p>이제 GitHub에서 이슈를 만들거나 댓글을 남겨 스레드와 안내 채널의 알림을 확인해 주세요.</p>'
-                    '<small>설치 이전 활동은 자동으로 가져오지 않습니다. 봇과 앱의 접근 권한을 유지해 주세요.</small>'
+                    '<small>연결 이전 활동은 개별 알림으로 다시 보내지 않습니다. 봇과 앱의 접근 권한을 유지해 주세요.</small>'
                     '<a class="button" href="https://discord.com/channels/' + esc(guild['id']) + '/'
                     + esc(binding.config.get('alert_channel') or binding.config['channels']['issue']) + '">Discord 알림 채널 열기</a>'
                     '<a class="button" href="/connect/server">연결 관리</a></div>')
@@ -582,6 +589,9 @@ class Onboarding:
             consent = legal_consent.receipt(session, fields, str(guild['id']) + '|' + session.data['repository'])
             existing = next((b for b in self.service.registry.active()
                              if b.repo_id == repo_id and str(b.config['guild_id']) == str(guild['id'])), None)
+            from notification_language import normalize_language, selected_language
+            choice = (session.data.get('team_draft') or {}).get('language') if fields.get('team_apply') == '1' else fields.get('notification_language')
+            notification_language = normalize_language(choice) if choice is not None else selected_language(session,str(guild['id'])+'|'+session.data['repository'],existing,LANGUAGE.get())
             if existing:
                 if existing.auth != 'app' or existing.installation != installation:
                     raise ConnectError('기존 연결이 있습니다. 연결 관리에서 확인해 주세요.', 409)
@@ -589,7 +599,7 @@ class Onboarding:
             else:
                 config = self.layouts.ensure(self.service.discord(), str(guild['id']), repo_id, actual['full_name'])
                 config['workflow_names'] = list(dict.fromkeys(names))
-                config['language'] = LANGUAGE.get()
+                config['language'] = notification_language
             if fields.get('team_apply') == '1':
                 draft = session.data.get('team_draft')
                 if not draft or draft['key'] != str(guild['id']) + '|' + session.data['repository']:
@@ -600,7 +610,9 @@ class Onboarding:
                 if groups:
                     layout = self.layouts.ensure(self.service.discord(), str(guild['id']), repo_id, actual['full_name'], groups)
                     groups = layout['routing_groups']
-                config.update({'routing_groups': groups, 'team_notifications': draft['options'], 'language': LANGUAGE.get()})
+                config.update({'routing_groups': groups, 'team_notifications': draft['options'], 'language': notification_language})
+            if not existing or choice is not None or 'language' in config:
+                config['language'] = notification_language
             available = {str(c['id']): p for c, p in self.channels(guild['id'])}
             destinations = {**config['channels'], 'alert': config.get('alert_channel'), 'ci': config.get('ci_channel'),
                             **{'role:' + g['id']: g['channel'] for g in config.get('routing_groups', [])}}
@@ -609,7 +621,7 @@ class Onboarding:
                 if channel and available.get(str(channel), 0) & needed != needed:
                     raise ConnectError('알림 채널의 접근·전송 권한이 부족합니다. 서버의 채널 권한을 확인한 뒤 다시 시도해 주세요.', 403)
             try:
-                if existing and fields.get('team_apply') == '1':
+                if existing and (fields.get('team_apply') == '1' or config != existing.config):
                     self.service.registry.configure(existing.id, config, session.data['discord_user'], session.data['github_user'], consent=consent)
                     identity = existing.id
                 else:

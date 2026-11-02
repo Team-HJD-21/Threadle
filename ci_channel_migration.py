@@ -36,7 +36,7 @@ class CiChannelMigration:
                 targets=[]
                 for row in channels:
                     channel=str(row.get('id',''))
-                    managed=channel in known or bool(re.fullmatch(r'GitHub Notify managed channel \| layout=[0-9a-f]+; kind=ci',row.get('topic') or ''))
+                    managed=channel in known or bool(re.fullmatch(r'(?:GitHub Notify|Threadle) managed channel \| layout=[0-9a-f]+; kind=ci',row.get('topic') or ''))
                     if row.get('type')==0 and channel.isdigit() and managed and row.get('name','').endswith('github-ci'):
                         targets.append((channel,guild,row['name'][:-len('github-ci')]+'github-ci-cd'))
                 with self.service.registry.db() as db:

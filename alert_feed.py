@@ -19,30 +19,8 @@ def alert_channel_config(api, config):
 
 
 def activity(event, payload):
-    action = payload.get('action', 'updated')
-    if event == 'threadle_bundle':
-        return '새 항목 등록' if payload.get('_created') else f"변경 {len(payload.get('_events', []))}건"
-    if event in ('issue_comment', 'discussion_comment', 'pull_request_review_comment'):
-        what = '코드 댓글' if event == 'pull_request_review_comment' else '댓글'
-        return what + {'created': ' 등록', 'edited': ' 수정', 'deleted': ' 삭제'}.get(action, ' 변경')
-    if event == 'pull_request_review':
-        if action == 'dismissed':
-            return '리뷰 취소'
-        return {'approved': '리뷰 승인', 'changes_requested': '변경 요청',
-                'commented': '리뷰 댓글'}.get(payload.get('review', {}).get('state', '').lower(), '리뷰 변경')
-    if event == 'workflow_run':
-        return 'CI 실패'
-    if action == 'closed' and payload.get('pull_request', {}).get('merged'):
-        return '병합'
-    return {'opened': '새 항목 등록', 'created': '새 항목 등록', 'edited': '내용 수정',
-            'deleted': '삭제', 'closed': '종료', 'reopened': '다시 열림', 'synchronize': '새 커밋 반영',
-            'review_requested': '리뷰 요청', 'review_request_removed': '리뷰 요청 취소',
-            'ready_for_review': '리뷰 준비 완료', 'converted_to_draft': '초안 전환',
-            'assigned': '담당자 지정', 'unassigned': '담당자 해제', 'labeled': '라벨 추가',
-            'unlabeled': '라벨 제거', 'answered': '답변 채택', 'unanswered': '답변 채택 해제',
-            'category_changed': '카테고리 변경', 'locked': '잠금', 'unlocked': '잠금 해제',
-            'milestoned': '마일스톤 지정', 'demilestoned': '마일스톤 해제',
-            'pinned': '고정', 'unpinned': '고정 해제', 'typed': '유형 지정', 'untyped': '유형 해제', 'field_added': '필드 설정', 'field_removed': '필드 해제'}.get(action, '항목 변경 · ' + str(action))
+    # GitHub statuses remain English; surrounding Threadle guidance follows the saved language.
+    return english_activity(event, payload)
 
 
 def english_activity(event, payload):

@@ -389,7 +389,9 @@ class ConnectionFlowTests(WebFixture):
         self.configure()
         result = self.browser.request('GET', '/connect/channels')
         self.assertEqual(result[0], 200)
-        self.assertNotIn('<select', result[2])
+        self.assertIn('name="notification_language"',result[2])
+        for kind in ('issue','pr','discussion','alert','ci'):
+            self.assertNotIn('name="'+kind+'"',result[2])
         self.assertIn('github-alert', result[2])
         self.assertEqual(self.bot.created_payloads, [])
 

@@ -28,26 +28,26 @@ def update_run(feed, repo, payload):
         return
     english = feed.config.get('language') == 'en'
     if phase < 3:
-        label = ('⏳ Queued' if english else '⏳ 실행 대기 중') if phase == 1 else ('🔄 Running' if english else '🔄 실행 중')
+        label = '⏳ Queued' if phase == 1 else '🔄 Running'
         color = 0xDBAB09
     elif conclusion == 'success':
-        label, color = ('✅ Succeeded' if english else '✅ 성공'), 0x2DA44E
+        label, color = '✅ Succeeded', 0x2DA44E
     elif conclusion in ('failure', 'timed_out', 'startup_failure', 'action_required'):
-        label, color = ('❌ Failed' if english else '❌ 실패'), 0xD1242F
+        label, color = '❌ Failed', 0xD1242F
     else:
         label, color = '⏹ ' + clip(conclusion or 'completed', 40), 0x8B949E
     started = timestamp(run.get('run_started_at'))
     ended = timestamp(run.get('updated_at')) if phase == 3 else None
-    description = ('Repository: ' if english else '저장소: ') + repo
-    description += ('\nBranch: ' if english else '\n브랜치: ') + '`' + clip(run.get('head_branch') or 'unknown', 100) + '`'
-    description += ('\nTrigger: ' if english else '\n실행 유형: ') + '`' + clip(run.get('event', 'unknown'), 60) + '`'
-    description += ('\nAttempt: ' if english else '\n실행 회차: ') + str(attempt)
+    description = 'Repository: ' + repo
+    description += '\nBranch: ' + '`' + clip(run.get('head_branch') or 'unknown', 100) + '`'
+    description += '\nTrigger: ' + '`' + clip(run.get('event', 'unknown'), 60) + '`'
+    description += '\nAttempt: ' + str(attempt)
     if started:
         if ended:
             seconds = max(0, ended - started)
-            description += ('\nDuration: ' if english else '\n소요 시간: ') + f'{seconds // 60}m {seconds % 60}s'
+            description += '\nDuration: ' + f'{seconds // 60}m {seconds % 60}s'
         elif phase < 3:
-            description += ('\nStarted: ' if english else '\n시작: ') + f'<t:{started}:R>'
+            description += '\nStarted: ' + f'<t:{started}:R>'
     embed = {'title': clip(run.get('name') or 'CI/CD', 180) + ' · ' + label,
              'description': description, 'url': run['html_url'], 'color': color,
              'footer': {'text': receipt}}

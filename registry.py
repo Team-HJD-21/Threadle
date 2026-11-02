@@ -45,6 +45,7 @@ class Registry:
                 CREATE TABLE IF NOT EXISTS github_profiles(user TEXT PRIMARY KEY, login TEXT NOT NULL,
                     checked REAL NOT NULL DEFAULT 0);
             ''')
+            db.execute('CREATE TABLE IF NOT EXISTS connection_welcomes(guild TEXT NOT NULL,repo_id INTEGER NOT NULL,binding TEXT NOT NULL,phase INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(guild,repo_id))')
             db.execute('CREATE TABLE IF NOT EXISTS connection_retention(id TEXT PRIMARY KEY, disconnected_at REAL NOT NULL)')
             db.execute('CREATE TABLE IF NOT EXISTS retention_scopes(scope TEXT PRIMARY KEY)')
             db.execute('CREATE TABLE IF NOT EXISTS legal_acceptances(binding TEXT NOT NULL, discord_user TEXT NOT NULL, '
@@ -143,6 +144,8 @@ class Registry:
             db.execute('INSERT INTO connection_audit(binding,action,discord_user,github_user) VALUES(?,?,?,?)',
                        (identity, 'connected', str(discord_user), str(github_user)))
             self.acceptance(db, identity, discord_user, github_user, consent)
+            if row is None:
+                db.execute('INSERT OR IGNORE INTO connection_welcomes(guild,repo_id,binding) VALUES(?,?,?)',(guild,repo_id,identity))
         return identity
 
     @staticmethod

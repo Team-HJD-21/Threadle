@@ -34,11 +34,11 @@ class ReadableNotificationsTests(unittest.TestCase):
             self.assertNotIn('<t:',embed['description'])
             self.assertEqual(embed['timestamp'],'2026-11-01T01:00:00+00:00')
             self.assertEqual(embed['author']['name'],'author')
-            if kind=='pr':self.assertEqual(names[:2],['브랜치','기본 정보'])
-            if kind=='issue':self.assertIn('추가 필드',names)
+            if kind=='pr':self.assertEqual(names[:2],['Branches','Details'])
+            if kind=='issue':self.assertIn('Issue fields',names)
             if kind=='discussion':
-                self.assertIn('카테고리',embed['fields'][0]['value']);self.assertIn('라벨',names)
-                self.assertNotIn('담당자',names);self.assertNotIn('마일스톤',names)
+                self.assertIn('Category',embed['fields'][0]['value']);self.assertIn('Labels',names)
+                self.assertNotIn('Assignees',names);self.assertNotIn('Milestone',names)
 
     def test_issue_type_and_custom_fields_keep_values_without_repeating_description(self):
         p=self.payload('issue','typed');p['issue']['type']={'name':'Task'}
@@ -57,7 +57,7 @@ class ReadableNotificationsTests(unittest.TestCase):
         api=Mock();api.pages.return_value=[{'issue_field_name':'Priority','value':1,'single_select_option':{'name':'High'}},{'issue_field_name':'Effort','value':0}]
         hydrated=hydrate_issue_fields(topic,p,api)
         result=make_embed(hydrated,'issues',p)
-        fields=next(f['value'] for f in result['fields'] if f['name']=='추가 필드')
+        fields=next(f['value'] for f in result['fields'] if f['name']=='Issue fields')
         self.assertIn('Priority: High',fields);self.assertIn('Effort: 0',fields)
 
     def test_short_window_durable_group_prioritizes_description_and_folds_creation_options(self):
@@ -192,3 +192,18 @@ class ReadableNotificationsTests(unittest.TestCase):
             size=sum(units(e.get('title',''))+units(e.get('description',''))+sum(units(f['name'])+units(f['value']) for f in e.get('fields',[])) for e in page)
             self.assertLess(size,5800)
             self.assertTrue(all(len(e.get('fields',[]))<=25 for e in page))
+
+    def test_issue_lifecycle_bundle_headings_show_last_state(self):
+        from notification_layout import bundle_embed,group_payload
+        for language,labels in [('en',{'closed':'Closed','deleted':'Deleted','reopened':'Reopened'}),('ko',{'closed':'Closed','deleted':'Deleted','reopened':'Reopened'})]:
+            for action,label in labels.items():
+                payload=self.payload('issue',action)
+                topic=topic_from('one/repo','issue',payload['issue'])
+                result=bundle_embed(topic,group_payload([('issues',payload)]),language)
+                self.assertIn('ISSUE #'+str(topic.number)+' · '+label,result['_embeds'][0]['title'])
+        events=[('issues',self.payload('issue',action)) for action in ('closed','reopened')]
+        payload=group_payload(events)
+        result=bundle_embed(topic_from('one/repo','issue',events[-1][1]['issue']),payload,'en')
+        self.assertIn('Reopened',result['_embeds'][0]['title'])
+        self.assertNotIn('Closed',result['_embeds'][0]['title'])
+

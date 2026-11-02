@@ -74,7 +74,7 @@ def creation_embed(topic, payload, language='ko'):
     unknown = 'Not provided by GitHub' if en else 'GitHub에서 정보 미제공'
     fields = []
     def add(ko, english, value, inline=True):
-        fields.append({'name': english if en else ko, 'value': clip(value or none, 600), 'inline': inline})
+        fields.append({'name': english, 'value': clip(value or none, 600), 'inline': inline})
     if topic.kind == 'pr':
         head,base = obj.get('head',{}).get('ref'),obj.get('base',{}).get('ref')
         branch = '`'+str(head).replace('`','')+'` → `'+str(base).replace('`','')+'`' if head and base else unknown
@@ -95,7 +95,7 @@ def creation_embed(topic, payload, language='ko'):
             people = display(obj.get('requested_reviewers'))
             teams = display(obj.get('requested_teams'))
             add('리뷰 요청','Reviewers',', '.join(filter(None,[people,teams])) if 'requested_reviewers' in obj else unknown)
-            add('상태','Status',('Draft' if obj.get('draft') else ('Ready for review' if en else '리뷰 준비')) if 'draft' in obj else unknown)
+            add('상태','Status',('Draft' if obj.get('draft') else 'Ready for review') if 'draft' in obj else unknown)
         else:
             values=snapshot_fields(obj)
             if not values:
@@ -117,7 +117,7 @@ def creation_embed(topic, payload, language='ko'):
         lines = ['**'+entry['name']+'** · '+entry['value'] for entry in compact]
         fields = [entry for entry in fields if entry not in compact]
         position = 1 if topic.kind == 'pr' else 0
-        fields.insert(position, {'name':'Details' if en else '기본 정보', 'value':clip('\n'.join(lines),1000),'inline':False})
+        fields.insert(position, {'name':'Details', 'value':clip('\n'.join(lines),1000),'inline':False})
     body = str(obj.get('body') or '').strip()
     result = {'title': clip(f'{topic.kind.upper()} #{topic.number} · {topic.title}',230), 'url':topic.url,
               'description':clip(body,3000) or ('No description provided.' if en else '설명 없음'),
@@ -172,12 +172,16 @@ def bundle_embed(topic, payload, language):
         else:
             embeds.append(make_embed(topic,event,value,language))
     if changes:
+        heading = 'Updates'
+        if topic.kind=='issue':
+            action=next((value.get('action') for event,value in reversed(entries) if event=='issues' and value.get('action') in ('closed','deleted','reopened','opened')),None)
+            heading={'closed':'Closed','deleted':'Deleted','reopened':'Reopened'}.get(action,heading)
         text='\n\n'.join(changes)
         change_embeds=[]
         while text:
             part=clip(text,3300)
             text=text[len(part):]
-            change_embeds.append({'title':clip(f'{topic.kind.upper()} #{topic.number} · '+('Updates' if language=='en' else '변경 사항'),230),
+            change_embeds.append({'title':clip(f'{topic.kind.upper()} #{topic.number} · '+heading,230),
                              'description':part,'url':topic.url,
                              **({'author':{'name':clip(next(iter(actors)),100)}} if len(actors)==1 else {}),
                              'color':{'issue':0x2DA44E,'pr':0x8957E5,'discussion':0x0969DA}[topic.kind]})

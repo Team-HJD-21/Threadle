@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 import json
+import logging
 import math
 import sqlite3
 import time
@@ -7,6 +8,7 @@ import uuid
 
 from connect_auth import ConnectError, channel_permissions
 from discord_threads import ApiError
+from runtime_logging import log_exception
 
 CHANNELS = [('issue', '‼️github-issue'), ('pr', '🙏🏻github-pr'),
             ('discussion', '🙋🏻github-discussions'), ('ci', '🔄github-ci-cd'), ('alert', '🚨github-alert')]
@@ -20,6 +22,7 @@ class ChannelLayouts:
     def __init__(self, path, bot_id, clock=time.time):
         self.path, self.bot_id, self.clock = path, str(bot_id), clock
         with self.db() as db:
+            db.execute('CREATE TABLE IF NOT EXISTS topic_cleanup(channel TEXT PRIMARY KEY,scope TEXT NOT NULL,kind TEXT NOT NULL,token TEXT NOT NULL,done INTEGER NOT NULL DEFAULT 0,next REAL NOT NULL DEFAULT 0)')
             db.execute('CREATE TABLE IF NOT EXISTS layouts(guild TEXT PRIMARY KEY, data TEXT NOT NULL, owner TEXT, lease REAL NOT NULL DEFAULT 0)')
 
     @contextmanager
@@ -52,6 +55,9 @@ class ChannelLayouts:
         with self.db() as db:
             changed = db.execute('UPDATE layouts SET data=?,lease=? WHERE guild=? AND owner=?',
                                  (json.dumps(data), self.clock() + 300, data.get('scope', guild), owner)).rowcount
+            if changed == 1 and not data.get('pending'):
+                for kind,channel in data.get('channels',{}).items():
+                    db.execute('INSERT OR IGNORE INTO topic_cleanup(channel,scope,kind,token) VALUES(?,?,?,?)',(str(channel),data.get('scope',guild),kind,data['token']))
         if changed != 1:
             raise ConnectError('다른 연결 요청이 진행 중입니다. 잠시 후 다시 확인해 주세요.', 409)
 
@@ -101,6 +107,8 @@ class ChannelLayouts:
             data['channels'][pending['key']] = str(matches[0]['id'])
         data['pending'] = None
         self.save(guild, owner, data)
+        if pending['key'] != 'category':
+            self.clean_topic(api,guild,data,pending['key'])
 
     def create(self, api, guild, owner, data, key, payload):
         rows = self.snapshot(api, guild)
@@ -134,6 +142,8 @@ class ChannelLayouts:
             data['channels'][key] = str(row['id'])
         data['pending'] = None
         self.save(guild, owner, data)
+        if key != 'category':
+            self.clean_topic(api,guild,data,key,row)
 
     def ensure(self, api, guild, repo_id, repository, groups=None):
         from pr_routing import validate_groups, group_channel_name
@@ -176,9 +186,48 @@ class ChannelLayouts:
                         continue
                 self.create(api, guild, owner, data, key,
                             {'name': name, 'type': 0, 'parent_id': data['category'], 'position': position,
-                             'topic': 'GitHub Notify managed channel | layout=' + data['token'] + '; kind=' + key})
+                             'topic': 'Threadle managed channel | layout=' + data['token'] + '; kind=' + key})
             config = {'guild_id': guild, 'channels': {key: data['channels'][key] for key in ('issue', 'pr', 'discussion')},
                       'alert_channel': data['channels']['alert'], 'ci_channel': data['channels']['ci']}
             if groups:
                 config['routing_groups'] = [dict(group, channel=data['channels']['role:' + group['id']]) for group in groups]
             return config
+
+
+    def clean_topic(self,api,guild,data,kind,row=None):
+        channel=str(data['channels'][kind])
+        try:
+            row=row or api.call('GET','/channels/'+channel)
+            if str(row.get('guild_id'))!=str(guild) or row.get('type')!=0 or str(row.get('id'))!=channel:
+                raise ValueError('Topic cleanup channel scope mismatch')
+            markers=[brand+' managed channel | layout='+data['token']+'; kind='+kind for brand in ('GitHub Notify','Threadle')]
+            if row.get('topic') in markers:
+                label={'pr':'pull request','issue':'issue','discussion':'discussion','ci':'CI/CD','alert':'repository update'}.get(kind,'pull request')
+                api.call('PATCH','/channels/'+channel,{'topic':'Threadle · GitHub '+label+' notifications.'})
+            with self.db() as db:
+                db.execute('UPDATE topic_cleanup SET done=1 WHERE channel=?',(channel,))
+        except Exception as error:
+            with self.db() as db:
+                if isinstance(error,ApiError) and error.status==404:
+                    db.execute('UPDATE topic_cleanup SET done=1 WHERE channel=?',(channel,))
+                else:
+                    db.execute('UPDATE topic_cleanup SET next=? WHERE channel=?',(self.clock()+300,channel))
+            log_exception(logging.getLogger('channel-topics'),'Channel topic cleanup will retry channel=%s error=%s',channel,type(error).__name__,level=logging.WARNING)
+
+    def clean_pending_topics(self,api):
+        with self.db() as db:
+            layouts=[(scope,json.loads(raw),owner,lease) for scope,raw,owner,lease in db.execute('SELECT guild,data,owner,lease FROM layouts')]
+            for scope,data,owner,lease in layouts:
+                if data.get('pending') or owner and lease>self.clock():
+                    continue
+                for kind,channel in data.get('channels',{}).items():
+                    db.execute('INSERT OR IGNORE INTO topic_cleanup(channel,scope,kind,token) VALUES(?,?,?,?)',(str(channel),scope,kind,data['token']))
+            pending=db.execute('SELECT channel,scope,kind,token FROM topic_cleanup WHERE done=0 AND next<=? ORDER BY next,channel LIMIT 25',(self.clock(),)).fetchall()
+        sources={scope:(data,owner,lease) for scope,data,owner,lease in layouts}
+        for channel,scope,kind,token in pending:
+            if scope not in sources:
+                continue
+            data,owner,lease=sources[scope]
+            if data.get('pending') or owner and lease>self.clock() or str(data.get('channels',{}).get(kind))!=channel or data['token']!=token:
+                continue
+            self.clean_topic(api,scope.split(':',1)[0],data,kind)
