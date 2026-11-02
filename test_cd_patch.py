@@ -25,6 +25,7 @@ class DeploymentTests(unittest.TestCase):
             shutil.copy2(self.source / name, target)
         (self.root / 'credentials.json').write_text('preserve credentials')
         (self.root / 'queue.sqlite3').write_bytes(b'preserve queued events')
+        self.changed_file = next(iter(self.manifest['files']))
         self.job = self.base / 'job'
         media = patch('deploy.media_dependency.stage')
         media.start()
@@ -42,7 +43,7 @@ class DeploymentTests(unittest.TestCase):
         self.assertEqual((self.root / 'queue.sqlite3').read_bytes(), b'preserve queued events')
 
     def test_unrecognized_server_change_aborts_before_any_backup_or_write(self):
-        target = self.root / 'service.py'
+        target = self.root / self.changed_file
         target.write_text('custom_server_change = True\n')
         with self.assertRaisesRegex(ValueError, 'differs from supported baseline'):
             prepare(self.root, self.source, self.job)
@@ -52,7 +53,7 @@ class DeploymentTests(unittest.TestCase):
     def test_changed_target_after_prepare_is_rejected_before_first_write(self):
         with patch('deploy.patch_runtime.subprocess.run'):
             prepare(self.root, self.source, self.job)
-        (self.root / 'service.py').write_text('changed_during_preflight = True\n')
+        (self.root / self.changed_file).write_text('changed_during_preflight = True\n')
         before = (self.root / 'auth.py').read_bytes()
         with self.assertRaisesRegex(ValueError, 'changed after preflight'):
             apply(self.root, self.job)
@@ -61,7 +62,7 @@ class DeploymentTests(unittest.TestCase):
     def test_corrupt_backup_prevents_restore(self):
         with patch('deploy.patch_runtime.subprocess.run'):
             prepare(self.root, self.source, self.job)
-        (self.job / 'backup/service.py').write_text('corrupt')
+        (self.job / 'backup' / self.changed_file).write_text('corrupt')
         with self.assertRaisesRegex(ValueError, 'Backup checksum mismatch'):
             restore(self.root, self.job)
 

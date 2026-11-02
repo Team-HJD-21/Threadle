@@ -57,7 +57,7 @@ small{display:block;color:#a2afab;line-height:1.6}strong{color:#f3f0e8}form{marg
 .footer-policy{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 24px}.footer-policy p{width:100%;font-size:12px;color:#a2afab;margin:0}
 .footer-copyright{align-self:center;color:#a2afab;font-size:12px}.related-sites{position:relative;justify-self:end;width:220px;max-width:100%;color:#a6bbc5}
 .related-sites summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:20px;padding:8px 13px;border:1px solid #33413e;border-radius:5px;cursor:pointer;min-height:40px}
-.related-sites summary::-webkit-details-marker{display:none}.related-sites summary::after{content:'⌃'}.related-sites[open] summary::after{content:'⌄'}
+.related-sites summary::-webkit-details-marker{display:none}.related-sites summary::after{content:none}.footer-chevron{width:18px;height:18px;flex-shrink:0;transition:transform .18s ease}.related-sites[open] .footer-chevron{transform:rotate(180deg)}@media(prefers-reduced-motion:reduce){.footer-chevron{transition:none}}
 .related-sites ul{position:absolute;bottom:calc(100% + 8px);left:0;width:100%;margin:0;padding:6px;background:#192426;border:1px solid #33413e;border-radius:5px;list-style:none;box-shadow:0 12px 30px #0005;z-index:2}
 .related-sites li a{display:block;padding:10px 12px}.related-sites li a:hover{background:#24332d}
 :focus-visible{outline:3px solid #d9eea6;outline-offset:4px}.error{border-color:#95606d}code{font-size:13px;overflow-wrap:anywhere}
@@ -85,7 +85,7 @@ def footer():
 <div><dt>통신판매업 신고번호</dt><dd translate="no" lang="ko">2026-수원영통-1221호</dd></div><div><dt>사업장 주소</dt><dd translate="no" lang="ko">경기도 수원시 영통구 태장로 71번길 19</dd></div>
 </dl><div class="footer-policy"><a href="https://teamhjd.com/press/index.html" target="_blank" rel="noopener noreferrer">프레스킷</a><a href="https://teamhjd.com/content-policy/index.html" target="_blank" rel="noopener noreferrer">콘텐츠 이용 · AI 학습 정책</a><p>AI 검색·정보 조회는 허용하며, 콘텐츠의 AI 학습 이용은 금지합니다.</p></div>
 <small class="footer-copyright">© 2026 TeamHJD. All rights reserved.</small>
-<details class="related-sites"><summary>관련 사이트</summary><ul><li><a href="https://teamhjd.com/" target="_blank" rel="noopener noreferrer">TeamHJD 메인</a></li><li><a href="https://docs.teamhjd.com/" target="_blank" rel="noopener noreferrer">TeamHJD Docs</a></li></ul></details>
+<details class="related-sites"><summary>관련 사이트<svg class="footer-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m6 15 6-6 6 6"></path></svg></summary><ul><li><a href="https://teamhjd.com/" target="_blank" rel="noopener noreferrer">TeamHJD 메인</a></li><li><a href="https://docs.teamhjd.com/" target="_blank" rel="noopener noreferrer">TeamHJD Docs</a></li></ul></details>
 </div></footer>'''
 
 
@@ -100,7 +100,7 @@ def page(title, body, landing=False):
     extra = '<link rel="icon" type="image/png" href="/connect/assets/threadle-avatar.png"><meta name="description" content="' + esc(description) + '">'
     extra += '<meta name="robots" content="' + ('index,follow' if public else 'noindex,nofollow') + '">'
     if landing:
-        extra += '<link rel="stylesheet" href="/connect/assets/landing.css?v=20261102-2"><link rel="stylesheet" href="/connect/assets/product.css?v=20261102-5">'
+        extra += '<link rel="stylesheet" href="/connect/assets/landing.css?v=20261102-2"><link rel="stylesheet" href="/connect/assets/product.css?v=20261102-7">'
     extra += '<link rel="stylesheet" href="/connect/assets/controls.css?v=20261102-6"><script src="/connect/assets/controls.js?v=1" defer></script>'
     if public:
         canonical_path = '/' if path in ('/', '/connect', '/connect/') else path

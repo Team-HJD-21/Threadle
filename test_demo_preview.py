@@ -35,3 +35,14 @@ class PreviewTests(unittest.TestCase):
             self.assertNotIn('새 댓글', html)
         finally:
             LANGUAGE.reset(token)
+
+
+    def test_ci_preview_shows_failed_run_and_alert_without_a_fictitious_ci_thread(self):
+        html = demonstration().split('class="preview-case preview-ci"',1)[1]
+        self.assertIn('github-ci', html)
+        self.assertIn('github-alert', html)
+        self.assertIn('Run #128', html)
+        self.assertIn('Threadle CI and deployment', html)
+        self.assertNotIn('preview-thread-card', html)
+        self.assertNotIn('[CI #', html)
+        self.assertNotIn('새 댓글', html)
