@@ -21,8 +21,8 @@ def read_manifest(source):
         if path.is_absolute() or '..' in path.parts or '\\' in name or ':' in name:
             raise ValueError('Invalid patch path')
         if not (len(path.parts) == 1 and path.suffix == '.py' or
-                len(path.parts) == 2 and path.parts[0] == 'web_assets' and path.suffix == '.css'):
-            raise ValueError('Patch targets application Python and CSS files only')
+                len(path.parts) == 2 and path.parts[0] == 'web_assets' and path.suffix in ('.css', '.js')):
+            raise ValueError('Patch targets application Python, CSS and JavaScript files only')
         data = (source / name).read_bytes()
         if digest(data) != rule['after']:
             raise ValueError('Source checksum mismatch: ' + name)

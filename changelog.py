@@ -45,6 +45,10 @@ def content(t):
         ('사용 화면', 'Interface', [
             ('CI 예시를 실패 실행 상세와 alert 채널 안내로 바꾸고, 요금제 제목 중복을 제거했습니다. 기능 포함 여부와 푸터 펼침 표시는 SVG로 통일했습니다.', 'The CI demo now shows failed-run details and an alert-channel heads-up. Plan headings no longer repeat, and feature checks and the footer chevron use SVG icons.'),
             ('홈페이지 작동 예시의 채널·스레드·알림·핀·사용자·입력창 아이콘을 Discord 화면에 맞춘 SVG로 교체했습니다. 기존 3열 배치와 PR·Issue·Discussion·CI 애니메이션은 유지합니다.', 'The homepage demo now uses Discord-style SVG icons for channels, threads, notifications, pins, members, and message controls. The three-pane layout and PR, issue, discussion, and CI animations are preserved.')])]))
+    groups.insert(0, ('2026.11.02.8', '채널에서 전환하는 작동 예시', 'Interactive channel previews', [
+        ('홈페이지', 'Homepage', [
+            ('왼쪽 채널을 눌러 PR·Issue·Discussion·CI 예시를 전환할 수 있고, 10초마다 순서대로 자동 재생합니다. 불필요한 사이드바 항목을 정리했습니다.', 'Switch previews from the channel list or let PR, issue, discussion, and CI examples rotate every ten seconds. Removed unrelated sidebar sections.'),
+            ('CI 예시는 댓글 대신 워크플로 실행과 검사 성공 과정을 보여줍니다. 동작 줄이기 설정을 존중하며 자동 재생을 일시정지할 수 있습니다.', 'The CI example shows workflow progress and successful checks rather than comments. Autoplay can be paused and respects reduced-motion preferences.')])]))
     for version,ko,en,sections in groups:
         body += '<article class="patch-entry"><p class="patch-label">' + version + ' · ' + t(ko,en) + '</p>'
         for heading_ko,heading_en,items in sections:
