@@ -35,6 +35,10 @@ EN = {
     'PR · Issue 현황 요약': 'PR and issue roundup',
 
     'GitHub 활동을 Discord 스레드로 정리하고 팀에 맞게 알림을 받아보세요.': 'Keep GitHub updates organized in Discord threads, with notifications that fit your team.',
+    '한국어 (KR)': 'Korean (KR)',
+    '이 저장소의 봇 알림에 사용할 언어입니다. 사이트 언어와 별개로 저장되며 제목과 댓글 원문은 번역하지 않습니다.': 'Choose this repository’s notification language independently of the website. Titles and comments stay in their original language.',
+    '사이트 언어와 별개로 이 저장소의 알림 언어를 설정합니다. 제목과 댓글 원문은 번역하지 않습니다.': 'Choose this repository’s notification language independently of the website. Titles and comments stay in their original language.',
+    '연결 이전 활동은 개별 알림으로 다시 보내지 않습니다. 봇과 앱의 접근 권한을 유지해 주세요.': 'Past activity is not replayed as individual notifications. Keep the bot and app permissions enabled.',
     '알림 언어': 'Notification language',
     '설정을 적용하면 현재 화면 언어로 이후 봇 안내를 보냅니다. 제목과 댓글 원문은 번역하지 않습니다.': 'Apply these settings to use this language for future bot messages. Titles and comments stay in their original language.',
     '개발 소식을 한곳에.': 'Keep your team in the loop.',
@@ -74,6 +78,7 @@ EN = {
     '기존 연결 확인하기': 'Continue with this connection',
     '카테고리와 알림 채널을 자동 생성하려면 봇의 채널 관리 권한이 필요합니다.': 'The bot needs Manage Channels permission to create your notification category and channels.',
     '채널 생성 권한 승인하기': 'Grant channel permissions',
+    '연결 후 채널 이름은 원하는 대로 바꿔도 알림이 유지됩니다.': 'You can rename the channels later; notifications will keep working.',
     '아래 카테고리와 채널을 자동으로 생성하고 연결합니다. 이 봇이 이미 만든 채널이 있으면 재사용합니다.': 'We will create the category and channels below and connect your repository. Channels already created for this connection will be reused.',
     'CI 워크플로 이름 필터 (선택)': 'CI workflow names (optional)',
     '비워두면 모든 워크플로, 여러 개는 쉼표로 구분': 'Leave blank for all workflows, or separate names with commas',

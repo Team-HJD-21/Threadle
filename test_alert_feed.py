@@ -59,7 +59,7 @@ class AlertTests(unittest.TestCase):
         self.notify()
         message = self.api.posts[0]
         self.assertIn('ISSUE #582', message['content'])
-        self.assertIn('댓글 등록', message['content'])
+        self.assertIn('New comment', message['content'])
         self.assertEqual(message['embeds'][0]['url'], 'https://discord.com/channels/guild/thread')
         self.assertIn(self.topic.url, message['embeds'][0]['description'])
         self.assertEqual(message['allowed_mentions'], {'parse': []})
@@ -82,9 +82,9 @@ class AlertTests(unittest.TestCase):
         self.assertEqual(len(self.api.posts), 1)
 
     def test_pr_review_and_merge_have_readable_activity(self):
-        self.assertEqual(activity('pull_request_review', {'review': {'state': 'approved'}}), '리뷰 승인')
-        self.assertEqual(activity('pull_request', {'action': 'closed', 'pull_request': {'merged': True}}), '병합')
-        self.assertEqual(activity('discussion_comment', {'action': 'deleted'}), '댓글 삭제')
+        self.assertEqual(activity('pull_request_review', {'review': {'state': 'approved'}}), 'Approved')
+        self.assertEqual(activity('pull_request', {'action': 'closed', 'pull_request': {'merged': True}}), 'Merged')
+        self.assertEqual(activity('discussion_comment', {'action': 'deleted'}), 'Comment deleted')
 
     def test_all_topic_types_link_to_their_actual_thread(self):
         for kind, thread in [('issue', 'issue-thread'), ('pr', 'pr-thread'), ('discussion', 'discussion-thread')]:
@@ -98,7 +98,7 @@ class AlertTests(unittest.TestCase):
         run = {'id': 123, 'name': 'PR CI', 'event': 'push', 'conclusion': 'failure',
                'head_branch': 'main', 'html_url': 'https://github.com/run'}
         self.feed.ci(REPO, {'workflow_run': run}, 'event')
-        self.assertIn('실패', self.api.posts[0]['content'])
+        self.assertIn('Failed', self.api.posts[0]['content'])
         self.assertEqual([row['channel_id'] for row in self.api.posts], ['ci', 'alerts'])
         self.assertIn('channels/guild/ci', self.api.posts[1]['embeds'][0]['description'])
         for changed in ({'conclusion': 'success'}, {'event': 'pull_request'}):

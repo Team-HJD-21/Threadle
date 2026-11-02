@@ -20,7 +20,7 @@ class WorkflowTests(unittest.TestCase):
         self.feed.ci_detail(REPO, self.run_payload('completed','success'), 'end')
         self.feed.ci_detail(REPO, self.run_payload('in_progress'), 'late')
         self.assertEqual(len(self.api.posts), 1)
-        self.assertIn('성공', self.api.posts[0]['content'])
+        self.assertIn('Succeeded', self.api.posts[0]['content'])
         self.assertIn('feature/test', self.api.posts[0]['embeds'][0]['description'])
         self.assertIn('1m 5s', self.api.posts[0]['embeds'][0]['description'])
 

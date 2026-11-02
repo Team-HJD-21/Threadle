@@ -28,7 +28,9 @@ class TeamWeb:
             existing = next((b for b in web.service.registry.active()
                              if b.repo_id == repo_id and str(b.config['guild_id']) == str(guild['id'])), None)
             config = existing.config if existing else {}
-            draft = {'key': key, 'groups': copy.deepcopy(config.get('routing_groups', [])),
+            from notification_language import selected_language
+            from web_locale import LANGUAGE
+            draft = {'language':selected_language(session,key,existing,LANGUAGE.get()), 'key': key, 'groups': copy.deepcopy(config.get('routing_groups', [])),
                      'split': bool(config.get('routing_groups')), 'selected': [],
                      'options': copy.deepcopy(config.get('team_notifications', {})),
                      'binding': existing.id if existing else None, 'original': copy.deepcopy(config)}
@@ -126,8 +128,9 @@ class TeamWeb:
                 body += self.preview_result(draft['preview'])
             body += '</div>'
         body += '<div class="card" id="team-options"><h2>추가 알림</h2><p>선택한 기능만 켭니다. 상세 스레드의 활동은 바로 기록됩니다.</p>'
-        body += '<p class="muted"><span>알림 언어</span>: <b translate="no">' + ('English' if LANGUAGE.get() == 'en' else '한국어') + '</b><br><span>설정을 적용하면 현재 화면 언어로 이후 봇 안내를 보냅니다. 제목과 댓글 원문은 번역하지 않습니다.</span></p>'
-        fields = select('review_hours', '열린 PR 반복 알림', [('0', '사용 안 함'), ('4', '4시간마다'), ('12', '12시간마다'), ('24', '24시간마다'), ('48', '48시간마다')], str(options.get('review_hours', 0)))
+        body += '<p class="muted">사이트 언어와 별개로 이 저장소의 알림 언어를 설정합니다. 제목과 댓글 원문은 번역하지 않습니다.</p>'
+        fields = select('notification_language','알림 언어',[('ko','한국어 (KR)'),('en','English (EN)')],draft.get('language','ko'))
+        fields += select('review_hours', '열린 PR 반복 알림', [('0', '사용 안 함'), ('4', '4시간마다'), ('12', '12시간마다'), ('24', '24시간마다'), ('48', '48시간마다')], str(options.get('review_hours', 0)))
         fields += '<p class="muted">담당자나 리뷰 요청이 없어도 초안을 포함한 열린 PR을 설정한 간격으로 다시 알립니다. 종료되면 중단하며, 조용한 시간에는 보내지 않습니다.</p>'
         fields += select('batch_seconds', '일반 알림 묶기', [('0', '즉시 전달'), ('60', '1분마다'), ('300', '5분마다')], str(options.get('batch_seconds', 0)))
         fields += '<p class="muted">종료·병합·CI 실패·변경 요청은 묶지 않습니다. 조용한 시간에는 함께 대기합니다.</p>'
@@ -151,7 +154,12 @@ class TeamWeb:
         web = self.web
         installation, repo_id, draft = self.scope(session, guild, {})
         repo = self.repository(session, installation, repo_id)
-        if path == '/connect/team/mode':
+        if path == '/connect/team/start':
+            from notification_language import normalize_language
+            language = normalize_language(fields.get('notification_language',draft.get('language','ko')))
+            draft['language'] = language
+            session.data['notification_language'] = {'key':draft['key'],'language':language}
+        elif path == '/connect/team/mode':
             if fields.get('mode') not in ('off', 'on'):
                 raise ConnectError('분류 방식을 선택해 주세요.')
             draft['split'] = fields['mode'] == 'on'
@@ -197,6 +205,8 @@ class TeamWeb:
         elif path == '/connect/team/remove':
             draft['groups'] = [g for g in draft['groups'] if g['id'] != fields.get('group')]
         elif path == '/connect/team/options':
+            from notification_language import normalize_language
+            draft['language'] = normalize_language(fields.get('notification_language',draft.get('language','ko')))
             options = {key: int(fields.get(key, default)) for key, default in [('review_hours', 0), ('batch_seconds', 0),
                        ('utc_offset', 9), ('digest_hour', 9), ('digest_weekday', 0), ('quiet_start', 22), ('quiet_end', 8)]}
             options.update({'digest': fields.get('digest', 'off'), 'quiet': fields.get('quiet') == '1'})

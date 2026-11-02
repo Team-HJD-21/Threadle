@@ -10,7 +10,7 @@ def t(ko, en):
 
 def navigation(active=''):
     links = [('/connect/features', '기능', 'Features'), ('/connect/setup', '연결 방법', 'Setup'), ('/connect/pricing', '요금제', 'Pricing'), ('/connect/faq', 'FAQ', 'FAQ'), ('/connect/changelog', '패치노트', 'Changelog')]
-    return '<nav class="product-nav" aria-label="' + t('제품 메뉴', 'Product navigation') + '">' + ''.join('<a href="' + path + '"' + (' aria-current="page"' if active == path else '') + '>' + t(ko, en) + '</a>' for path, ko, en in links) + '<a class="nav-manage" href="/connect/server">' + t('연결 관리', 'Manage connections') + '</a></nav>'
+    return '<nav class="product-nav" aria-label="' + t('제품 메뉴', 'Product navigation') + '">' + ''.join('<a href="' + path + '"' + (' aria-current="page"' if active == path else '') + '>' + t(ko, en) + '</a>' for path, ko, en in links) + '</nav>'
 
 
 def start(session, ko='무료로 시작하기', en='Start free'):

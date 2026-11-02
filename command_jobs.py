@@ -133,10 +133,12 @@ class CommandJobs:
         updates = {k: v for k, v in options.items() if k != 'repository'}
         current = dict({'review_hours': 0, 'batch_seconds': 0, 'digest': 'off', 'digest_hour': 9, 'digest_weekday': 0, 'utc_offset': 9, 'quiet': False, 'quiet_start': 22, 'quiet_end': 8}, **binding.config.get('team_notifications', {}))
         if not updates:
-            return self.describe(binding.repo, current) + '\nPass an option to change it.'
-        allowed = {'review_hours', 'batch_seconds', 'digest', 'digest_hour', 'digest_weekday', 'utc_offset', 'quiet', 'quiet_start', 'quiet_end'}
+            return self.describe(binding.repo, current, binding.config.get('language','ko')) + '\nPass an option to change it.'
+        allowed = {'language', 'review_hours', 'batch_seconds', 'digest', 'digest_hour', 'digest_weekday', 'utc_offset', 'quiet', 'quiet_start', 'quiet_end'}
         if set(updates) - allowed:
             raise ValueError('Unknown notification setting.')
+        from notification_language import normalize_language
+        language = normalize_language(updates.pop('language',binding.config.get('language','ko')))
         current.update(updates)
         try:
             validate_options(current)
@@ -146,16 +148,16 @@ class CommandJobs:
             current['review_since'] = time.time()
         if current.get('digest', 'off') != 'off' and (not current.get('enabled_at') or set(updates) & {'digest','digest_hour','digest_weekday','utc_offset'}):
             current['enabled_at'] = time.time()
-        config = dict(binding.config, team_notifications=current)
+        config = dict(binding.config, team_notifications=current, language=language)
         self.service.registry.configure(binding.id, config, user, 'discord-command')
-        return self.describe(binding.repo, current) + '\nNotification settings updated.'
+        return self.describe(binding.repo, current, language) + '\nNotification settings updated.'
 
     @staticmethod
-    def describe(repo, options):
+    def describe(repo, options, language='ko'):
         hours = options.get('review_hours', 0)
         batch = options.get('batch_seconds', 0)
         weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-        return (f'**{repo}**\nOpen PR reminder: ' + (f'{hours} hours' if hours else 'off')
+        return (f'**{repo}**\nNotification language: '+('English (EN)' if language=='en' else 'Korean (KR)')+'\nOpen PR reminder: ' + (f'{hours} hours' if hours else 'off')
                 + '\nNotification batching: ' + (f'{batch} seconds' if batch else 'instant')
                 + f"\nPR and issue digest: {options.get('digest', 'off')} · {options.get('digest_hour', 9):02}:00 · {weekdays[options.get('digest_weekday', 0)]}"
                 + f"\nTime zone: UTC{options.get('utc_offset', 9):+d}"
@@ -173,7 +175,7 @@ def command_definitions():
         return {'name': name, 'value': values}
     repository = {'type':3, 'name':'repository', 'description':'Choose a connected repository.', 'autocomplete':True}
     integers = [('review_hours','Repeat open PR reminders every N hours; 0 disables reminders.',0,720),('batch_seconds','Batch interval: 0, 60, or 300 seconds.',0,300),('digest_hour','Digest hour in the configured time zone.',0,23),('digest_weekday','Weekly digest weekday: Monday 0 through Sunday 6.',0,6),('utc_offset','Time zone offset from UTC in whole hours.',-12,14),('quiet_start','Quiet hours start, in the configured time zone.',0,23),('quiet_end','Quiet hours end, in the configured time zone.',0,23)]
-    options = [repository]
+    options = [repository, {'type':3,'name':'language','description':'Notification language for this repository.','choices':[choice('Korean (KR)','ko'),choice('English (EN)','en')]}]
     for name, description, low, high in integers:
         item = {'type':4,'name':name,'description':description,'min_value':low,'max_value':high}
         if name == 'batch_seconds':

@@ -376,7 +376,7 @@ def make_embed(topic, event, payload, language='ko'):
     action = payload.get("action", "updated")
     if event == "workflow_run":
         run = payload["workflow_run"]
-        status = 'CI failed' if english else 'CI 실패'
+        status = 'CI Failed'
         description = (f"{run.get('name', 'PR CI')} failed · {run.get('head_sha', '')[:12]}\nOpen the run to see which checks failed." if english else f"{run.get('name', 'PR CI')} 실패 · {run.get('head_sha', '')[:12]}\n실행 결과에서 실패한 검사를 확인하세요.")
         return {"title": clip(f"PR #{topic.number} · {status}", 230), "url": run["html_url"],
                 "description": clip(description, 3350), "author":{"name":clip(payload.get('sender',{}).get('login','GitHub'),100)},
@@ -386,7 +386,7 @@ def make_embed(topic, event, payload, language='ko'):
         action = "merged"
     actor = payload.get("sender", {}).get("login", "GitHub")
     body = obj.get("body") or ""
-    if event in ('issues', 'discussion', 'pull_request', 'pull_request_target') and action in ('review_requested', 'review_request_removed', 'synchronize', 'assigned', 'unassigned', 'milestoned', 'demilestoned', 'labeled', 'unlabeled', 'converted_to_draft', 'typed', 'untyped', 'field_added', 'field_removed', 'closed', 'merged'):
+    if event in ('issues', 'discussion', 'pull_request', 'pull_request_target') and action in ('review_requested', 'review_request_removed', 'synchronize', 'assigned', 'unassigned', 'milestoned', 'demilestoned', 'labeled', 'unlabeled', 'converted_to_draft', 'typed', 'untyped', 'field_added', 'field_removed', 'closed', 'merged', 'reopened', 'deleted', 'answered', 'unanswered', 'locked', 'unlocked'):
         body = ''
     if event in ('pull_request', 'pull_request_target') and action == 'synchronize':
         before, after = str(payload.get('before', '')), str(payload.get('after', ''))
@@ -401,7 +401,7 @@ def make_embed(topic, event, payload, language='ko'):
         if payload.get(key):
             item = payload[key]
             labels = {'label': ('Label','라벨'), 'assignee': ('Assignee','담당자'), 'requested_reviewer': ('Reviewer','리뷰어'), 'milestone': ('Milestone','마일스톤')}
-            extras.append(labels[key][0 if english else 1] + ': ' + str(item.get('name') or item.get('login') or item.get('title', '')))
+            extras.append(labels[key][0] + ': ' + str(item.get('name') or item.get('login') or item.get('title', '')))
     if payload.get('requested_team'):
         extras.append('requested_team: ' + str(payload['requested_team'].get('slug', '')))
     if extras:

@@ -258,15 +258,23 @@ class Service:
                            or options.get('quiet') or options.get('digest', 'off') != 'off')
                 runtime = TeamNotifications(binding, self.queue(binding), api)
                 notices = runtime if enabled or runtime.has_pending() else None
+                from connection_welcome import ConnectionWelcome
+                welcome = ConnectionWelcome(self,binding,api,self.queue(binding))
                 scheduled_stop = threading.Event()
                 def scheduled(runtime=runtime, scheduled_stop=scheduled_stop):
                     while not stop.is_set() and not scheduled_stop.is_set() and self.registry.get(binding.id) == binding:
                         try:
-                            runtime.tick(self.github(binding))
+                            github = self.github(binding)
+                            if welcome.pending():
+                                welcome.tick(github)
+                            if notices:
+                                runtime.tick(github)
+                            elif not welcome.pending():
+                                return
                         except Exception as error:
                             log_exception(LOG,'Scheduled notifications retry binding=%s error=%s', binding.id, type(error).__name__)
                         scheduled_stop.wait(1)
-                scheduler = threading.Thread(target=scheduled, daemon=True) if notices else None
+                scheduler = threading.Thread(target=scheduled, daemon=True) if notices or welcome.pending() else None
                 if scheduler:
                     scheduler.start()
                 try:
@@ -287,6 +295,8 @@ class Service:
         from presence import Presence
         presence_worker = Presence(self).start(stop)
         self.guilds.start(stop)
+        from channel_topics import ChannelTopics
+        ChannelTopics(self).start(stop)
         from ci_channel_migration import CiChannelMigration
         CiChannelMigration(self).start(stop)
         from webhook_recovery import WebhookRecovery

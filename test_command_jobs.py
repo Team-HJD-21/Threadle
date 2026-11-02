@@ -121,3 +121,13 @@ class CommandTests(unittest.TestCase):
         self.assertEqual([c.args[0] for c in api.call.call_args_list], ['GET', 'PATCH', 'POST'])
         self.assertTrue(all(c['description'].isascii() for c in command_definitions()))
         self.assertTrue(all(c['default_member_permissions'] == '32' for c in command_definitions()))
+
+    def test_language_is_saved_for_only_the_selected_repository(self):
+        second=self.service.registry.add('two',22,'two/repo',101,'app',dict(config(2000),guild_id='1000',language='en'))
+        self.jobs.execute(self.payload(repository=self.identity,language='KR'))
+        self.assertEqual(self.service.registry.get(self.identity).config['language'],'ko')
+        self.assertEqual(self.service.registry.get(second).config['language'],'en')
+        self.jobs.execute(self.payload(repository=self.identity,language='EN'))
+        self.assertEqual(self.service.registry.get(self.identity).config['language'],'en')
+        with self.assertRaises(ValueError):self.jobs.execute(self.payload(repository=self.identity,language='invalid'))
+

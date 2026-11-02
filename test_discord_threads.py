@@ -114,7 +114,7 @@ class RoutingTests(unittest.TestCase):
         api.call.return_value = {"number": 33, "title": "CI target"}
         topics = m.route("workflow_run", event, api)
         self.assertEqual(("pr", 33), (topics[0].kind, topics[0].number))
-        self.assertIn("CI 실패", m.make_embed(topics[0], "workflow_run", event)["title"])
+        self.assertIn("CI Failed", m.make_embed(topics[0], "workflow_run", event)["title"])
         event["workflow_run"]["conclusion"] = "success"
         self.assertEqual([], m.route("workflow_run", event, api))
 

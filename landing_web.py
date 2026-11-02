@@ -13,12 +13,11 @@ def home(session, signed_in=False):
     navigation = ('<nav class="product-nav" aria-label="' + t('제품 메뉴', 'Product navigation') + '">'
                   '<a href="#features">' + t('기능', 'Features') + '</a><a href="#setup">' + t('연결 방법', 'Setup')
                   + '</a><a href="#plans">' + t('이용 안내', 'Plans') + '</a><a href="#faq">FAQ</a></nav>')
-    manage = '<a class="manage-link" href="/connect/guilds">' + t('연결 관리', 'Manage connections') + '</a>' if signed_in else ''
     body = navigation + '<section class="product-hero" aria-labelledby="hero-title"><div class="hero-copy">'
     body += '<p class="eyebrow">GITHUB → DISCORD</p>'
     body += '<h1 id="hero-title">' + t('GitHub 알림을', 'GitHub notifications.') + '<br><em>' + t('Discord에 정리하세요.', 'Organized in Discord.') + '</em></h1>'
     body += '<p class="hero-description">' + t('PR, 이슈, Discussion마다 스레드를 만들고 관련 댓글과 리뷰를 모아줍니다. 새 활동은 알림 채널에서 확인하세요.', 'Each PR, issue, and discussion gets a thread for its comments and reviews. New activity appears in your notification channel.') + '</p>'
-    body += '<div class="hero-actions">' + start() + '<a class="text-link" href="#preview">' + t('작동 예시 보기', 'Explore the preview') + ' ↓</a></div>' + manage
+    body += '<div class="hero-actions">' + start() + '<a class="text-link" href="#preview">' + t('작동 예시 보기', 'Explore the preview') + ' ↓</a></div>'
     body += '<p class="hero-note">' + t('베타 무료 이용 · 개인 GitHub 토큰 입력 없음', 'Free during beta · No personal GitHub token to paste') + '</p></div>'
     body += '<div class="demo-frame" id="preview"><input class="sr-only" type="radio" name="preview-kind" id="preview-pr" checked><input class="sr-only" type="radio" name="preview-kind" id="preview-issue"><input class="sr-only" type="radio" name="preview-kind" id="preview-ci">'
     body += '<div class="demo-top"><span><span class="demo-mark" aria-hidden="true">↳</span> launchpad</span><span class="demo-example">' + t('작동 예시', 'Illustrative preview') + '</span></div>'
