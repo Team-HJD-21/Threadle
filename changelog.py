@@ -84,6 +84,8 @@ def content(t):
             ('조용한 시간의 표시 이름을 방해금지 시간으로 변경합니다. 기존 시간 설정은 그대로 유지합니다.', 'Quiet hours are now called Do Not Disturb. Existing configured times are preserved.'),
             ('방해금지 중 PR·Issue·Discussion 상세 알림은 silent로 바로 전달하고, 종료 후 변경된 항목의 스레드 링크를 alert 채널에서 모아 안내합니다. 기존 대기 알림도 이 요약으로 전환하며 재시작·전송 재시도 기록을 유지합니다.', 'PR, issue and discussion updates arrive immediately and silently during Do Not Disturb. Afterwards, alert shows a roundup linking to changed threads. Previously deferred heads-ups join the roundup, with durable restart and retry recovery.'),
             ('CI/CD 상태와 실패 경고는 방해금지 시간에도 즉시 전달합니다. CI/CD 채널은 항상 silent이며 alert의 실패 경고는 일반 알림으로 전송합니다.', 'CI/CD status and failure alerts bypass Do Not Disturb. The CI/CD channel always stays silent, while failure warnings in alert use regular notifications.')])]))
+    groups.insert(0, ('v1.0.0-beta.7', '삭제된 Issue 처리 수정', 'Fix deleted issue cleanup', [
+        ('오류 수정', 'Fix', [('삭제된 Issue 조회 시 GitHub의 410 Gone 응답을 처리해 시작 메시지와 스레드를 정리합니다. 404 호환 처리는 유지하고 인증·권한·서버 오류는 삭제로 취급하지 않습니다.', 'Handle GitHub 410 Gone responses for deleted issues so their starter message and thread are removed. Existing 404 handling remains, while authentication, permission and server errors never authorize deletion.')])]))
     for version,ko,en,sections in groups:
         body += '<article class="patch-entry"><p class="patch-label">' + version + ' · ' + t(ko,en) + '</p>'
         for heading_ko,heading_en,items in sections:
