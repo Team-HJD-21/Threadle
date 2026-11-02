@@ -71,3 +71,5 @@ button:active:not(:disabled),.button:active { transform:translateY(0); }
  button,.button,.language-switcher a,.product-nav a { transition:none; }
  button:hover:not(:disabled),a.button:hover { transform:none!important; }
 }
+
+.legal-confirmation{border:1px solid #495854;border-radius:12px;padding:20px;margin:24px 0;min-width:0}.legal-confirmation legend{font-weight:700;padding:0 8px}.legal-check{display:flex;align-items:flex-start;gap:12px;margin:16px 0!important;line-height:1.6;cursor:pointer}.legal-check input{flex:0 0 auto;width:20px;height:20px;margin:4px 0;accent-color:#d9eea6}.legal-check span{min-width:0;overflow-wrap:anywhere}.legal-confirmation a{text-decoration:underline}.legal-confirmation input:focus-visible{outline:3px solid #d9eea6;outline-offset:4px}@media(max-width:520px){.legal-confirmation{padding:14px}.legal-check{gap:10px}}

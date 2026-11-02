@@ -45,7 +45,7 @@ def prepare(root, source, job):
         if target.is_symlink() or not target.resolve().is_relative_to(root.resolve()):
             raise ValueError('Unexpected target location: ' + name)
         actual = digest(target.read_bytes()) if target.exists() else None
-        if actual not in [rule['before'], rule['after']]:
+        if actual not in [rule['before'], rule['after'], *rule.get('previous', [])]:
             raise ValueError('Server differs from supported baseline; no files changed: ' + name)
     job.mkdir(parents=True)
     candidate = job / 'candidate'

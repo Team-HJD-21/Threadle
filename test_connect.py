@@ -302,6 +302,7 @@ class WebFixture(unittest.TestCase):
         self.users, self.bot = FakeUsers(), FakeBot()
         self.service.discord = lambda: self.bot
         self.install_api = Mock()
+        self.install_api.pages.return_value = []
         self.install_api.call.side_effect = lambda method, path: {
             'id': int(path.rsplit('/', 1)[1]), 'full_name': 'user' + ('1' if path.endswith('/11') else '2') + '/repo'}
         self.service.github = lambda binding: self.install_api
@@ -323,6 +324,9 @@ class WebFixture(unittest.TestCase):
 
     def post(self, path, fields=None, browser=None):
         browser = browser or self.browser
+        if path in ('/connect/save', '/connect/team/options', '/connect/team/apply'):
+            from legal_consent import VERSION
+            fields = {'legal_version': VERSION, 'legal_terms': '1', 'legal_age': '1', 'legal_audience': '1', **(fields or {})}
         return browser.request('POST', path, {'csrf': self.session(browser).data['csrf'], **(fields or {})})
 
     def login(self, provider, user='1', browser=None):

@@ -423,7 +423,8 @@ class TeamWebTests(WebFixture):
         result = self.browser.request('GET', '/connect/team?lang=en')
         self.assertEqual(result[0], 200)
         self.assertIn('Team notifications', result[2])
-        self.assertIn('4 hours after a review request', result[2])
+        self.assertIn('Recurring open PR reminders', result[2])
+        self.assertIn('Every 4 hours', result[2])
         self.assertNotIn('나누지 않기', result[2])
 
     def test_directory_browsing_keeps_name_and_selection_and_can_remove_a_chip(self):
@@ -476,7 +477,7 @@ class TeamWebTests(WebFixture):
         csp = response[1]['Content-Security-Policy']
         self.assertIn("script-src 'self'; connect-src 'self'", csp)
         self.assertNotIn("script-src 'unsafe-inline'", csp)
-        self.assertNotIn("script-src", self.browser.request('GET', '/connect')[1]['Content-Security-Policy'])
+        self.assertIn("script-src 'self'", self.browser.request('GET', '/connect')[1]['Content-Security-Policy'])
 
     def test_other_server_connection_cannot_be_configured(self):
         self.configure()
