@@ -46,7 +46,7 @@
     },
     "changelog.py": {
       "before": "261336f2f039d63348697c8fb4f9f7ec8f25c959ad6f0e2ccd74230f8c208e28",
-      "after": "d20da6e332fac770f2372ffa8b10824b6c1be80695fcd275324c160badfb59df",
+      "after": "827b52ee4bd4cdbc1231fb483117cf4651986420dea51f62b428f8f526829bd2",
       "previous": [
         "ce59507c70872a51ef2bbd42a7ee232a5bd4e2692a6b0c8903887594a1e59b90",
         "70c46b09eeacc09189050699f22f47224d0f1b157c741d0f25f9f51bd23af677",
@@ -62,7 +62,8 @@
         "7b7d27e87ee758ff10144841f0b7fdf67f97d816029c5341e223631fda7ffd1e",
         "2481bef13c59c6f9cfa9cc48b255974de399b042a341c21d0982a44ce9fdc6a1",
         "1ae7d27d99b3575848471edfd3a1d9091a58db9d003477ad5e9a21c65052e74b",
-        "a79dc122fa03b032f7f473aeb0a22b53c8a5710943979a5cca3d7e613f8587fc"
+        "a79dc122fa03b032f7f473aeb0a22b53c8a5710943979a5cca3d7e613f8587fc",
+        "d20da6e332fac770f2372ffa8b10824b6c1be80695fcd275324c160badfb59df"
       ]
     },
     "web_assets/preview.js": {
@@ -87,14 +88,15 @@
     },
     "service.py": {
       "before": "8ef021eb91f276ae424209884b25cd423995d41e1455bbb6bfd63a0ab0206d1e",
-      "after": "d5803edb5ff6c86686f331aeacb4a3cf2c935396e2f72002464393de5c111e6b",
+      "after": "6d361f75242b9cfe4d42048de08bdd9adcdd24bef5f52cceb20be322fc6b8de2",
       "previous": [
         "2b39caa084daa3eaa290f3bf3573d907c4d36513a97abf24be24bc9458e3f397",
         "a687e18707282836bb64ec6159556183889032368eacccaaacf86ba8116a1588",
         "d9fcdfc98170c6eef7ea26bed0d37aa1aad4a93cf35b80ebaa58397a2feaeae0",
         "759d7f169b28d267c62703108b3e6703ede6f12fb941021fa24b4dca9f53f688",
         "bbb2afed752fe32d328521735852e8bca7e093ceff36f61cc4dac54c986eebd2",
-        "f613a62c2dd6340e497c8103f1ec6e9d8b702860205b2a02eaf4eeac454969f0"
+        "f613a62c2dd6340e497c8103f1ec6e9d8b702860205b2a02eaf4eeac454969f0",
+        "d5803edb5ff6c86686f331aeacb4a3cf2c935396e2f72002464393de5c111e6b"
       ]
     },
     "auth.py": {
@@ -103,12 +105,13 @@
     },
     "discord_threads.py": {
       "before": "0b353710016c6563fda1178e599cacca7ab802854803040f0866ef940dcbec94",
-      "after": "3906639ac0f4053fd2180f252dd8eb72867c93fec11cdaa1de90d10e4e905afb",
+      "after": "ebcc763812ec90b23713c18ec237c02382b17355e9b91c11aba9c0bd91dce8a5",
       "previous": [
         "7db8a83427bc41833c8673eb12f23da21cad41888357873706070557c0d50cd5",
         "11914c2dee5b538656765b97ba424055a2ed686dd6e543be11390b0c20dcd7a5",
         "bd72a21863867b5a2d35d096e88648457ec31c1e5e45812f1333a0a223fd3557",
-        "327bc8047b39b138d7c8849f05543a7260cf7935110ddfad8fc8b1ad71b3a618"
+        "327bc8047b39b138d7c8849f05543a7260cf7935110ddfad8fc8b1ad71b3a618",
+        "3906639ac0f4053fd2180f252dd8eb72867c93fec11cdaa1de90d10e4e905afb"
       ]
     },
     "notification_media.py": {
@@ -282,7 +285,10 @@
     },
     "dnd_notifications.py": {
       "before": null,
-      "after": "a17fcd0301659bbaa57c1552b82ef7ba18e8a8dac7b95d226edcb737a0dd31c3"
+      "after": "953c375d71a94d6ccc46d27731bdbd8b1bdf7ebd15e39f1104275441381b3c4c",
+      "previous": [
+        "a17fcd0301659bbaa57c1552b82ef7ba18e8a8dac7b95d226edcb737a0dd31c3"
+      ]
     },
     "legal_pages.py": {
       "before": "a573811f0fe01da7d8653fc1044f380e84afb92530d8d79e5b27de9aa3e5fd4c",
@@ -291,6 +297,13 @@
     "digest_settings.py": {
       "before": null,
       "after": "a0f09fe8e613f1cbe23b7e673fd05e004996cd69674796b3a1f9df1ed7de5129"
+    },
+    "root_status.py": {
+      "before": null,
+      "after": "73ec419d8148be6f50b09330274d2476debfa9434ccb689cacba37bcf3417b59",
+      "previous": [
+        "ce79462d35a1c2678530257bc872ff5a130e0b2b6be03681a5fc9beb7102f75f"
+      ]
     }
   }
 }

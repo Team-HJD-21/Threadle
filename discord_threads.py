@@ -322,13 +322,11 @@ class Threads:
         existing = self.find(channel, topic)
         if existing:
             return existing
+        from root_status import starter_embed
         root = self.api.call("POST", f"/channels/{channel}/messages", {
             "allowed_mentions": {"parse": []}, "nonce": nonce(channel+":"+topic.key), "enforce_nonce": True,
             **({"flags":1<<12} if self.notifications_suppressed() else {}),
-            "embeds": [{"title": clip(f"{topic.kind.upper()} #{topic.number} · {topic.title}", 230),
-                        "url": topic.url, **({"description": root_description(topic, self.language == 'en')} if root_description(topic, self.language == 'en') else {}),
-                        "author": {"name": clip(topic.metadata.get('user', {}).get('login', 'GitHub'), 100)},
-                        "footer": {"text": topic.key}, **({"timestamp": iso_timestamp(topic.metadata.get("created_at"))} if iso_timestamp(topic.metadata.get("created_at")) else {})}]})
+            "embeds":[starter_embed(topic)]})
         return self.start(channel, root["id"], topic)
 
     def delivered(self, thread, receipt):

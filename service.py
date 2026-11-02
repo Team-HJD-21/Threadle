@@ -207,6 +207,9 @@ class Service:
             dnd_until=delivery_mode(queue,delivery,event,binding.config.get('team_notifications',{}),time.time())
             topics = route(route_event, payload, github)
             for topic in topics:
+                from root_status import TopicRoots
+                roots=TopicRoots(threads,github)
+                if roots.handle_deleted(topic,event,payload):continue
                 from notification_layout import hydrate_issue_fields, resolve_changed_fields
                 resolve_changed_fields(topic,payload,github)
                 topic = hydrate_issue_fields(topic,payload,github)
@@ -228,9 +231,10 @@ class Service:
                     routed.bot = threads.bot
                     routed.media_fetcher = getattr(github, "fetch_media", None)
                 routed.silent_notifications=lambda:bool(delivery_mode(queue,delivery,event,binding.config.get('team_notifications',{}),time.time()))
+                roots.threads=routed
                 from message_edits import deliver_events
                 thread = deliver_events(routed,topic,event,payload,'webhook:'+delivery,
-                                        lambda topic=topic: current_closed(topic,github),binding.config.get('language','ko'))
+                                        lambda topic=topic: roots.closed(topic),binding.config.get('language','ko'))
                 if notices:
                     if event == 'threadle_bundle':
                         for index,item in enumerate(payload['_events']):

@@ -80,8 +80,12 @@ class DndRoundup:
                 batch={'period':period,'rows':rows}
                 raw=json.dumps(batch,ensure_ascii=False,sort_keys=True);identity='dnd:'+nonce(raw)
                 db.execute('INSERT INTO dnd_roundups VALUES(?,?)',(identity,raw))
+        with self.queue.connect() as db:
+            exists=db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='deleted_topics'").fetchone()
+            deleted={row[0] for row in db.execute('SELECT topic FROM deleted_topics')} if exists else set()
         topics={}
         for event,topic,kind,number,title,thread,url in batch['rows']:
+            if topic in deleted:continue
             row=topics.setdefault(topic,{'kind':kind,'number':number,'title':title,'thread':thread,'count':0})
             row['count']+=1
         lines=[]

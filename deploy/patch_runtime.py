@@ -71,7 +71,7 @@ def prepare(root, source, job):
     for path in candidate.glob('*.py'):
         ast.parse(path.read_bytes(), filename=path.name)
     check = ('import sys; sys.path.insert(0,sys.argv[1]); '
-             'import digest_settings, dnd_notifications, message_edits, commit_notifications, notification_markdown, service, auth, discord_threads, notification_media, demo_web, channel_topics, connection_welcome, notification_language; '
+             'import root_status, digest_settings, dnd_notifications, message_edits, commit_notifications, notification_markdown, service, auth, discord_threads, notification_media, demo_web, channel_topics, connection_welcome, notification_language; '
              'assert callable(auth.RepositoryApi.fetch_media); '
              'assert callable(notification_media.installation_image); '
              'assert demo_web.demonstration(lambda ko,en:en).count("preview-case ")==5; '
