@@ -178,16 +178,16 @@ class NotificationTests(unittest.TestCase):
         notices.flush()
         self.assertEqual(len(self.api.messages), 2)
 
-    def test_non_pr_ci_failure_is_delayed_during_quiet_hours(self):
+    def test_non_pr_ci_failure_bypasses_dnd(self):
         self.now[0] += 23 * 3600
         notices = self.notices(quiet=True, quiet_start=22, quiet_end=8, utc_offset=0)
         notices.ci('owner/repo', {'workflow_run': {'id': 1, 'event': 'push', 'conclusion': 'failure', 'name': 'Build', 'html_url': 'https://github.com/owner/repo/actions/runs/1'}}, 'ci1')
-        self.assertEqual(self.api.messages, [])
+        self.assertEqual(len(self.api.messages), 1)
         self.now[0] += 9 * 3600
         notices.flush()
         self.assertEqual(len(self.api.messages), 1)
 
-    def test_ci_detail_is_immediate_but_alert_observes_quiet_hours(self):
+    def test_ci_detail_and_failure_alert_are_immediate_during_dnd(self):
         self.now[0] += 23 * 3600
         notices = self.notices(quiet=True, quiet_start=22, quiet_end=8, utc_offset=0)
         notices.binding.config['ci_channel'] = '105'
@@ -195,7 +195,7 @@ class NotificationTests(unittest.TestCase):
                    'name': 'Deploy', 'html_url': 'https://github.com/owner/repo/actions/runs/1'}}
         notices.ci('owner/repo', payload, 'ci1')
         notices.ci('owner/repo', payload, 'ci1')
-        self.assertEqual([path for path, _ in self.api.messages], ['/channels/105/messages'])
+        self.assertEqual([path for path, _ in self.api.messages], ['/channels/105/messages', '/channels/104/messages'])
         self.now[0] += 9 * 3600
         notices.flush()
         self.assertEqual([path for path, _ in self.api.messages], ['/channels/105/messages', '/channels/104/messages'])
@@ -319,6 +319,20 @@ class DeliveryIntegrationTests(unittest.TestCase):
 
 
 class TeamWebTests(WebFixture):
+    def test_web_independent_digest_switches_can_be_saved_and_reopened(self):
+        self.configure();self.browser.request('GET','/connect/team')
+        response=self.post('/connect/team/options',{'apply':'1','daily_digest':'1','weekly_digest':'1','digest_hour':'9','weekly_digest_hour':'17','digest_weekday':'4'})
+        self.assertEqual(response[0],303)
+        saved=self.service.registry.active()[0]
+        self.assertTrue(saved.config['team_notifications']['daily_digest'])
+        self.assertTrue(saved.config['team_notifications']['weekly_digest'])
+        response=self.browser.request('GET','/connect/team?lang=en&binding='+saved.id)
+        self.assertIn('Enable daily digest',response[2]);self.assertIn('Enable weekly digest',response[2])
+        self.post('/connect/team/options',{'apply':'1','daily_digest':'0','weekly_digest':'1'})
+        options=self.service.registry.get(saved.id).config['team_notifications']
+        self.assertFalse(options['daily_digest']);self.assertTrue(options['weekly_digest'])
+        self.assertEqual(options['weekly_digest_hour'],17)
+
     def test_new_basic_connection_defaults_to_friday_without_migrating_old_schedules(self):
         self.configure()
         self.post('/connect/save')

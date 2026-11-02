@@ -239,6 +239,10 @@ class Threads:
         self.language = language
         self.bot = None
         self.media_fetcher = None
+        self.silent_notifications = False
+
+    def notifications_suppressed(self):
+        return bool(self.silent_notifications() if callable(self.silent_notifications) else self.silent_notifications)
 
     def check(self):
         self.bot = self.api.call("GET", "/users/@me")
@@ -318,12 +322,11 @@ class Threads:
         existing = self.find(channel, topic)
         if existing:
             return existing
+        from root_status import starter_embed
         root = self.api.call("POST", f"/channels/{channel}/messages", {
             "allowed_mentions": {"parse": []}, "nonce": nonce(channel+":"+topic.key), "enforce_nonce": True,
-            "embeds": [{"title": clip(f"{topic.kind.upper()} #{topic.number} · {topic.title}", 230),
-                        "url": topic.url, **({"description": root_description(topic, self.language == 'en')} if root_description(topic, self.language == 'en') else {}),
-                        "author": {"name": clip(topic.metadata.get('user', {}).get('login', 'GitHub'), 100)},
-                        "footer": {"text": topic.key}, **({"timestamp": iso_timestamp(topic.metadata.get("created_at"))} if iso_timestamp(topic.metadata.get("created_at")) else {})}]})
+            **({"flags":1<<12} if self.notifications_suppressed() else {}),
+            "embeds":[starter_embed(topic)]})
         return self.start(channel, root["id"], topic)
 
     def delivered(self, thread, receipt):
@@ -357,7 +360,7 @@ class Threads:
                 sent = self.api.call("POST", f"/channels/{thread_id}/messages", {
                     "embeds": embeds, "allowed_mentions": {"parse": []},
                     **({'_files': files} if files else {}),
-                    "nonce": nonce(thread_id+":"+receipt), "enforce_nonce": True})
+                    "nonce": nonce(thread_id+":"+receipt), "enforce_nonce": True, **({"flags":1<<12} if self.notifications_suppressed() else {})})
                 self.remember_delivery(receipt, sent["id"])
         # Read current GitHub state after sending, not an older queued close/reopen event.
         if closed():

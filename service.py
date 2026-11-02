@@ -203,8 +203,13 @@ class Service:
             if feed and event == 'workflow_run':
                 feed.ci_detail(binding.repo, payload, 'webhook:' + delivery)
                 (notices or feed).ci(binding.repo, payload, 'webhook:' + delivery)
+            from dnd_notifications import delivery_mode
+            dnd_until=delivery_mode(queue,delivery,event,binding.config.get('team_notifications',{}),time.time())
             topics = route(route_event, payload, github)
             for topic in topics:
+                from root_status import TopicRoots
+                roots=TopicRoots(threads,github)
+                if roots.handle_deleted(topic,event,payload):continue
                 from notification_layout import hydrate_issue_fields, resolve_changed_fields
                 resolve_changed_fields(topic,payload,github)
                 topic = hydrate_issue_fields(topic,payload,github)
@@ -225,9 +230,11 @@ class Service:
                     routed = CachedThreads(threads.api, binding.config['guild_id'], dict(binding.config['channels'], pr=destination), queue, binding.config.get('language', 'ko'))
                     routed.bot = threads.bot
                     routed.media_fetcher = getattr(github, "fetch_media", None)
+                routed.silent_notifications=lambda:bool(delivery_mode(queue,delivery,event,binding.config.get('team_notifications',{}),time.time()))
+                roots.threads=routed
                 from message_edits import deliver_events
                 thread = deliver_events(routed,topic,event,payload,'webhook:'+delivery,
-                                        lambda topic=topic: current_closed(topic,github),binding.config.get('language','ko'))
+                                        lambda topic=topic: roots.closed(topic),binding.config.get('language','ko'))
                 if notices:
                     if event == 'threadle_bundle':
                         for index,item in enumerate(payload['_events']):
@@ -237,7 +244,8 @@ class Service:
                     channels = {g['channel'] for g in targets}
                     if not channels or destination == binding.config['channels']['pr']:
                         channels.add(binding.config['alert_channel'])
-                    notices.topic(topic, event, payload, 'webhook:' + delivery, thread, channels)
+                    dnd_until=delivery_mode(queue,delivery,event,binding.config.get('team_notifications',{}),time.time())
+                    notices.topic(topic, event, payload, 'webhook:' + delivery, thread, channels, dnd_until=dnd_until)
                 elif feed:
                     feed.topic(topic, event, payload, 'webhook:' + delivery, thread)
             queue.finish_group(group_ids)
@@ -257,8 +265,9 @@ class Service:
                 if feed:
                     feed.check()
                 options = binding.config.get('team_notifications', {})
+                from digest_settings import enabled as digest_enabled
                 enabled = (binding.config.get('routing_groups') or options.get('review_hours') or options.get('batch_seconds')
-                           or options.get('quiet') or options.get('digest', 'off') != 'off')
+                           or options.get('quiet') or digest_enabled(options,'daily') or digest_enabled(options,'weekly'))
                 runtime = TeamNotifications(binding, self.queue(binding), api)
                 notices = runtime if enabled or runtime.has_pending() else None
                 from connection_welcome import ConnectionWelcome

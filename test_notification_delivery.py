@@ -48,7 +48,7 @@ class DeliveryTests(unittest.TestCase):
     def test_settings_description_shows_effective_weekly_time(self):
         from command_jobs import CommandJobs
         text=CommandJobs.describe('owner/repo',{'digest':'weekly','digest_hour':9,'weekly_digest_hour':17,'digest_weekday':4})
-        self.assertIn('weekly · 17:00 · Friday',text)
+        self.assertIn('On · Friday · 17:00',text)
 
     def test_summary_parentheses_have_no_visible_escape(self):
         item={'number':1,'title':'Fix (mobile) [screen]','createdAt':''}
