@@ -623,7 +623,7 @@ class Onboarding:
                 session.data.pop('team_draft', None)
             self.sessions.save(session)
             LOG.info('Connected binding=%s', identity)
-            return self.redirect(request, '/connect/team?saved=1#team-options' if fields.get('team_apply') == '1' else '/connect/done')
+            return self.redirect(request, '/connect/team?saved=1#team-options' if fields.get('team_apply') == '1' and existing else '/connect/done')
         raise ConnectError('요청을 찾을 수 없습니다.', 404)
 
     def handle(self, request):

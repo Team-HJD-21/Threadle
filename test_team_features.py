@@ -368,12 +368,17 @@ class TeamWebTests(WebFixture):
         self.browser.request('GET', '/connect/team')
         response = self.post('/connect/team/options', {'apply': '1', 'review_hours': '12'})
         self.assertEqual(response[0], 303)
-        self.assertEqual(response[1]['Location'], '/connect/team?saved=1#team-options')
-        self.assertIn('설정이 적용됐어요.', self.browser.request('GET', response[1]['Location'])[2])
+        self.assertEqual(response[1]['Location'], '/connect/done')
+        done = self.browser.request('GET', response[1]['Location'])
+        self.assertEqual(done[0], 200)
+        self.assertIn('연결이 완료됐어요.', done[2])
         saved = self.service.registry.active()[0]
         self.assertEqual(saved.config['team_notifications']['review_hours'], 12)
         self.assertEqual(self.browser.request('GET', '/connect/team?binding=' + saved.id)[0], 200)
-        self.assertEqual(self.post('/connect/team/options', {'apply': '1', 'review_hours': '24'})[0], 303)
+        updated = self.post('/connect/team/options', {'apply': '1', 'review_hours': '24'})
+        self.assertEqual(updated[0], 303)
+        self.assertEqual(updated[1]['Location'], '/connect/team?saved=1#team-options')
+        self.assertIn('설정이 적용됐어요.', self.browser.request('GET', updated[1]['Location'])[2])
         self.assertEqual(self.service.registry.get(saved.id).config['team_notifications']['review_hours'], 24)
 
     def test_stale_settings_cannot_overwrite_a_newer_saved_configuration(self):
