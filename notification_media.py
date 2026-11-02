@@ -79,10 +79,12 @@ def fit_image(raw, extension, mime):
         from PIL import Image, ImageOps
     except ImportError:
         return None
+    if int(Image.__version__.split('.')[0]) < 13:
+        return None
     try:
         with IMAGE_WORKER, warnings.catch_warnings():
             warnings.simplefilter('error',Image.DecompressionBombWarning)
-            with Image.open(io.BytesIO(raw)) as original:
+            with Image.open(io.BytesIO(raw), formats=('PNG','JPEG','GIF','WEBP')) as original:
                 pixels=original.width*original.height
                 frames=getattr(original,'n_frames',1)
                 if pixels>24_000_000 or frames>150 or pixels*frames>120_000_000:

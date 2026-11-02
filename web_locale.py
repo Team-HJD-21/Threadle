@@ -12,6 +12,7 @@ COOKIE = '__Host-ghd-language'
 
 EN = {
     '이용약관': 'Terms of Service',
+    '개인정보 요청': 'Privacy requests',
     '명령어 동기화:': 'Command sync:',
     'Discord 등록 확인됨': 'Discord registration verified',
     'Discord 명령어 등록 재시도 중': 'Retrying Discord command registration',

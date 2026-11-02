@@ -58,6 +58,7 @@ class Retention:
                 db.execute('DELETE FROM bindings WHERE id=? AND enabled=0',(identity,))
                 db.execute('DELETE FROM retired_bindings WHERE id=?',(identity,))
                 db.execute('DELETE FROM connection_audit WHERE binding=?',(identity,))
+                db.execute('DELETE FROM legal_acceptances WHERE binding=?',(identity,))
                 db.execute('DELETE FROM admin_audit WHERE binding=?',(identity,))
                 db.execute('DELETE FROM admin_paused WHERE id=?',(identity,))
                 db.execute('DELETE FROM connection_retention WHERE id=?',(identity,))
@@ -111,6 +112,8 @@ class Retention:
         with self.service.file_index.connect() as db:
             db.execute('PRAGMA secure_delete=ON')
             db.execute('DELETE FROM pr_files WHERE created<?',(self.clock()-7*86400,))
+        from operational_retention import purge_operations
+        purge_operations(self.service.root, self.clock())
         return len(expired)
 
     def run(self, stop):

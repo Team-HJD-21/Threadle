@@ -3,11 +3,12 @@ import hashlib
 import hmac
 import json
 import logging
-from logging.handlers import RotatingFileHandler
+from logging.handlers import TimedRotatingFileHandler
 import os
 from pathlib import Path
 import re
 import sqlite3
+import sys
 import threading
 import time
 import uuid
@@ -75,6 +76,9 @@ class Service:
     def __init__(self, root, env=None, api_factory=Api, token_provider=None):
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
+        media = self.root / 'vendor-pillow-13'
+        if media.is_dir() and str(media) not in sys.path:
+            sys.path.insert(0,str(media))
         self.env = os.environ if env is None else env
         self.registry = Registry(self.root / 'connections.sqlite3')
         self.api_factory = api_factory
@@ -393,7 +397,7 @@ def main():
     parser.add_argument('--port', type=int, default=8787)
     args = parser.parse_args()
     service = Service(args.state_dir)
-    log = RotatingFileHandler(service.root / 'receiver.log', maxBytes=2_000_000, backupCount=3, encoding='utf-8')
+    log = TimedRotatingFileHandler(service.root / 'receiver.log', when='midnight', interval=1, backupCount=30, encoding='utf-8', utc=True)
     logging.basicConfig(level=logging.INFO, handlers=[log], format='%(asctime)s %(levelname)s %(message)s')
     bindings = service.registry.active()
     if not bindings and service.web is None:

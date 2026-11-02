@@ -51,7 +51,7 @@ try {
     }
     $folder.GetTask($taskName) | Out-Null
     Invoke-Patch 'prepare'
-    if ($PreflightOnly) { Write-Host ('PREFLIGHT PASSED. Service was not restarted. Job: ' + $job); return }
+    if ($PreflightOnly) { 'preflight' | Set-Content -LiteralPath (Join-Path $job 'result.txt'); Write-Host ('PREFLIGHT PASSED. Service was not restarted. Job: ' + $job); return }
     $stopRequested = $true
     Stop-Receiver
     $stopped = $true

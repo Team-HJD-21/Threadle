@@ -9,4 +9,4 @@ propcache==0.5.4
 typing_extensions==4.16.0
 yarl==1.25.1
 idna==3.20
-Pillow==12.3.0
+Pillow==13.0.0

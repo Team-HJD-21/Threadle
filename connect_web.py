@@ -15,6 +15,7 @@ from discord_threads import ApiError
 from channel_layouts import CHANNELS, ChannelLayouts
 from web_locale import LANGUAGE, PAGE_PATH, PUBLIC_ORIGIN, COOKIE as LANGUAGE_COOKIE, preference, switcher, render, text
 from team_web import TeamWeb
+import legal_consent
 
 COOKIE = '__Host-ghd-session'
 LOG = logging.getLogger('connect')
@@ -77,7 +78,7 @@ CSS += '\n.admin-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)
 def footer():
     return '''<footer class="site-footer"><div class="footer-inner">
 <div class="footer-brand"><a href="https://teamhjd.com/" target="_blank" rel="noopener noreferrer"><img src="/connect/assets/teamhjd-wordmark.png?v=1" width="486" height="98" alt="Team HJD"></a><p class="footer-tagline">Happy Journey of Developers.</p></div>
-<nav class="footer-links" aria-label="하단 메뉴"><a href="https://github.com/Team-HJD-21" target="_blank" rel="noopener noreferrer">GitHub</a><a href="https://store.steampowered.com/app/4336820/The_Developer/" target="_blank" rel="noopener noreferrer">Steam</a><a href="https://teamhjd.com/privacy/index.html#email" target="_blank" rel="noopener noreferrer">support@teamhjd.com</a><a href="/connect/terms">이용약관</a><a href="/connect/privacy">개인정보처리방침</a></nav>
+<nav class="footer-links" aria-label="하단 메뉴"><a href="https://github.com/Team-HJD-21" target="_blank" rel="noopener noreferrer">GitHub</a><a href="https://store.steampowered.com/app/4336820/The_Developer/" target="_blank" rel="noopener noreferrer">Steam</a><a href="https://teamhjd.com/privacy/index.html#email" target="_blank" rel="noopener noreferrer">support@teamhjd.com</a><a href="/connect/terms">이용약관</a><a href="/connect/privacy">개인정보처리방침</a><a href="/connect/privacy#policy-12">개인정보 요청</a></nav>
 <dl class="footer-business">
 <div><dt>상호</dt><dd translate="no" lang="ko">팀 에이치제이디(TeamHJD)</dd></div><div><dt>대표자</dt><dd>황재동</dd></div>
 <div><dt>사업자등록번호</dt><dd>622-10-17519 <a class="business-info-link" href="https://www.ftc.go.kr/bizCommPop.do?wrkr_no=6221017519" target="_blank" rel="noopener noreferrer">(사업자정보확인)</a></dd></div>
@@ -100,7 +101,7 @@ def page(title, body, landing=False):
     extra += '<meta name="robots" content="' + ('index,follow' if public else 'noindex,nofollow') + '">'
     if landing:
         extra += '<link rel="stylesheet" href="/connect/assets/landing.css?v=20261102-2"><link rel="stylesheet" href="/connect/assets/product.css?v=20261102-5">'
-    extra += '<link rel="stylesheet" href="/connect/assets/controls.css?v=20261102-2"><script src="/connect/assets/controls.js?v=1" defer></script>'
+    extra += '<link rel="stylesheet" href="/connect/assets/controls.css?v=20261102-6"><script src="/connect/assets/controls.js?v=1" defer></script>'
     if public:
         canonical_path = '/' if path in ('/', '/connect', '/connect/') else path
         canonical = base + canonical_path + ('?lang=en' if LANGUAGE.get() == 'en' else '')
@@ -449,14 +450,14 @@ class Onboarding:
                              if b.repo_id == repo_id and str(b.config['guild_id']) == str(guild['id'])), None)
             if existing:
                 body += '<p>이미 연결된 저장소입니다. 기존 알림 채널을 그대로 사용합니다.</p>'
-                body += form('/connect/save', session, '<button>기존 연결 확인하기</button>')
+                body += form('/connect/save', session, legal_consent.fields(session) + '<button>기존 연결 확인하기</button>')
             elif not self.layouts.can_manage(self.service.discord(), str(guild['id'])):
                 body += '<p>카테고리와 알림 채널을 자동 생성하려면 봇의 채널 관리 권한이 필요합니다.</p>'
                 body += form('/connect/bot/permissions', session, '<button>채널 생성 권한 승인하기</button>')
             else:
                 body += '<p>아래 카테고리와 채널을 자동으로 생성하고 연결합니다. 이 봇이 이미 만든 채널이 있으면 재사용합니다.</p>'
                 body += '<strong>' + esc(self.layouts.name(guild['id'], repo_id, repo['full_name'])) + '</strong><ul>' + ''.join('<li>' + esc(name) + '</li>' for _, name in CHANNELS) + '</ul>'
-                fields = ''
+                fields = legal_consent.fields(session)
                 fields += '<label for="workflow">CI 워크플로 이름 필터 (선택)</label><input id="workflow" name="workflow" maxlength="1000" placeholder="비워두면 모든 워크플로, 여러 개는 쉼표로 구분">'
                 fields += '<p class="muted">새 카테고리는 서버의 기본 역할 권한을 따릅니다. 비공개 저장소의 알림도 이 채널을 볼 수 있는 서버 구성원에게 공개됩니다.</p><button>카테고리·채널 자동 생성하고 연결하기</button>'
                 body += form('/connect/save', session, fields)
@@ -574,6 +575,7 @@ class Onboarding:
             actual = self.service.github(binding).call('GET', f'/repositories/{repo_id}')
             if int(actual['id']) != repo_id:
                 raise ConnectError('앱이 이 저장소에 접근할 수 없습니다.', 403)
+            consent = legal_consent.receipt(session, fields, str(guild['id']) + '|' + session.data['repository'])
             existing = next((b for b in self.service.registry.active()
                              if b.repo_id == repo_id and str(b.config['guild_id']) == str(guild['id'])), None)
             if existing:
@@ -604,14 +606,15 @@ class Onboarding:
                     raise ConnectError('알림 채널의 접근·전송 권한이 부족합니다. 서버의 채널 권한을 확인한 뒤 다시 시도해 주세요.', 403)
             try:
                 if existing and fields.get('team_apply') == '1':
-                    self.service.registry.configure(existing.id, config, session.data['discord_user'], session.data['github_user'])
+                    self.service.registry.configure(existing.id, config, session.data['discord_user'], session.data['github_user'], consent=consent)
                     identity = existing.id
                 else:
                     identity = self.service.registry.connect(repo_id, actual['full_name'], installation, config,
-                                                             session.data['discord_user'], session.data['github_user'])
+                                                             session.data['discord_user'], session.data['github_user'], consent=consent)
             except ValueError as error:
                 raise ConnectError(str(error), 409) from None
             self.service.registry.save_guild_name(str(guild['id']), guild.get('name'))
+            session.data['legal_acceptance'] = consent
             session.data['completed'] = identity
             if fields.get('team_apply') == '1':
                 session.data.pop('team_draft', None)

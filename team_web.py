@@ -142,7 +142,8 @@ class TeamWeb:
         fields += '<h3>설정 적용</h3><p>선택한 옵션은 아래 버튼을 눌러야 실제 연결에 반영됩니다. 기존 PR 스레드와 대기 중인 알림은 유지됩니다.</p>'
         if query.get('saved') == '1':
             fields += '<div class="team-feedback" role="status">설정이 적용됐어요.</div>'
-        body += form('/connect/team/options', session, fields + '<button name="apply" value="1">채널 생성 및 설정 적용</button>') + '</div><a href="/connect/channels">기본 연결 설정으로 돌아가기</a>'
+        import legal_consent
+        body += form('/connect/team/options', session, fields + legal_consent.fields(session) + '<button name="apply" value="1">채널 생성 및 설정 적용</button>') + '</div><a href="/connect/channels">기본 연결 설정으로 돌아가기</a>'
         body = '<div id="team-settings" data-folder="' + esc(query.get('folder', '')) + '">' + body + '</div><script src="/connect/assets/team-settings.js?v=1" defer></script>'
         return web.send(request, 200, page('팀 알림 설정', body))
 
@@ -230,7 +231,7 @@ class TeamWeb:
             if draft['split'] and not draft['groups']:
                 raise ConnectError('작업 영역을 하나 이상 추가해 주세요.')
             web.sessions.save(session)
-            return web.post(request, '/connect/save', session, {'team_apply': '1', 'csrf': fields['csrf']})
+            return web.post(request, '/connect/save', session, {'team_apply': '1', 'csrf': fields['csrf'], **{k: v for k, v in fields.items() if k.startswith('legal_')}})
         else:
             raise ConnectError('요청을 찾을 수 없습니다.', 404)
         draft.pop('preview', None) if path != '/connect/team/preview' else None

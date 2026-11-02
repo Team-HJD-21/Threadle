@@ -26,6 +26,9 @@ class DeploymentTests(unittest.TestCase):
         (self.root / 'credentials.json').write_text('preserve credentials')
         (self.root / 'queue.sqlite3').write_bytes(b'preserve queued events')
         self.job = self.base / 'job'
+        media = patch('deploy.media_dependency.stage')
+        media.start()
+        self.addCleanup(media.stop)
 
     def tearDown(self):
         self.temp.cleanup()
@@ -61,3 +64,17 @@ class DeploymentTests(unittest.TestCase):
         (self.job / 'backup/service.py').write_text('corrupt')
         with self.assertRaisesRegex(ValueError, 'Backup checksum mismatch'):
             restore(self.root, self.job)
+
+
+    def test_explicit_previous_release_hash_is_accepted_and_restorable(self):
+        from deploy.patch_runtime import digest
+        previous = b'previous_release = True\n'
+        (self.root/'service.py').write_bytes(previous)
+        manifest = {'version':'test','files':{'service.py':{
+            'before': digest(b'baseline = True\n'), 'previous':[digest(previous)],
+            'after':digest((self.source/'service.py').read_bytes())}}}
+        with patch('deploy.patch_runtime.read_manifest',return_value=manifest), patch('deploy.patch_runtime.subprocess.run'):
+            prepare(self.root,self.source,self.job)
+        apply(self.root,self.job)
+        restore(self.root,self.job)
+        self.assertEqual((self.root/'service.py').read_bytes(),previous)

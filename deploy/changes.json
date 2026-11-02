@@ -1,10 +1,14 @@
 {
-  "version": "2026.11.02.5",
+  "version": "2026.11.02.6",
   "baseline": "2026.11.02.3 (public-media runtime; updater unchanged)",
   "files": {
     "service.py": {
       "before": "acdd04891a66f0f963049edecc1437383943649f9fe18eb34fa6b7b3bab38bc6",
-      "after": "a2d91034b8ff0f9b9d92782c15acc84bbb0616f16509e301eaac6f3442ba5b58"
+      "after": "8ef021eb91f276ae424209884b25cd423995d41e1455bbb6bfd63a0ab0206d1e",
+      "previous": [
+        "a2d91034b8ff0f9b9d92782c15acc84bbb0616f16509e301eaac6f3442ba5b58",
+        "4507b84e7a273b172f9785111670e71adbf6a9f0f54f4f2f645c835a93632684"
+      ]
     },
     "discord_threads.py": {
       "before": "c35ea787f597459b16d888db66920aae97e876f7c6bd4dc7eb7b5e49d8a0aa2d",
@@ -12,15 +16,25 @@
     },
     "notification_media.py": {
       "before": "be9c356581bed56e8571d2d5fcddae621a76c558d415a2ac2efda996c6596736",
-      "after": "88fa509c3fcfb6a66df539800dea599060155f7d4fb605020040a9cef7776620"
+      "after": "8de2185cda462cf8cff64cc21a3eb38b3849390951cdeafcabc0a720015aa484",
+      "previous": [
+        "88fa509c3fcfb6a66df539800dea599060155f7d4fb605020040a9cef7776620"
+      ]
     },
     "legal_pages.py": {
       "before": "adce22da97bcb71c8406089c66bd3e127748020d65aa4a6c7314bb18a1333ad5",
-      "after": "09c57735ed051da385f8dc8627859e5bf58b46189a8bde2f5ebb56a4fdebfe04"
+      "after": "a573811f0fe01da7d8653fc1044f380e84afb92530d8d79e5b27de9aa3e5fd4c",
+      "previous": [
+        "09c57735ed051da385f8dc8627859e5bf58b46189a8bde2f5ebb56a4fdebfe04"
+      ]
     },
     "changelog.py": {
       "before": "03f19425cfe89c5f1d74e39a5e9d2d27e9cc978d1e4e25a6e0f5b38d1c3e8049",
-      "after": "c1da661578b1e816e952350920553b31b767d8a1c7d9ec9497b412a5fd9e824d"
+      "after": "70c46b09eeacc09189050699f22f47224d0f1b157c741d0f25f9f51bd23af677",
+      "previous": [
+        "c1da661578b1e816e952350920553b31b767d8a1c7d9ec9497b412a5fd9e824d",
+        "ff681bea2940ed4748e492ab5cfb0e3d958d37a63cf171027fa9b15748b6f8aa"
+      ]
     },
     "product_web.py": {
       "before": "99bd32db9363d21f2320c789ab98f0177af7b17e3db9f72693753c782e7e29bc",
@@ -40,7 +54,10 @@
     },
     "connect_web.py": {
       "before": "a435f26b187da16f6d55104002c35b77c03947859026d14bc5a8f7c13da48252",
-      "after": "452b354892c709b183ec8ad346c210648a323918bcae6e1c08d3c90b791cb85c"
+      "after": "c71b37f392a2f9bb79cbe8c361c5e7f45ea94591c0199f198598a1d360930c39",
+      "previous": [
+        "452b354892c709b183ec8ad346c210648a323918bcae6e1c08d3c90b791cb85c"
+      ]
     },
     "alert_feed.py": {
       "before": "e69c288a5e6d51a9857ca53cc65f29cf2e2e2a564b76b41cfefd74951abfd1cd",
@@ -49,6 +66,34 @@
     "team_notifications.py": {
       "before": "38e7160817cb3352bc8ae1182ca62409cd59ba6528d8438163d06a225d1128c2",
       "after": "6904471f68f57f58851b7e4f6c1c4f3d8d72ffedb177a5c20982b5a1ebf15eb6"
+    },
+    "registry.py": {
+      "before": "b74aaa41e493e0f5740ede561dfafc79dbbe9840bfa8539878b51ddb5458bd41",
+      "after": "adfa9743b40023f8e23159262a0e478894d6c7e05a1e24e80348d47bc616b503"
+    },
+    "data_retention.py": {
+      "before": "1e4ccabd49a095fb3252836a0222b6d4884f7ddf4b791a776711dec84578276f",
+      "after": "840d8779cc129d3a9c02ad70e3b8a389955c4c84baa8534aa5ca7d876ab4f2cf"
+    },
+    "team_web.py": {
+      "before": "4ba0c4da9e63ef44e027ecfc30aed889efb13383c68c3e308eefe6480dc14137",
+      "after": "bcdba8e32ccefa7ab1677b94253798328034aee750cb7587cc826e9de17a5307"
+    },
+    "web_locale.py": {
+      "before": "c92a434f2567196b0e0673ee5fb878ee2a4e66bcf2574b937deb92a9963f1e3d",
+      "after": "b63af655ba90793a9692eefd590b594aa192e56ca5e992688eff37f42f57c560"
+    },
+    "web_assets/controls.css": {
+      "before": "08f61dd3cf96b8ed8e778cf2f84140ffb433a3a3a33878842b2290d37f3e94cb",
+      "after": "c036554f3e44d7421293347afb11c9029dc80619c33f2164f74407b695034a6e"
+    },
+    "legal_consent.py": {
+      "before": null,
+      "after": "0cf5c6257698d8fb7c98cfca99b6599072ab5d8c56b6a2d151f36eda4efc597e"
+    },
+    "operational_retention.py": {
+      "before": null,
+      "after": "2583b22d3763363622d9b7115fc2a40927f3490adfaf333216308fb250e200a6"
     }
   }
 }

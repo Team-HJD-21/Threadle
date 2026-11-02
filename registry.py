@@ -47,6 +47,9 @@ class Registry:
             ''')
             db.execute('CREATE TABLE IF NOT EXISTS connection_retention(id TEXT PRIMARY KEY, disconnected_at REAL NOT NULL)')
             db.execute('CREATE TABLE IF NOT EXISTS retention_scopes(scope TEXT PRIMARY KEY)')
+            db.execute('CREATE TABLE IF NOT EXISTS legal_acceptances(binding TEXT NOT NULL, discord_user TEXT NOT NULL, '
+                       'github_user TEXT NOT NULL, version TEXT NOT NULL, accepted_at REAL NOT NULL, '
+                       'PRIMARY KEY(binding,discord_user,github_user,version))')
             db.execute('INSERT OR IGNORE INTO connection_retention SELECT id,? FROM bindings WHERE enabled=0',(time.time(),))
             db.execute('INSERT OR IGNORE INTO connection_retention SELECT id,? FROM retired_bindings',(time.time(),))
             db.executescript("""
@@ -90,7 +93,7 @@ class Registry:
             if not re.fullmatch('[0-9]+', str(value)) or int(value) <= 0:
                 raise ValueError('Discord IDs must be numeric')
 
-    def configure(self, identity, config, discord_user, github_user):
+    def configure(self, identity, config, discord_user, github_user, consent=None):
         binding = self.get(identity)
         if binding is None or binding.auth != 'app' or config['guild_id'] != binding.config['guild_id']:
             raise ValueError('연결 정보가 변경됐습니다. 다시 확인해 주세요.')
@@ -102,6 +105,7 @@ class Registry:
                 raise ValueError('연결 정보가 변경됐습니다. 다시 확인해 주세요.')
             db.execute('INSERT INTO connection_audit(binding,action,discord_user,github_user) VALUES(?,?,?,?)',
                        (identity, 'configure', discord_user, github_user))
+            self.acceptance(db, identity, discord_user, github_user, consent)
 
     def add(self, tenant, repo_id, repo, installation, auth, config, legacy_state=False):
         self.validate(repo_id, repo, installation, auth, config)
@@ -113,7 +117,7 @@ class Registry:
                         json.dumps(config), int(legacy_state)))
         return identity
 
-    def connect(self, repo_id, repo, installation, config, discord_user, github_user):
+    def connect(self, repo_id, repo, installation, config, discord_user, github_user, consent=None):
         self.validate(repo_id, repo, installation, 'app', config)
         guild = str(config['guild_id'])
         identity = uuid.uuid4().hex
@@ -128,6 +132,7 @@ class Registry:
                     raise ValueError('기존 운영 연결이 있습니다. 운영자에게 이전을 요청해 주세요.')
                 if row['enabled']:
                     if row['installation'] == installation and json.loads(row['config']) == config:
+                        self.acceptance(db, row['id'], discord_user, github_user, consent)
                         return row['id']
                     raise ValueError('이미 연결된 저장소입니다. 기존 연결을 해제한 뒤 다시 연결해 주세요.')
                 db.execute('INSERT OR REPLACE INTO retired_bindings(id,data) VALUES(?,?)', (row['id'],json.dumps(dict(row))))
@@ -137,7 +142,17 @@ class Registry:
                        (identity, 'discord:' + guild, repo_id, repo, installation, 'app', guild, json.dumps(config), 0))
             db.execute('INSERT INTO connection_audit(binding,action,discord_user,github_user) VALUES(?,?,?,?)',
                        (identity, 'connected', str(discord_user), str(github_user)))
+            self.acceptance(db, identity, discord_user, github_user, consent)
         return identity
+
+    @staticmethod
+    def acceptance(db, identity, discord_user, github_user, consent):
+        if consent is not None:
+            from legal_consent import VERSION
+            if consent.get('version') != VERSION or not isinstance(consent.get('accepted_at'), (int, float)):
+                raise ValueError('Invalid terms acceptance')
+            db.execute('INSERT OR IGNORE INTO legal_acceptances VALUES(?,?,?,?,?)',
+                       (identity, str(discord_user), str(github_user), VERSION, consent['accepted_at']))
 
     def disconnect(self, identity, guild, discord_user):
         with self.db() as db:
