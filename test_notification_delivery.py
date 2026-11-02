@@ -45,6 +45,11 @@ class DeliveryTests(unittest.TestCase):
                 with patch('team_notifications.open_prs',return_value=[]),patch('team_notifications.open_issue_digest',return_value=(0,[])):
                     notices.digest(Mock())
                 self.assertEqual(feed.send.call_count,expected)
+    def test_settings_description_shows_effective_weekly_time(self):
+        from command_jobs import CommandJobs
+        text=CommandJobs.describe('owner/repo',{'digest':'weekly','digest_hour':9,'weekly_digest_hour':17,'digest_weekday':4})
+        self.assertIn('weekly · 17:00 · Friday',text)
+
     def test_summary_parentheses_have_no_visible_escape(self):
         item={'number':1,'title':'Fix (mobile) [screen]','createdAt':''}
         service=Mock()

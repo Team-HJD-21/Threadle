@@ -158,10 +158,11 @@ class CommandJobs:
     def describe(repo, options, language='ko'):
         hours = options.get('review_hours', 0)
         batch = options.get('batch_seconds', 0)
+        hour=options.get('weekly_digest_hour',options.get('digest_hour',9)) if options.get('digest')=='weekly' else options.get('digest_hour',9)
         weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
         return (f'**{repo}**\nNotification language: '+('English (EN)' if language=='en' else 'Korean (KR)')+'\nOpen PR reminder: ' + (f'{hours} hours' if hours else 'off')
                 + '\nNotification batching: ' + (f'{batch} seconds' if batch else 'instant')
-                + f"\nPR and issue digest: {options.get('digest', 'off')} · {options.get('digest_hour', 9):02}:00 · {weekdays[options.get('digest_weekday', 0)]}"
+                + f"\nPR and issue digest: {options.get('digest', 'off')} · {hour:02}:00 · {weekdays[options.get('digest_weekday', 0)]}"
                 + f"\nWeekly digest time: {options.get('weekly_digest_hour',options.get('digest_hour',9)):02}:00"
                 + f"\nTime zone: UTC{options.get('utc_offset', 9):+d}"
                 + '\nQuiet hours: ' + (f"{options.get('quiet_start', 22):02}:00–{options.get('quiet_end', 8):02}:00" if options.get('quiet') else 'off'))
