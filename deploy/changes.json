@@ -20,7 +20,7 @@
     },
     "changelog.py": {
       "before": "03f19425cfe89c5f1d74e39a5e9d2d27e9cc978d1e4e25a6e0f5b38d1c3e8049",
-      "after": "b980e5499238fed51a4215e5b63b22a5bb2fc3b93ad22a6696b2945048998ebf"
+      "after": "c1da661578b1e816e952350920553b31b767d8a1c7d9ec9497b412a5fd9e824d"
     },
     "product_web.py": {
       "before": "99bd32db9363d21f2320c789ab98f0177af7b17e3db9f72693753c782e7e29bc",
@@ -41,6 +41,14 @@
     "connect_web.py": {
       "before": "a435f26b187da16f6d55104002c35b77c03947859026d14bc5a8f7c13da48252",
       "after": "452b354892c709b183ec8ad346c210648a323918bcae6e1c08d3c90b791cb85c"
+    },
+    "alert_feed.py": {
+      "before": "e69c288a5e6d51a9857ca53cc65f29cf2e2e2a564b76b41cfefd74951abfd1cd",
+      "after": "c617136c345ffe142d18541874c1322549d2b489fdfc8f44e356a083f3bf0516"
+    },
+    "team_notifications.py": {
+      "before": "38e7160817cb3352bc8ae1182ca62409cd59ba6528d8438163d06a225d1128c2",
+      "after": "6904471f68f57f58851b7e4f6c1c4f3d8d72ffedb177a5c20982b5a1ebf15eb6"
     }
   }
 }

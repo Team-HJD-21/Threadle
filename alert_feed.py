@@ -135,10 +135,32 @@ class AlertFeed:
                   topic.title or summary, description,
                   link, {'issue': 0x2DA44E, 'pr': 0x8957E5, 'discussion': 0x0969DA}[topic.kind])
 
+    def ci_detail(self, repo, payload, event_key):
+        run = payload['workflow_run']
+        channel = self.config.get('ci_channel')
+        if not channel or str(channel) == str(self.channel):
+            return
+        english = self.config.get('language') == 'en'
+        link = run['html_url']
+        actor = clip((run.get('triggering_actor') or run.get('actor') or {}).get('login', 'GitHub'), 80)
+        detail = (f'Repository: {repo}\nBranch: `{clip(run.get("head_branch", ""), 100)}`\n'
+                  f'Trigger: `{clip(run.get("event", ""), 60)}` · By {actor}\n'
+                  if english else
+                  f'저장소: {repo}\n브랜치: `{clip(run.get("head_branch", ""), 100)}`\n'
+                  f'실행 유형: `{clip(run.get("event", ""), 60)}` · 실행자: {actor}\n')
+        detail += ('[View run on GitHub](' if english else '[GitHub 실행 결과](') + link + ')'
+        target = AlertFeed(self.api, dict(self.config, alert_channel=str(channel),
+                                         alert_scope='ci-detail:' + str(channel)), self.queue)
+        target.check()
+        target.send(repo + ':ci:' + str(run['id']), event_key,
+                    'CI failed' if english else 'CI 실패',
+                    clip(run.get('name', 'CI'), 150), detail, link, 0xD1242F)
+
     def ci(self, repo, payload, event_key):
         run = payload['workflow_run']
         if run.get('event') == 'pull_request' or run.get('conclusion') != 'failure':
             return
+        self.ci_detail(repo, payload, event_key)
         link = run['html_url']
         channel = self.config.get('ci_channel')
         english = self.config.get('language') == 'en'

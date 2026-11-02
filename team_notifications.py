@@ -114,9 +114,14 @@ class TeamNotifications:
         run = payload['workflow_run']
         if run.get('event') == 'pull_request' or run.get('conclusion') != 'failure':
             return
+        self.feed(self.binding.config['alert_channel']).ci_detail(repo, payload, event_key)
         link = run['html_url']
+        description = ('[View run on GitHub](' if self.english else '[GitHub 실행 결과](') + link + ')'
+        channel = self.binding.config.get('ci_channel')
+        if channel:
+            description = ('[Open CI channel](' if self.english else '[CI 채널 확인하기](') + f'https://discord.com/channels/{self.binding.config["guild_id"]}/{channel}) · ' + description
         self.schedule(repo + ':ci:' + str(run['id']), ('CI failed · ' if self.english else 'CI 실패 · ') + clip(run.get('name', ''), 150),
-                      ('[View run on GitHub](' if self.english else '[GitHub 실행 결과](') + link + ')', link, event_key, [self.binding.config['alert_channel']], True, 0xD1242F)
+                      description, link, event_key, [self.binding.config['alert_channel']], True, 0xD1242F)
 
     def flush(self):
         with self.queue.connect() as db:
