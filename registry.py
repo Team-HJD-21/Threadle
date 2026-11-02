@@ -256,6 +256,22 @@ class Registry:
             db.execute('BEGIN IMMEDIATE')
             if db.execute('SELECT 1 FROM inbox WHERE id=?', (mode + ':' + delivery,)).fetchone():
                 return 202
+            if event in ('issues', 'pull_request') and payload.get('action') in ('milestoned', 'demilestoned'):
+                obj = payload.get('pull_request') or payload.get('issue') or {}
+                milestone = payload.get('milestone') or {}
+                identity = obj.get('number')
+                target = milestone.get('node_id') or milestone.get('id')
+                updated = obj.get('updated_at')
+                if identity and target and updated:
+                    db.execute('CREATE TABLE IF NOT EXISTS milestone_receipts(topic TEXT PRIMARY KEY,fingerprint TEXT NOT NULL,received REAL NOT NULL)')
+                    topic = mode + ':' + str(repo_id) + ':' + str(identity)
+                    fingerprint = json.dumps([payload['action'],str(target),updated,payload.get('sender',{}).get('id')])
+                    previous = db.execute('SELECT fingerprint,received FROM milestone_receipts WHERE topic=?',(topic,)).fetchone()
+                    if previous and previous[0] == fingerprint and time.time() - previous[1] < 30:
+                        db.execute('INSERT OR IGNORE INTO inbox VALUES(?,?,?,NULL,?,1)',(mode+':'+delivery,delivery,event,'[]'))
+                        return 202
+                    db.execute('INSERT INTO milestone_receipts VALUES(?,?,?) ON CONFLICT(topic) DO UPDATE SET fingerprint=excluded.fingerprint,received=excluded.received',(topic,fingerprint,time.time()))
+                    db.execute('DELETE FROM milestone_receipts WHERE received<?',(time.time()-86400,))
             if db.execute('SELECT count(*) FROM inbox WHERE done=0').fetchone()[0] >= 10000:
                 raise RuntimeError('Ingress capacity reached')
             db.execute('INSERT OR IGNORE INTO inbox VALUES(?,?,?,?,?,0)',

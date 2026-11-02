@@ -9,7 +9,7 @@ from connect_auth import ConnectError, channel_permissions
 from discord_threads import ApiError
 
 CHANNELS = [('issue', '‼️github-issue'), ('pr', '🙏🏻github-pr'),
-            ('discussion', '🙋🏻github-discussions'), ('ci', '🔄github-ci'), ('alert', '🚨github-alert')]
+            ('discussion', '🙋🏻github-discussions'), ('ci', '🔄github-ci-cd'), ('alert', '🚨github-alert')]
 
 
 def category_name(repository, qualified=False):

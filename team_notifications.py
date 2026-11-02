@@ -112,11 +112,13 @@ class TeamNotifications:
 
     def ci(self, repo, payload, event_key):
         run = payload['workflow_run']
-        if run.get('event') == 'pull_request' or run.get('conclusion') != 'failure':
+        event_key = 'ci-result:' + str(run['id']) + ':' + str(run.get('run_attempt') or 1)
+        if run.get('conclusion') not in ('failure', 'timed_out', 'startup_failure', 'action_required'):
             return
         self.feed(self.binding.config['alert_channel']).ci_detail(repo, payload, event_key)
         link = run['html_url']
-        description = ('[View run on GitHub](' if self.english else '[GitHub 실행 결과](') + link + ')'
+        description = ('Branch: ' if self.english else '브랜치: ') + '`' + clip(run.get('head_branch', 'unknown'), 100) + '`\n'
+        description += ('[View run on GitHub](' if self.english else '[GitHub 실행 결과](') + link + ')'
         channel = self.binding.config.get('ci_channel')
         if channel:
             description = ('[Open CI channel](' if self.english else '[CI 채널 확인하기](') + f'https://discord.com/channels/{self.binding.config["guild_id"]}/{channel}) · ' + description

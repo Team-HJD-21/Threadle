@@ -44,7 +44,7 @@ def compose(t, channel=None):
 def ci_panes(t, avatar):
     title = 'Threadle CI and deployment'
     badge = '<b>Threadle <em>' + icon('check') + ' APP</em></b>'
-    out = '<div class="preview-main"><header>' + icon('hash') + '<span class="preview-header-name">github-ci</span>' + tools('bell','pin','members','search') + '</header><div class="preview-feed"><div class="preview-welcome"><div class="preview-hash">' + icon('hash') + '</div><h2>' + t('실행부터 완료까지.', 'From run to result.') + '</h2><p>' + t('워크플로의 진행과 검사 결과를 한눈에.', 'Follow the workflow and its checks at a glance.') + '</p></div><div class="preview-date">' + t('오늘', 'Today') + '</div>'
+    out = '<div class="preview-main"><header>' + icon('hash') + '<span class="preview-header-name">github-ci-cd</span>' + tools('bell','pin','members','search') + '</header><div class="preview-feed"><div class="preview-welcome"><div class="preview-hash">' + icon('hash') + '</div><h2>' + t('실행부터 완료까지.', 'From run to result.') + '</h2><p>' + t('워크플로의 진행과 검사 결과를 한눈에.', 'Follow the workflow and its checks at a glance.') + '</p></div><div class="preview-date">' + t('오늘', 'Today') + '</div>'
     out += '<div class="preview-post preview-arrival">' + avatar + '<div>' + badge + '<article><b>Run #128</b><strong>' + title + '</strong><span class="preview-ci-running">' + t('실행 중', 'In progress') + '</span><span class="preview-ci-success">' + icon('check') + ' ' + t('성공', 'Successful') + '</span><dl class="preview-ci-metadata">'
     for ko,en,value in [('저장소','Repository','TeamHJD/threadle'),('브랜치','Branch','main'),('실행 유형','Trigger','push'),('실행자','Triggered by','Jae')]:
         out += '<div><dt>' + t(ko,en) + '</dt><dd>' + value + '</dd></div>'
@@ -80,7 +80,7 @@ def demonstration(t):
         ('discussion', 'DISCUSSION', 'github-discussions', '9', t('다음 업데이트 아이디어', 'Ideas for the next update'), 'Ideas · enhancement',
          t('다음 업데이트에서 어떤 기능을 보고 싶으신가요?', 'What would you like to see in the next update?'),
          t('설정을 내보낼 수 있으면 좋겠어요.', 'Exporting settings would be useful.')),
-        ('ci', 'CI', 'github-ci', '128', 'Threadle CI and deployment', '`main` · `push`',
+        ('ci', 'CI', 'github-ci-cd', '128', 'Threadle CI and deployment', '`main` · `push`',
          t('integration-tests 검사에 실패했습니다.', 'The integration-tests check failed.'),
          t('CI 채널에서 실행 결과를 확인해 주세요.', 'Check the run details in the CI channel.')),
         ('alert', 'ALERT', 'github-alert', '', '', '', '', ''),
@@ -94,7 +94,7 @@ def demonstration(t):
     for key, label, channel, number, title, detail, description, reply in cases:
         topic = label + ' #' + number
         out += '<div class="preview-case preview-' + key + '"><aside class="preview-sidebar"><header><span class="preview-server-name">Threadle Test Server</span>' + icon('chevron') + icon('invite') + '</header><div class="preview-sidebar-content"><div class="preview-category"><span>🔔 Threadle</span>' + icon('chevron') + icon('plus') + '</div>'
-        for target, name, emoji in [('pr','github-pr','🙏'),('issue','github-issue','‼️'),('discussion','github-discussions','🙋'),('ci','github-ci','🔄'),('alert','github-alert','🚨')]:
+        for target, name, emoji in [('pr','github-pr','🙏'),('issue','github-issue','‼️'),('discussion','github-discussions','🙋'),('ci','github-ci-cd','🔄'),('alert','github-alert','🚨')]:
             out += '<button type="button" data-preview-key="' + target + '" aria-pressed="' + ('true' if target == key else 'false') + '" class="preview-channel' + (' is-selected' if name == channel else '') + '">' + icon('hash') + '<span>' + emoji + ' ' + name + '</span></button>'
         out += '</div><div class="preview-user">' + avatar + '<b>Team HJD</b><span class="preview-status">' + icon('status') + '</span>' + tools('mic','headphones','settings') + '</div></aside>'
         if key == 'ci':

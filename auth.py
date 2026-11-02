@@ -61,7 +61,7 @@ class RepositoryApi(Api):
                 self.tokens.invalidate(self.binding.installation, self.binding.repo_id)
 
     def fetch_media(self, url):
-        from notification_media import installation_image
+        from notification_media import installation_image, rendered_installation_image
         token = (self.legacy if self.binding.auth == "legacy" else
                  self.tokens.token(self.binding.installation, self.binding.repo_id))
-        return installation_image(url, token)
+        return installation_image(url, token) or rendered_installation_image(url, token, self.binding.repo)

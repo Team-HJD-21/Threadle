@@ -6,6 +6,7 @@ import uuid
 import io
 import threading
 import warnings
+import logging
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, HTTPRedirectHandler, build_opener
 from urllib.parse import urlsplit
@@ -59,7 +60,7 @@ def media_embeds(original):
     embed['image']={'url':urls[0]}
     result=[embed]
     for url in urls[1:]:
-        result.append({'url':embed.get('url',urls[0]),'image':{'url':url},'color':embed.get('color',0x2DA44E)})
+        result.append({'image':{'url':url},'color':embed.get('color',0x2DA44E)})
     if embed.get('timestamp') and len(result)>1:
         result[-1]['timestamp']=embed.pop('timestamp')
     return result
@@ -237,7 +238,7 @@ def attach_public_images(embeds, authenticated_fetcher=None):
             image=public_image(url)
         except Exception:
             image=None
-        if image is None and authenticated_fetcher and urlsplit(url).hostname == 'github.com':
+        if image is None and authenticated_fetcher and urlsplit(url).hostname in ('github.com', 'private-user-images.githubusercontent.com'):
             try:
                 image=authenticated_fetcher(url)
             except Exception:
@@ -263,3 +264,35 @@ def multipart_message(data):
             raise ValueError('Invalid media attachment')
         parts.append(('--'+boundary+'\r\nContent-Disposition: form-data; name="files['+str(index)+']"; filename="'+name+'"\r\nContent-Type: '+mime+'\r\n\r\n').encode()+raw+b'\r\n')
     return b''.join(parts)+('--'+boundary+'--\r\n').encode(), 'multipart/form-data; boundary='+boundary
+
+
+def rendered_installation_image(url, token, repository):
+    # Only GitHub API receives the repository-scoped token; image CDN requests are anonymous.
+    if not token or not github_media_url(url) or urlsplit(url).hostname not in ('github.com', 'private-user-images.githubusercontent.com'):
+        return None
+    opener = build_opener(NoMediaRedirect())
+    body = json.dumps({'text': '<img src="' + html.escape(url, quote=True) + '">',
+                       'mode': 'gfm', 'context': repository}).encode()
+    request = Request('https://api.github.com/markdown', data=body, method='POST',
+                      headers={'User-Agent': 'Threadle-Media/1.0', 'Accept': 'text/html',
+                               'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token,
+                               'X-GitHub-Api-Version': '2022-11-28'})
+    try:
+        with opener.open(request, timeout=5) as response:
+            raw = response.read(256 * 1024 + 1)
+        if len(raw) > 256 * 1024:
+            return None
+        parser = Images()
+        parser.feed(raw.decode('utf-8'))
+        for source in parser.urls:
+            if github_media_url(source) and urlsplit(source).hostname != 'github.com':
+                image = public_image(source)
+                if image:
+                    return image
+    except HTTPError as error:
+        logging.getLogger('notification-media').warning('Private image render failed HTTP=%s; check repository Contents read permission', error.code)
+        error.close()
+        return None
+    except (URLError, OSError, ValueError):
+        return None
+    return None

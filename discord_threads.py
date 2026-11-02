@@ -46,6 +46,7 @@ class Api:
             try:
                 with urlopen(request, timeout=30) as response:
                     raw = response.read()
+                    self.last_link = response.headers.get("Link", "")
                     return json.loads(raw) if raw else None
             except HTTPError as error:
                 try:
