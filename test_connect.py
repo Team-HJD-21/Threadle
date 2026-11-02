@@ -372,7 +372,7 @@ class ConnectionFlowTests(WebFixture):
         self.assertIn('<footer class="site-footer">', self.browser.request('GET', '/connect/done')[2])
 
     def test_logo_assets_load_without_login_and_do_not_create_a_session(self):
-        for name in ('notify-logo.png', 'teamhjd-wordmark.png'):
+        for name in ('notify-logo.png', 'teamhjd-wordmark.png', 'threadle-banner.png'):
             connection = http.client.HTTPConnection(*self.server.server_address, timeout=3)
             try:
                 connection.request('GET', '/connect/assets/' + name, headers={'Host': 'notify.example'})

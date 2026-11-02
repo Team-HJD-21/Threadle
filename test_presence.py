@@ -60,12 +60,12 @@ class PresenceTests(unittest.TestCase):
             clients.append(client)
             return client
         module = SimpleNamespace(Client=create, Intents=SimpleNamespace(none=lambda: SimpleNamespace(guilds=False)),
-                                 Activity=lambda **kwargs: kwargs, ActivityType=SimpleNamespace(watching=3),
+                                 CustomActivity=lambda name: {'type':4,'state':name},
                                  Status=SimpleNamespace(online='online'))
         asyncio.run(self.presence.session(stop, module, DEFAULT_TEXT, 'online'))
         client = clients[0]
         self.assertTrue(client.kwargs['intents'].guilds)
-        self.assertEqual(client.kwargs['activity'], {'type':3,'name':DEFAULT_TEXT})
+        self.assertEqual(client.kwargs['activity'], {'type':4,'state':DEFAULT_TEXT})
         self.assertTrue(client.reconnect)
         self.assertTrue(client.closed)
         state = (self.root / 'presence-status.json').read_text()

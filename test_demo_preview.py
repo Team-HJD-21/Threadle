@@ -17,11 +17,11 @@ class Markup(HTMLParser):
 
 
 class PreviewTests(unittest.TestCase):
-    def test_four_tabs_each_have_three_panes_and_no_remote_requests(self):
+    def test_five_channels_each_have_three_panes_and_no_remote_requests(self):
         html = demonstration()
-        self.assertEqual(html.count('class="preview-case '), 4)
+        self.assertEqual(html.count('class="preview-case '), 5)
         for pane in ['preview-sidebar', 'preview-main', 'preview-detail']:
-            self.assertEqual(html.count('class="' + pane + '"'), 4)
+            self.assertEqual(html.count('class="' + pane + '"'), 5)
         markup = Markup(html)
         self.assertEqual(len(markup.ids), len(set(markup.ids)))
         self.assertNotIn('<script', html)
@@ -38,7 +38,7 @@ class PreviewTests(unittest.TestCase):
 
 
     def test_ci_preview_shows_workflow_progress_and_success_without_comments(self):
-        html = demonstration().split('class="preview-case preview-ci"',1)[1]
+        html = demonstration().split('class="preview-case preview-ci"',1)[1].split('class="preview-case preview-alert"',1)[0]
         self.assertIn('github-ci', html)
         self.assertIn('Run #128', html)
         self.assertIn('Threadle CI and deployment', html)
@@ -59,3 +59,11 @@ class PreviewTests(unittest.TestCase):
         positions = [first.index('data-preview-key="' + key + '"') for key in ['pr','issue','discussion','ci']]
         self.assertEqual(positions, sorted(positions))
         self.assertIn('🔔 Threadle', first)
+
+    def test_alert_shows_scheduled_digest_and_on_demand_summary(self):
+        html = demonstration().split('class="preview-case preview-alert"',1)[1]
+        self.assertIn('/summary', html)
+        self.assertIn('일일 PR · Issue 현황', html)
+        self.assertIn('Discussion · 1개 열림', html)
+        self.assertIn('7 remaining issues', html)
+        self.assertNotIn('preview-thread-card', html)
