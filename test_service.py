@@ -227,6 +227,14 @@ class ServiceTests(unittest.TestCase):
         self.assertFalse(self.service.process(old_binding, threads, None))
         threads.deliver.assert_not_called()
 
+    def test_workflow_start_and_completion_are_durably_queued(self):
+        for index, action in enumerate(('requested', 'in_progress', 'completed')):
+            self.assertEqual(self.send(event='workflow_run', delivery=f'aaaaaaaa-bbbb-cccc-dddd-{index:012d}',
+                extra={'action':action, 'workflow_run':{'id':90, 'status':action}}), 202)
+        self.service.dispatch()
+        with self.service.queue(self.service.registry.get(self.a)).connect() as db:
+            self.assertEqual(db.execute("SELECT count(*) FROM jobs WHERE event='workflow_run'").fetchone()[0], 3)
+
     def test_configured_ci_workflow_filter_preserves_existing_team_behavior(self):
         with self.service.registry.db() as db:
             settings = config(1000)

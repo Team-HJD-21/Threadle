@@ -213,7 +213,7 @@ def message_pages(embed):
     pages=[];current=[];used=0
     for item in embeds:
         count=units(item.get('title',''))+units(item.get('description',''))+units(item.get('author',{}).get('name',''))+sum(units(f.get('name',''))+units(f.get('value','')) for f in item.get('fields',[]))
-        if current and (len(current)>=10 or used+count>5700):
+        if current and (item.get('image') or any(e.get('image') for e in current) or len(current)>=10 or used+count>5700):
             pages.append(current);current=[];used=0
         current.append(item);used+=count
     if current:pages.append(current)
@@ -234,6 +234,18 @@ def group_payload(entries):
     entries=[(event,payload) for event,payload in entries if not silent_review(event,payload)]
     if not entries:
         return {'_events':[], '_silent':True}
+    unique=[];previous_milestone=None
+    for event,value in entries:
+        if value.get('action') in ('milestoned','demilestoned'):
+            obj=issue_object(value)
+            fingerprint=json.dumps([obj.get('number'),value.get('action'),value.get('milestone',{}).get('id'),obj.get('updated_at')])
+            if fingerprint == previous_milestone:
+                continue
+            previous_milestone=fingerprint
+        else:
+            previous_milestone=None
+        unique.append((event,value))
+    entries=unique
     first_creation=next((p for e,p in entries if e in CREATION and p.get('action') in ('opened','created')),None)
     base=copy.deepcopy(first_creation or entries[0][1])
     base['_events']=[{'event':event,'payload':payload} for event,payload in entries]

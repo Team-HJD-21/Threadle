@@ -31,6 +31,10 @@ class FakeAlertApi:
                 self.accept_then_fail = False
                 raise RuntimeError('Response lost after Discord accepted the message')
             return message
+        if method == 'PATCH' and '/messages/' in path:
+            row = next(row for row in self.posts if row['id'] == path.rsplit('/', 1)[1])
+            row.update(copy.deepcopy(data))
+            return row
         raise AssertionError((method, path))
 
 
@@ -90,17 +94,17 @@ class AlertTests(unittest.TestCase):
                          ['https://discord.com/channels/guild/' + value
                           for value in ('issue-thread', 'pr-thread', 'discussion-thread')])
 
-    def test_main_ci_failure_alert_but_success_and_pr_do_not_duplicate(self):
+    def test_ci_failure_alert_deduplicates_run_across_deliveries(self):
         run = {'id': 123, 'name': 'PR CI', 'event': 'push', 'conclusion': 'failure',
                'head_branch': 'main', 'html_url': 'https://github.com/run'}
         self.feed.ci(REPO, {'workflow_run': run}, 'event')
-        self.assertIn('CI 실패', self.api.posts[0]['content'])
+        self.assertIn('실패', self.api.posts[0]['content'])
         self.assertEqual([row['channel_id'] for row in self.api.posts], ['ci', 'alerts'])
         self.assertIn('channels/guild/ci', self.api.posts[1]['embeds'][0]['description'])
         for changed in ({'conclusion': 'success'}, {'event': 'pull_request'}):
             self.feed.ci(REPO, {'workflow_run': dict(run, **changed)}, 'other')
         self.assertEqual(len(self.api.posts), 2)
-        self.feed.ci(REPO, {'workflow_run': dict(run, name='Other workflow')}, 'other')
+        self.feed.ci(REPO, {'workflow_run': dict(run, id=124, name='Other workflow')}, 'other')
         self.assertEqual(len(self.api.posts), 4)
 
     def test_ci_retry_recovers_detail_and_sends_alert_once(self):

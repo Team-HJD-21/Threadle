@@ -1,5 +1,5 @@
 {
-  "version": "v1.0.0-beta.1",
+  "version": "v1.0.0-beta.2",
   "baseline": "2026.11.02.8",
   "files": {
     "demo_web.py": {
@@ -23,23 +23,25 @@
     },
     "connect_web.py": {
       "before": "a10a26dc8a437897a74a705d18b2eed378b2ec30b7b95f9298d833ba91b81db9",
-      "after": "117f3639cb662cac9459b4f915e9d44fad8b8ecf30242dc67c3f87a5d84702b2",
+      "after": "b86cf3b6bc717112bb5d188ad849dab7d2bb19199837ea80ed54211ceb330799",
       "previous": [
         "039da5474270896cb0d94cff9d8fbc012749be2cba8d41af02c9c38a98df280b",
         "c71b37f392a2f9bb79cbe8c361c5e7f45ea94591c0199f198598a1d360930c39",
         "5d40c90b7792d09d8dd3b5c80253d54853b2d5bd1cc8191906dffe0104e03595",
         "6a13c0e069becb5dbf9265c4fbbe5439ce5cf7fe41331b071e1a53a0acf92400",
         "19e6a586a669df88364a0d5cfd0e8b249c456b7abae40467db8435e3c443eb23",
-        "bca1d013825c5631faeb4fb19548c45344cec377f2857640e2a46aa45600e744"
+        "bca1d013825c5631faeb4fb19548c45344cec377f2857640e2a46aa45600e744",
+        "117f3639cb662cac9459b4f915e9d44fad8b8ecf30242dc67c3f87a5d84702b2"
       ]
     },
     "changelog.py": {
       "before": "261336f2f039d63348697c8fb4f9f7ec8f25c959ad6f0e2ccd74230f8c208e28",
-      "after": "04fa502c59d291c038e46fef1546a45474d636ad69471111b1fcf600d190034b",
+      "after": "c0f7130dcd4ef6199e40ccb51590900ab56d332eb7d24a6d7785df4304ed9da6",
       "previous": [
         "ce59507c70872a51ef2bbd42a7ee232a5bd4e2692a6b0c8903887594a1e59b90",
         "70c46b09eeacc09189050699f22f47224d0f1b157c741d0f25f9f51bd23af677",
-        "71df4c28e5e491425c100f00a84fa662cd1af28c53ea71675aa0667bf230b5e5"
+        "71df4c28e5e491425c100f00a84fa662cd1af28c53ea71675aa0667bf230b5e5",
+        "04fa502c59d291c038e46fef1546a45474d636ad69471111b1fcf600d190034b"
       ]
     },
     "web_assets/preview.js": {
@@ -58,6 +60,46 @@
     "presence.py": {
       "before": "279304f830e3ec011c0b95ea4764cef0132593252c7e9ea88b0506d6771c0bf4",
       "after": "78e99f719ed87d8df3431c0e7147fb42ec26c8f5d93e43149a5c7d88447fa7c5"
+    },
+    "service.py": {
+      "before": "8ef021eb91f276ae424209884b25cd423995d41e1455bbb6bfd63a0ab0206d1e",
+      "after": "2b39caa084daa3eaa290f3bf3573d907c4d36513a97abf24be24bc9458e3f397"
+    },
+    "auth.py": {
+      "before": "be8ffb8d515312c5fb8390e4b31184cfe906d8711efc889621f7327b0ef2d09e",
+      "after": "809d3d2145c66e0d9f8242d7c5adebfd866441573956ae1f4655db9e288f93b9"
+    },
+    "discord_threads.py": {
+      "before": "0b353710016c6563fda1178e599cacca7ab802854803040f0866ef940dcbec94",
+      "after": "7db8a83427bc41833c8673eb12f23da21cad41888357873706070557c0d50cd5"
+    },
+    "notification_media.py": {
+      "before": "8de2185cda462cf8cff64cc21a3eb38b3849390951cdeafcabc0a720015aa484",
+      "after": "606b47fa89b1e59eac0adcc456992b2b3d32f10f7986dec74d4fd39536fde6a4"
+    },
+    "notification_layout.py": {
+      "before": "0f2e331db64524fb143329aac6312533683734bd68c1ac6c3cef59c848ac785d",
+      "after": "833371a2f021574216b64a9e0eed4e807d6ad9fb6718190e056e85f785772b1f"
+    },
+    "alert_feed.py": {
+      "before": "c617136c345ffe142d18541874c1322549d2b489fdfc8f44e356a083f3bf0516",
+      "after": "21873e6a5f74799cdbab164298547048ad2ed7e6d04b852a365f0fc74ede9bb2"
+    },
+    "team_notifications.py": {
+      "before": "6904471f68f57f58851b7e4f6c1c4f3d8d72ffedb177a5c20982b5a1ebf15eb6",
+      "after": "8cb672fdf1523f327cc6da04a33f0a4ac02bc133733b190f66c6c64ea59fa2d6"
+    },
+    "registry.py": {
+      "before": "adfa9743b40023f8e23159262a0e478894d6c7e05a1e24e80348d47bc616b503",
+      "after": "58e3fe261ed4bfb98d927677fa42d139218317c3a037309ccf385c17fba009e6"
+    },
+    "workflow_notifications.py": {
+      "before": null,
+      "after": "1c6f3299d4da35597604eee85b363e62c4c516bf098026877cd267f091d7554a"
+    },
+    "webhook_recovery.py": {
+      "before": null,
+      "after": "de3d3481761df79ae408739e9aa746a76eb3b063a7faca85cf0f9340ec34f63c"
     }
   }
 }

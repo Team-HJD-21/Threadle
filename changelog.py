@@ -57,6 +57,11 @@ def content(t):
         ('베타 업데이트', 'Beta update', [
             ('현재 서비스는 베타입니다. 버전을 v1.0.0-beta.1 형식으로 표시하며, 정식 출시 전 업데이트는 beta 번호를 올립니다.', 'Threadle is in beta. Versions now use v1.0.0-beta.1, with increasing beta numbers before the stable release.'),
             ('예시 안의 알림 등장 간격을 늘리고 화면 폭에 따라 예시창 높이를 조절합니다. CI 예시는 모든 검사 완료 후 다음 채널로 전환합니다.', 'Preview notifications arrive more slowly and the window height adapts to screen width. The CI preview waits for every check before advancing.')])]))
+    groups.insert(0, ('v1.0.0-beta.2', 'CI/CD 진행 알림과 누락 알림 복구', 'CI/CD status and missed event recovery', [
+        ('알림 개선', 'Notification improvements', [
+            ('CI/CD 시작·진행 상태를 보내고 같은 메시지를 완료 결과로 갱신합니다. 브랜치와 시작 시점 또는 소요 시간을 표시하며 alert에는 실패만 안내합니다.', 'CI/CD messages show running status and update in place on completion, with branch and start time or duration. Only failures appear in alert.'),
+            ('서버 복구 후 최근 3일의 GitHub App 전송 실패를 재요청합니다. 이미 수신한 이벤트는 건너뛰며 기존 대기열로 처리합니다.', 'After recovery, recent GitHub App delivery failures are requested again within the three-day window. Already received events are skipped and delivery uses the existing queue.'),
+            ('여러 이미지를 세로 메시지로 나누고 비공개 첨부의 인증된 Markdown 다운로드 경로를 추가합니다. 같은 마일스톤 변경의 중복 수신을 억제합니다.', 'Images are sent as separate vertical messages. Private attachments gain an authenticated Markdown download path, and duplicate milestone updates are suppressed.')])]))
     for version,ko,en,sections in groups:
         body += '<article class="patch-entry"><p class="patch-label">' + version + ' · ' + t(ko,en) + '</p>'
         for heading_ko,heading_en,items in sections:

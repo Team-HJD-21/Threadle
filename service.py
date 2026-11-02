@@ -132,7 +132,7 @@ class Service:
             return 200
         if mode == 'legacy' and event not in EVENTS:
             return 200
-        if event == 'workflow_run' and payload.get('action') != 'completed':
+        if event == 'workflow_run' and payload.get('action') not in ('requested', 'in_progress', 'completed'):
             return 200
         return self.registry.receive(mode, delivery, event, payload)
 
@@ -195,6 +195,9 @@ class Service:
                 return False
             payload['repository']['full_name'] = binding.repo
             route_event = ('pull_request' if payload.get('pull_request') else 'discussion' if payload.get('discussion') else 'issues') if event == 'threadle_bundle' else event
+            if feed and event == 'workflow_run':
+                feed.ci_detail(binding.repo, payload, 'webhook:' + delivery)
+                (notices or feed).ci(binding.repo, payload, 'webhook:' + delivery)
             topics = route(route_event, payload, github)
             for topic in topics:
                 from notification_layout import hydrate_issue_fields, resolve_changed_fields
@@ -231,8 +234,6 @@ class Service:
                     notices.topic(topic, event, payload, 'webhook:' + delivery, thread, channels)
                 elif feed:
                     feed.topic(topic, event, payload, 'webhook:' + delivery, thread)
-            if feed and event == 'workflow_run' and not topics:
-                (notices or feed).ci(binding.repo, payload, 'webhook:' + delivery)
             queue.finish_group(group_ids)
             LOG.info('Delivered binding=%s event=%s delivery=%s', binding.id, event, delivery)
         except Exception as error:
@@ -283,6 +284,8 @@ class Service:
         from presence import Presence
         presence_worker = Presence(self).start(stop)
         self.guilds.start(stop)
+        from webhook_recovery import WebhookRecovery
+        WebhookRecovery(self).start(stop)
         from data_retention import Retention
         Retention(self).start(stop)
         if self.discord_connect is not None:
