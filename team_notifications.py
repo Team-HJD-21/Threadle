@@ -20,6 +20,8 @@ def validate_options(options):
             raise ValueError('알림 시간 설정이 올바르지 않습니다.')
     if options.get('batch_seconds', 0) not in (0, 60, 300) or options.get('digest', 'off') not in ('off', 'daily', 'weekly'):
         raise ValueError('알림 주기를 확인해 주세요.')
+    for key in ('daily_digest','weekly_digest'):
+        if key in options and type(options[key]) is not bool:raise ValueError('요약 사용 여부를 확인해 주세요.')
     if type(options.get('quiet', False)) is not bool:
         raise ValueError('방해금지 시간 설정을 확인해 주세요.')
     if options.get('quiet') and options.get('quiet_start', 0) == options.get('quiet_end', 0):
@@ -277,15 +279,19 @@ class TeamNotifications:
                 db.execute('UPDATE open_pr_waits SET due=? WHERE number=? AND due=?',(self.clock()+hours*3600,number,due))
             db.execute('DELETE FROM pr_reminder_batches WHERE id=?',(identity,))
 
-    def digest(self, github):
-        kind = self.options.get('digest', 'off')
-        if kind == 'off' or allowed_time(self.clock(), self.options) > self.clock():
+    def digest(self, github, kind=None):
+        from digest_settings import enabled
+        if kind is None:
+            for frequency in ('daily','weekly'):
+                if enabled(self.options,frequency):self.digest(github,frequency)
+            return
+        if not enabled(self.options,kind) or allowed_time(self.clock(), self.options) > self.clock():
             return
         offset = self.options.get('utc_offset', 9) * 3600
         local = dt.datetime.fromtimestamp(self.clock() + offset, dt.timezone.utc)
         hour = self.options.get('weekly_digest_hour',self.options.get('digest_hour',9)) if kind=='weekly' else self.options.get('digest_hour',9)
         scheduled = local.replace(hour=hour, minute=0, second=0, microsecond=0)
-        if (local < scheduled or scheduled.timestamp() - offset < self.options.get('enabled_at', self.clock())
+        if (local < scheduled or scheduled.timestamp() - offset < self.options.get(kind+'_enabled_at',self.options.get('enabled_at', self.clock()))
                 or kind == 'weekly' and local.weekday() != self.options.get('digest_weekday', 0)):
             return
         period = kind + ':' + scheduled.isoformat()

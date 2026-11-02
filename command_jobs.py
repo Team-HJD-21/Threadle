@@ -134,38 +134,38 @@ class CommandJobs:
         current = dict({'review_hours': 0, 'batch_seconds': 0, 'digest': 'off', 'digest_hour': 9, 'digest_weekday': 0, 'utc_offset': 9, 'quiet': False, 'quiet_start': 22, 'quiet_end': 8}, **binding.config.get('team_notifications', {}))
         if not updates:
             return self.describe(binding.repo, current, binding.config.get('language','ko')) + '\nPass an option to change it.'
-        allowed = {'language', 'review_hours', 'batch_seconds', 'digest', 'digest_hour', 'weekly_digest_hour', 'digest_weekday', 'utc_offset', 'quiet', 'quiet_start', 'quiet_end'}
+        allowed = {'daily_digest', 'weekly_digest', 'language', 'review_hours', 'batch_seconds', 'digest', 'digest_hour', 'weekly_digest_hour', 'digest_weekday', 'utc_offset', 'quiet', 'quiet_start', 'quiet_end'}
         if set(updates) - allowed:
             raise ValueError('Unknown notification setting.')
         from notification_language import normalize_language
         language = normalize_language(updates.pop('language',binding.config.get('language','ko')))
-        # Freeze the old weekly time before changing the daily time.
-        current.setdefault('weekly_digest_hour',current.get('digest_hour',9))
-        current.update(updates)
+        from digest_settings import apply
+        current=apply(current,updates,time.time())
         try:
             validate_options(current)
         except ValueError:
             raise ValueError('Invalid settings. Do Not Disturb hours must have different start and end times; use the listed option ranges.') from None
         if updates.get('review_hours') and not binding.config.get('team_notifications', {}).get('review_hours'):
             current['review_since'] = time.time()
-        if current.get('digest', 'off') != 'off' and (not current.get('enabled_at') or set(updates) & {'digest','digest_hour','weekly_digest_hour','digest_weekday','utc_offset'}):
-            current['enabled_at'] = time.time()
         config = dict(binding.config, team_notifications=current, language=language)
         self.service.registry.configure(binding.id, config, user, 'discord-command')
         return self.describe(binding.repo, current, language) + '\nNotification settings updated.'
 
     @staticmethod
     def describe(repo, options, language='ko'):
-        hours = options.get('review_hours', 0)
-        batch = options.get('batch_seconds', 0)
-        hour=options.get('weekly_digest_hour',options.get('digest_hour',9)) if options.get('digest')=='weekly' else options.get('digest_hour',9)
-        weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-        return (f'**{repo}**\nNotification language: '+('English (EN)' if language=='en' else 'Korean (KR)')+'\nOpen PR reminder: ' + (f'{hours} hours' if hours else 'off')
-                + '\nNotification batching: ' + (f'{batch} seconds' if batch else 'instant')
-                + f"\nPR and issue digest: {options.get('digest', 'off')} · {hour:02}:00 · {weekdays[options.get('digest_weekday', 0)]}"
-                + f"\nWeekly digest time: {options.get('weekly_digest_hour',options.get('digest_hour',9)):02}:00"
-                + f"\nTime zone: UTC{options.get('utc_offset', 9):+d}"
-                + '\nDo Not Disturb hours: ' + (f"{options.get('quiet_start', 22):02}:00–{options.get('quiet_end', 8):02}:00" if options.get('quiet') else 'off'))
+        from digest_settings import enabled
+        hours=options.get('review_hours',0);batch=options.get('batch_seconds',0)
+        weekdays=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+        daily='On' if enabled(options,'daily') else 'Off'
+        weekly='On' if enabled(options,'weekly') else 'Off'
+        dnd=f"{options.get('quiet_start',22):02}:00–{options.get('quiet_end',8):02}:00" if options.get('quiet') else 'Off'
+        return (f'**{repo}**\n\n**General**\nNotification language: '+('English (EN)' if language=='en' else 'Korean (KR)')
+                +f"\nTime zone: UTC{options.get('utc_offset',9):+d}"
+                +'\n\n**PR reminders & batching**\nOpen PR reminder: '+(f'{hours} hours' if hours else 'off')
+                +'\nNotification batching: '+(f'{batch} seconds' if batch else 'instant')
+                +f"\n\n**Daily digest**\n{daily} · {options.get('digest_hour',9):02}:00"
+                +f"\n\n**Weekly digest**\n{weekly} · {weekdays[options.get('digest_weekday',0)]} · {options.get('weekly_digest_hour',options.get('digest_hour',9)):02}:00"
+                +'\n\n**Do Not Disturb**\n'+dnd)
 
     def summary(self, binding, kind, page=1):
         if kind not in ('pr', 'issue', 'discussion'):
@@ -179,13 +179,25 @@ def command_definitions():
         return {'name': name, 'value': values}
     repository = {'type':3, 'name':'repository', 'description':'Choose a connected repository.', 'autocomplete':True}
     integers = [('review_hours','Repeat open PR reminders every N hours; 0 disables reminders.',0,720),('batch_seconds','Batch interval: 0, 60, or 300 seconds.',0,300),('digest_hour','Daily digest hour in the configured time zone.',0,23),('weekly_digest_hour','Weekly digest hour in the configured time zone.',0,23),('digest_weekday','Weekly digest weekday: Monday 0 through Sunday 6.',0,6),('utc_offset','Time zone offset from UTC in whole hours.',-12,14),('quiet_start','Do Not Disturb hours start, in the configured time zone.',0,23),('quiet_end','Do Not Disturb hours end, in the configured time zone.',0,23)]
-    options = [repository, {'type':3,'name':'language','description':'Notification language for this repository.','choices':[choice('Korean (KR)','ko'),choice('English (EN)','en')]}]
-    for name, description, low, high in integers:
-        item = {'type':4,'name':name,'description':description,'min_value':low,'max_value':high}
-        if name == 'batch_seconds':
-            item['choices']=[choice('Off',0),choice('Every minute',60),choice('Every five minutes',300)]
-        options.append(item)
-    options += [{'type':3,'name':'digest','description':'Scheduled PR and issue summary frequency.','choices':[choice('Off','off'),choice('Daily','daily'),choice('Weekly','weekly')]}, {'type':5,'name':'quiet','description':'Enable or disable Do Not Disturb hours.'}]
+    items={}
+    for name,description,low,high in integers:
+        item={'type':4,'name':name,'description':description,'min_value':low,'max_value':high}
+        if name=='batch_seconds':item['choices']=[choice('Off',0),choice('Every minute',60),choice('Every five minutes',300)]
+        items[name]=item
+    options=[repository,
+        {'type':3,'name':'language','description':'[General] Notification language for this repository.','choices':[choice('Korean (KR)','ko'),choice('English (EN)','en')]},
+        items['utc_offset'],items['review_hours'],items['batch_seconds'],
+        {'type':5,'name':'daily_digest','description':'[Daily digest] Enable or disable the daily PR and issue snapshot.'},
+        items['digest_hour'],
+        {'type':5,'name':'weekly_digest','description':'[Weekly digest] Enable or disable the weekly PR and issue snapshot.'},
+        items['digest_weekday'],items['weekly_digest_hour'],
+        {'type':5,'name':'quiet','description':'[Do Not Disturb] Enable or disable Do Not Disturb hours.'},
+        items['quiet_start'],items['quiet_end']]
+    prefixes={'utc_offset':'General','review_hours':'PR reminders','batch_seconds':'Batching',
+              'digest_hour':'Daily digest','digest_weekday':'Weekly digest','weekly_digest_hour':'Weekly digest',
+              'quiet_start':'Do Not Disturb','quiet_end':'Do Not Disturb'}
+    for item in options:
+        if item['name'] in prefixes:item['description']='['+prefixes[item['name']]+'] '+item['description']
     base = {'type':1,'default_member_permissions':'32','contexts':[0],'integration_types':[0],'name_localizations':None,'description_localizations':None}
     return [dict(base,name='summary',description='Show open PRs, issues, and discussions for every connected repository.',options=[]),dict(base,name='settings',description='View or change notification preferences for a connected repository.',options=options)]
 

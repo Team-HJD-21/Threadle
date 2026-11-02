@@ -261,8 +261,9 @@ class Service:
                 if feed:
                     feed.check()
                 options = binding.config.get('team_notifications', {})
+                from digest_settings import enabled as digest_enabled
                 enabled = (binding.config.get('routing_groups') or options.get('review_hours') or options.get('batch_seconds')
-                           or options.get('quiet') or options.get('digest', 'off') != 'off')
+                           or options.get('quiet') or digest_enabled(options,'daily') or digest_enabled(options,'weekly'))
                 runtime = TeamNotifications(binding, self.queue(binding), api)
                 notices = runtime if enabled or runtime.has_pending() else None
                 from connection_welcome import ConnectionWelcome

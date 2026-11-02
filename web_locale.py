@@ -11,6 +11,12 @@ PUBLIC_ORIGIN = ContextVar('public_origin', default='https://threadle.teamhjd.co
 COOKIE = '__Host-ghd-language'
 
 EN = {
+    '일일 요약':'Daily digest',
+    '주간 요약':'Weekly digest',
+    '일일 요약 사용':'Enable daily digest',
+    '주간 요약 사용':'Enable weekly digest',
+    '시간대와 방해금지':'Time zone and Do Not Disturb',
+    '요약 사용 여부를 확인해 주세요.':'Please choose whether to enable each digest.',
     '일일 요약 시각':'Daily digest time',
     '주간 요약 시각':'Weekly digest time',
     '요약은 발송 시점의 열린 PR · Issue 현황입니다.':'Digests show open PRs and issues at the time they are sent.',

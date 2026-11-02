@@ -78,6 +78,7 @@ def content(t):
             ('예시 패널의 크기와 스크롤을 보완하고 팀 설정 적용 후 완료 화면을 표시합니다. 관리 화면은 고유 저장소 수와 서버별 연결 수를 구분합니다.', 'Preview panes constrain and scroll their content. Applying team settings opens confirmation. Admin counts distinguish unique repositories from server connections.')])]))
     groups.insert(0, ('v1.0.0-beta.6', '방해금지 시간과 종료 요약', 'Do Not Disturb and catch-up roundups', [
         ('알림', 'Notifications', [
+            ('일일·주간 요약을 각각 켜거나 끄고 동시에 받을 수 있습니다. 각 요약의 시간·요일과 기존 발송 기록을 독립적으로 유지하며 /settings 옵션과 조회 결과를 관련 항목끼리 정리합니다.', 'Daily and weekly digests can be enabled independently or received together. Schedules and delivery records stay independent, and settings options and replies are grouped by topic.'),
             ('조용한 시간의 표시 이름을 방해금지 시간으로 변경합니다. 기존 시간 설정은 그대로 유지합니다.', 'Quiet hours are now called Do Not Disturb. Existing configured times are preserved.'),
             ('방해금지 중 PR·Issue·Discussion 상세 알림은 silent로 바로 전달하고, 종료 후 변경된 항목의 스레드 링크를 alert 채널에서 모아 안내합니다. 기존 대기 알림도 이 요약으로 전환하며 재시작·전송 재시도 기록을 유지합니다.', 'PR, issue and discussion updates arrive immediately and silently during Do Not Disturb. Afterwards, alert shows a roundup linking to changed threads. Previously deferred heads-ups join the roundup, with durable restart and retry recovery.'),
             ('CI/CD 상태와 실패 경고는 방해금지 시간에도 즉시 전달합니다. CI/CD 채널은 항상 silent이며 alert의 실패 경고는 일반 알림으로 전송합니다.', 'CI/CD status and failure alerts bypass Do Not Disturb. The CI/CD channel always stays silent, while failure warnings in alert use regular notifications.')])]))
