@@ -386,7 +386,7 @@ def make_embed(topic, event, payload, language='ko'):
         action = "merged"
     actor = payload.get("sender", {}).get("login", "GitHub")
     body = obj.get("body") or ""
-    if event in ('issues', 'discussion', 'pull_request', 'pull_request_target') and action in ('review_requested', 'review_request_removed', 'synchronize', 'assigned', 'unassigned', 'milestoned', 'demilestoned', 'labeled', 'unlabeled', 'converted_to_draft', 'typed', 'untyped', 'field_added', 'field_removed', 'closed', 'merged'):
+    if event in ('issues', 'discussion', 'pull_request', 'pull_request_target') and action in ('review_requested', 'review_request_removed', 'synchronize', 'assigned', 'unassigned', 'milestoned', 'demilestoned', 'labeled', 'unlabeled', 'converted_to_draft', 'typed', 'untyped', 'field_added', 'field_removed', 'closed', 'merged', 'reopened', 'deleted', 'answered', 'unanswered', 'locked', 'unlocked'):
         body = ''
     if event in ('pull_request', 'pull_request_target') and action == 'synchronize':
         before, after = str(payload.get('before', '')), str(payload.get('after', ''))

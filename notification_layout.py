@@ -173,9 +173,12 @@ def bundle_embed(topic, payload, language):
             embeds.append(make_embed(topic,event,value,language))
     if changes:
         heading = 'Updates'
-        if topic.kind=='issue':
-            action=next((value.get('action') for event,value in reversed(entries) if event=='issues' and value.get('action') in ('closed','deleted','reopened','opened')),None)
-            heading={'closed':'Closed','deleted':'Deleted','reopened':'Reopened'}.get(action,heading)
+        state=next((value for event,value in reversed(entries) if event in CREATION and value.get('action') in ('closed','deleted','reopened','opened','created','answered','unanswered')),None)
+        if state:
+            action=state.get('action')
+            if topic.kind=='pr' and action=='closed' and state.get('pull_request',{}).get('merged'):
+                action='merged'
+            heading={'closed':'Closed','deleted':'Deleted','reopened':'Reopened','merged':'Merged','answered':'Answered','unanswered':'Unanswered'}.get(action,heading)
         text='\n\n'.join(changes)
         change_embeds=[]
         while text:

@@ -207,3 +207,18 @@ class ReadableNotificationsTests(unittest.TestCase):
         self.assertIn('Reopened',result['_embeds'][0]['title'])
         self.assertNotIn('Closed',result['_embeds'][0]['title'])
 
+    def test_pr_and_discussion_lifecycle_titles_without_repeated_description(self):
+        from notification_layout import bundle_embed,group_payload
+        for kind,event,actions in [('pr','pull_request',('closed','reopened')),('discussion','discussion',('closed','reopened','deleted','answered','unanswered'))]:
+            for action in actions:
+                for language in ('ko','en'):
+                    payload=self.payload(kind,action)
+                    topic=topic_from('one/repo',kind,payload['pull_request' if kind=='pr' else 'discussion'])
+                    result=bundle_embed(topic,group_payload([(event,payload)]),language)['_embeds'][0]
+                    self.assertTrue(result['title'].endswith(' · '+action.capitalize()))
+                    self.assertNotIn('The original description.',result['description'])
+        payload=self.payload('pr','closed');payload['pull_request']['merged']=True
+        topic=topic_from('one/repo','pr',payload['pull_request'])
+        self.assertIn('Merged',bundle_embed(topic,group_payload([('pull_request',payload)]),'ko')['_embeds'][0]['title'])
+
+
