@@ -53,6 +53,10 @@ def content(t):
         ('사용 화면', 'Interface', [
             ('github-alert에서 일일 요약과 /summary 결과를 보여주고, 예시의 마지막 메시지가 나타나면 다음 채널로 빠르게 전환합니다.', 'The alert preview shows scheduled digests and /summary replies. Previews move on shortly after their final message appears.'),
             ('공유 링크 미리보기 이미지를 Threadle 배너로 바꾸고 봇 상태 문구를 Delivering GitHub updates로 변경합니다.', 'Shared links use the Threadle banner. The bot status now reads Delivering GitHub updates.')])]))
+    groups.insert(0, ('v1.0.0-beta.1', '베타 버전 표기와 작동 예시 개선', 'Beta versioning and preview improvements', [
+        ('베타 업데이트', 'Beta update', [
+            ('현재 서비스는 베타입니다. 버전을 v1.0.0-beta.1 형식으로 표시하며, 정식 출시 전 업데이트는 beta 번호를 올립니다.', 'Threadle is in beta. Versions now use v1.0.0-beta.1, with increasing beta numbers before the stable release.'),
+            ('예시 안의 알림 등장 간격을 늘리고 화면 폭에 따라 예시창 높이를 조절합니다. CI 예시는 모든 검사 완료 후 다음 채널로 전환합니다.', 'Preview notifications arrive more slowly and the window height adapts to screen width. The CI preview waits for every check before advancing.')])]))
     for version,ko,en,sections in groups:
         body += '<article class="patch-entry"><p class="patch-label">' + version + ' · ' + t(ko,en) + '</p>'
         for heading_ko,heading_en,items in sections:
