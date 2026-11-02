@@ -153,3 +153,8 @@ button.preview-channel{width:100%;border:0;background:transparent;text-align:lef
 .threadle-preview .preview-arrival,.threadle-preview .preview-message{animation-duration:.45s;animation-delay:.15s}.threadle-preview .preview-message.message-1{animation-delay:.8s}.threadle-preview .preview-message.message-2{animation-delay:1.6s}
 @media(max-width:760px){.preview-summary-titles{font-size:clamp(6px,1.4vw,10px);line-height:1.4;margin:4px 0 7px}.preview-command-summary>b{margin-top:6px}.preview-command-summary>small,.preview-post article>small{font-size:6px}.preview-alert .preview-detail-scroll>h2{font-size:clamp(10px,2.7vw,19px)}}
 @media(prefers-reduced-motion:reduce){.threadle-preview .preview-arrival,.threadle-preview .preview-message{animation:none}}
+
+/* Leave time to read each notification before the next one arrives. */
+.threadle-preview .preview-case:not(.preview-ci) .preview-arrival,.threadle-preview .preview-case:not(.preview-ci) .preview-message{animation-name:preview-notification-arrive;animation-duration:.7s;animation-delay:.4s}.threadle-preview .preview-case:not(.preview-ci) .preview-message.message-1{animation-delay:2s}.threadle-preview .preview-case:not(.preview-ci) .preview-message.message-2{animation-delay:3.8s}
+@keyframes preview-notification-arrive{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.threadle-preview .preview-case:not(.preview-ci) .preview-arrival,.threadle-preview .preview-case:not(.preview-ci) .preview-message{animation:none}}

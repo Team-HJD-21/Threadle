@@ -1,5 +1,5 @@
 {
-  "version": "2026.11.02.11",
+  "version": "2026.11.02.12",
   "baseline": "2026.11.02.8",
   "files": {
     "demo_web.py": {
@@ -12,7 +12,7 @@
     },
     "web_assets/product.css": {
       "before": "563cad825ee0729d58f6325d992ea6cb8d3e3f3d8765d4d2aa2213bb45b7470f",
-      "after": "a3ee7935324af9031f3cd5ee885a6a3af3423c4d86f07b8992bbf55baa71c4d7",
+      "after": "4b990033cef46dca645dfcf65258b45d301cada19db9c67521b0ecf743ec953f",
       "previous": [
         "5e991577e9f581ce27e81e2f3f502bfdb28b267caca4b0a6fcdf9b1cd87009ff",
         "583a964565990306e2f7f8e324beb96ad937788c14c906da6e3b84ea6f814942",
@@ -22,10 +22,11 @@
     },
     "connect_web.py": {
       "before": "a10a26dc8a437897a74a705d18b2eed378b2ec30b7b95f9298d833ba91b81db9",
-      "after": "5d40c90b7792d09d8dd3b5c80253d54853b2d5bd1cc8191906dffe0104e03595",
+      "after": "6a13c0e069becb5dbf9265c4fbbe5439ce5cf7fe41331b071e1a53a0acf92400",
       "previous": [
         "039da5474270896cb0d94cff9d8fbc012749be2cba8d41af02c9c38a98df280b",
-        "c71b37f392a2f9bb79cbe8c361c5e7f45ea94591c0199f198598a1d360930c39"
+        "c71b37f392a2f9bb79cbe8c361c5e7f45ea94591c0199f198598a1d360930c39",
+        "5d40c90b7792d09d8dd3b5c80253d54853b2d5bd1cc8191906dffe0104e03595"
       ]
     },
     "changelog.py": {
