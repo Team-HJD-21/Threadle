@@ -131,9 +131,9 @@ class TeamWeb:
         body += '<p class="muted">사이트 언어와 별개로 이 저장소의 알림 언어를 설정합니다. 제목과 댓글 원문은 번역하지 않습니다.</p>'
         fields = select('notification_language','알림 언어',[('ko','한국어 (KR)'),('en','English (EN)')],draft.get('language','ko'))
         fields += select('review_hours', '열린 PR 반복 알림', [('0', '사용 안 함'), ('4', '4시간마다'), ('12', '12시간마다'), ('24', '24시간마다'), ('48', '48시간마다')], str(options.get('review_hours', 0)))
-        fields += '<p class="muted">담당자나 리뷰 요청이 없어도 초안을 포함한 열린 PR을 설정한 간격으로 다시 알립니다. 종료되면 중단하며, 조용한 시간에는 보내지 않습니다.</p>'
+        fields += '<p class="muted">담당자나 리뷰 요청이 없어도 초안을 포함한 열린 PR을 설정한 간격으로 다시 알립니다. 종료되면 중단하며, 방해금지 시간에는 보내지 않습니다.</p>'
         fields += select('batch_seconds', '일반 알림 묶기', [('0', '즉시 전달'), ('60', '1분마다'), ('300', '5분마다')], str(options.get('batch_seconds', 0)))
-        fields += '<p class="muted">종료·병합·CI 실패·변경 요청은 묶지 않습니다. 조용한 시간에는 함께 대기합니다.</p>'
+        fields += '<p class="muted">종료·병합·CI 실패·변경 요청은 묶지 않습니다. 방해금지 시간에는 일반 활동을 silent로 기록하고 종료 후 항목별로 요약합니다. CI/CD 상태와 실패 경고는 즉시 전달합니다.</p>'
         fields += select('digest', 'PR · Issue 현황 요약', [('off', '사용 안 함'), ('daily', '매일'), ('weekly', '매주')], options.get('digest', 'off'))
         fields += select('digest_hour', '일일 요약 시각', [(str(n), f'{n:02d}:00') for n in range(24)], str(options.get('digest_hour', 9)))
         fields += select('weekly_digest_hour', '주간 요약 시각', [(str(n), f'{n:02d}:00') for n in range(24)], str(options.get('weekly_digest_hour', options.get('digest_hour', 9))))
@@ -141,8 +141,8 @@ class TeamWeb:
         fields += select('digest_weekday', '주간 요약 요일', [(str(n), label) for n, label in enumerate(['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'])], str(options.get('digest_weekday', 0)))
         fields += select('utc_offset', '시간대 (UTC 기준)', [(str(n), f'UTC{n:+d}') for n in range(-12, 15)], str(options.get('utc_offset', 9)))
         fields += '<p class="muted">고정 UTC 시차입니다. 서머타임은 자동 변경하지 않습니다.</p>'
-        fields += '<label><input class="choice" type="checkbox" name="quiet" value="1"' + (' checked' if options.get('quiet') else '') + '>조용한 시간 사용</label>'
-        for key, title, default in [('quiet_start', '조용한 시간 시작', 22), ('quiet_end', '조용한 시간 종료', 8)]:
+        fields += '<label><input class="choice" type="checkbox" name="quiet" value="1"' + (' checked' if options.get('quiet') else '') + '>방해금지 시간 사용</label>'
+        for key, title, default in [('quiet_start', '방해금지 시간 시작', 22), ('quiet_end', '방해금지 시간 종료', 8)]:
             fields += select(key, title, [(str(n), f'{n:02d}:00') for n in range(24)], str(options.get(key, default)))
         fields += '<h3>설정 적용</h3><p>선택한 옵션은 아래 버튼을 눌러야 실제 연결에 반영됩니다. 기존 PR 스레드와 대기 중인 알림은 유지됩니다.</p>'
         if query.get('saved') == '1':

@@ -76,6 +76,11 @@ def content(t):
             ('Markdown 서식을 유지하고 표·체크박스·접기 영역은 Discord에서 읽기 쉽게 변환합니다. /summary 제목의 괄호 앞 불필요한 역슬래시를 제거합니다.', 'Markdown is preserved, with readable Discord equivalents for tables, task lists and details. Summary titles no longer escape parentheses.'),
             ('새 연결의 주간 요약 기본 요일은 금요일이며 주간 시각을 별도로 설정할 수 있습니다. 기존 연결은 저장된 요일과 시간을 유지합니다. 요약은 발송 시점의 열린 PR·Issue 현황입니다.', 'New connections default to Friday for weekly digests, with a separate weekly time. Existing connections keep their schedule. Digests are snapshots of open PRs and issues.'),
             ('예시 패널의 크기와 스크롤을 보완하고 팀 설정 적용 후 완료 화면을 표시합니다. 관리 화면은 고유 저장소 수와 서버별 연결 수를 구분합니다.', 'Preview panes constrain and scroll their content. Applying team settings opens confirmation. Admin counts distinguish unique repositories from server connections.')])]))
+    groups.insert(0, ('v1.0.0-beta.6', '방해금지 시간과 종료 요약', 'Do Not Disturb and catch-up roundups', [
+        ('알림', 'Notifications', [
+            ('조용한 시간의 표시 이름을 방해금지 시간으로 변경합니다. 기존 시간 설정은 그대로 유지합니다.', 'Quiet hours are now called Do Not Disturb. Existing configured times are preserved.'),
+            ('방해금지 중 PR·Issue·Discussion 상세 알림은 silent로 바로 전달하고, 종료 후 변경된 항목의 스레드 링크를 alert 채널에서 모아 안내합니다. 기존 대기 알림도 이 요약으로 전환하며 재시작·전송 재시도 기록을 유지합니다.', 'PR, issue and discussion updates arrive immediately and silently during Do Not Disturb. Afterwards, alert shows a roundup linking to changed threads. Previously deferred heads-ups join the roundup, with durable restart and retry recovery.'),
+            ('CI/CD 상태와 실패 경고는 방해금지 시간에도 즉시 전달합니다. CI/CD 채널은 항상 silent이며 alert의 실패 경고는 일반 알림으로 전송합니다.', 'CI/CD status and failure alerts bypass Do Not Disturb. The CI/CD channel always stays silent, while failure warnings in alert use regular notifications.')])]))
     for version,ko,en,sections in groups:
         body += '<article class="patch-entry"><p class="patch-label">' + version + ' · ' + t(ko,en) + '</p>'
         for heading_ko,heading_en,items in sections:

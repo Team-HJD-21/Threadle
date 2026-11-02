@@ -119,7 +119,7 @@ class MutableMessages:
                     if error.status!=404:raise
                     existing=None
             if not existing:
-                sent=threads.api.call('POST',f'/channels/{thread_id}/messages',dict(data,nonce=nonce(thread_id+":"+receipt),enforce_nonce=True,**({'flags':1<<12} if current or payload.get('action')=='edited' else {})))
+                sent=threads.api.call('POST',f'/channels/{thread_id}/messages',dict(data,nonce=nonce(thread_id+":"+receipt),enforce_nonce=True,**({'flags':1<<12} if threads.notifications_suppressed() or current or payload.get('action')=='edited' else {})))
             with self.queue.connect() as db:db.execute('INSERT INTO source_pages VALUES(?,?,?,?) ON CONFLICT(source,page) DO UPDATE SET message=excluded.message,media=excluded.media',(source,index,sent['id'],origin))
             threads.remember_delivery(receipt,sent['id'])
         with self.queue.connect() as db:surplus=db.execute('SELECT page,message FROM source_pages WHERE source=? AND page>=?',(source,len(pages))).fetchall()

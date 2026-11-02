@@ -203,6 +203,8 @@ class Service:
             if feed and event == 'workflow_run':
                 feed.ci_detail(binding.repo, payload, 'webhook:' + delivery)
                 (notices or feed).ci(binding.repo, payload, 'webhook:' + delivery)
+            from dnd_notifications import delivery_mode
+            dnd_until=delivery_mode(queue,delivery,event,binding.config.get('team_notifications',{}),time.time())
             topics = route(route_event, payload, github)
             for topic in topics:
                 from notification_layout import hydrate_issue_fields, resolve_changed_fields
@@ -225,6 +227,7 @@ class Service:
                     routed = CachedThreads(threads.api, binding.config['guild_id'], dict(binding.config['channels'], pr=destination), queue, binding.config.get('language', 'ko'))
                     routed.bot = threads.bot
                     routed.media_fetcher = getattr(github, "fetch_media", None)
+                routed.silent_notifications=lambda:bool(delivery_mode(queue,delivery,event,binding.config.get('team_notifications',{}),time.time()))
                 from message_edits import deliver_events
                 thread = deliver_events(routed,topic,event,payload,'webhook:'+delivery,
                                         lambda topic=topic: current_closed(topic,github),binding.config.get('language','ko'))
@@ -237,7 +240,8 @@ class Service:
                     channels = {g['channel'] for g in targets}
                     if not channels or destination == binding.config['channels']['pr']:
                         channels.add(binding.config['alert_channel'])
-                    notices.topic(topic, event, payload, 'webhook:' + delivery, thread, channels)
+                    dnd_until=delivery_mode(queue,delivery,event,binding.config.get('team_notifications',{}),time.time())
+                    notices.topic(topic, event, payload, 'webhook:' + delivery, thread, channels, dnd_until=dnd_until)
                 elif feed:
                     feed.topic(topic, event, payload, 'webhook:' + delivery, thread)
             queue.finish_group(group_ids)

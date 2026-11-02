@@ -178,16 +178,16 @@ class NotificationTests(unittest.TestCase):
         notices.flush()
         self.assertEqual(len(self.api.messages), 2)
 
-    def test_non_pr_ci_failure_is_delayed_during_quiet_hours(self):
+    def test_non_pr_ci_failure_bypasses_dnd(self):
         self.now[0] += 23 * 3600
         notices = self.notices(quiet=True, quiet_start=22, quiet_end=8, utc_offset=0)
         notices.ci('owner/repo', {'workflow_run': {'id': 1, 'event': 'push', 'conclusion': 'failure', 'name': 'Build', 'html_url': 'https://github.com/owner/repo/actions/runs/1'}}, 'ci1')
-        self.assertEqual(self.api.messages, [])
+        self.assertEqual(len(self.api.messages), 1)
         self.now[0] += 9 * 3600
         notices.flush()
         self.assertEqual(len(self.api.messages), 1)
 
-    def test_ci_detail_is_immediate_but_alert_observes_quiet_hours(self):
+    def test_ci_detail_and_failure_alert_are_immediate_during_dnd(self):
         self.now[0] += 23 * 3600
         notices = self.notices(quiet=True, quiet_start=22, quiet_end=8, utc_offset=0)
         notices.binding.config['ci_channel'] = '105'
@@ -195,7 +195,7 @@ class NotificationTests(unittest.TestCase):
                    'name': 'Deploy', 'html_url': 'https://github.com/owner/repo/actions/runs/1'}}
         notices.ci('owner/repo', payload, 'ci1')
         notices.ci('owner/repo', payload, 'ci1')
-        self.assertEqual([path for path, _ in self.api.messages], ['/channels/105/messages'])
+        self.assertEqual([path for path, _ in self.api.messages], ['/channels/105/messages', '/channels/104/messages'])
         self.now[0] += 9 * 3600
         notices.flush()
         self.assertEqual([path for path, _ in self.api.messages], ['/channels/105/messages', '/channels/104/messages'])

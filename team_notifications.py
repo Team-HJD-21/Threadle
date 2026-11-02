@@ -21,9 +21,9 @@ def validate_options(options):
     if options.get('batch_seconds', 0) not in (0, 60, 300) or options.get('digest', 'off') not in ('off', 'daily', 'weekly'):
         raise ValueError('알림 주기를 확인해 주세요.')
     if type(options.get('quiet', False)) is not bool:
-        raise ValueError('조용한 시간 설정을 확인해 주세요.')
+        raise ValueError('방해금지 시간 설정을 확인해 주세요.')
     if options.get('quiet') and options.get('quiet_start', 0) == options.get('quiet_end', 0):
-        raise ValueError('조용한 시간의 시작과 종료를 다르게 설정해 주세요.')
+        raise ValueError('방해금지 시간의 시작과 종료를 다르게 설정해 주세요.')
     return options
 
 
@@ -76,21 +76,23 @@ class TeamNotifications:
             if not hours:
                 db.execute('DELETE FROM pr_reminder_batches')
             db.execute('INSERT OR REPLACE INTO open_pr_policy VALUES(1,?)', (hours,))
+        from dnd_notifications import DndRoundup
+        self.dnd=DndRoundup(self)
 
     def has_pending(self):
         with self.queue.connect() as db:
-            return db.execute('SELECT 1 FROM notice_events WHERE sent=0 LIMIT 1').fetchone() is not None
+            return db.execute('SELECT 1 FROM notice_events WHERE sent=0 LIMIT 1').fetchone() is not None or self.dnd.has_pending()
 
     def feed(self, channel):
         scope = str(channel) if str(channel) != str(self.binding.config.get('alert_channel')) else ''
         config = dict(self.binding.config, alert_channel=str(channel), alert_scope=scope)
         return AlertFeed(self.api, config, self.queue)
 
-    def schedule(self, key, title, description, link, event_key, channels, critical=False, color=0x8957E5):
+    def schedule(self, key, title, description, link, event_key, channels, critical=False, color=0x8957E5, bypass_dnd=False):
         seconds = 0 if critical else self.options.get('batch_seconds', 0)
         now = self.clock()
         due = (math.floor(now / seconds) + 1) * seconds if seconds else now
-        due = allowed_time(due, self.options)
+        if not bypass_dnd:due = allowed_time(due, self.options)
         for channel in set(channels):
             if due <= now:
                 self.feed(channel).send(key, event_key, ('🧵 Here’s your update: ' if self.english else '🧵 새 소식을 가져왔어요! ') + title, title, description, link, color)
@@ -100,7 +102,14 @@ class TeamNotifications:
                     db.execute('INSERT OR IGNORE INTO notice_events(channel,event_key,topic,title,description,url,color,due,bucket) VALUES(?,?,?,?,?,?,?,?,?)',
                                (str(channel), event_key, key, title, description, link, color, due, bucket))
 
-    def topic(self, topic, event, payload, event_key, thread, channels):
+    def topic(self, topic, event, payload, event_key, thread, channels, dnd_until=None):
+        if event != 'workflow_run':
+            now=self.clock()
+            until=dnd_until or allowed_time(now,self.options)
+            if dnd_until or until>now:
+                for index in range(len(payload.get('_events') or [None])):
+                    self.dnd.record(topic,event_key+':part:'+str(index),thread,until)
+                return
         label = {'pr': 'PR', 'issue': 'ISSUE', 'discussion': 'Discussion'}[topic.kind]
         title = f'{label} #{topic.number} · ' + (english_activity(event, payload) if self.english else activity(event, payload))
         link = f"https://discord.com/channels/{self.binding.config['guild_id']}/{thread}"
@@ -108,7 +117,7 @@ class TeamNotifications:
                        else f'[스레드 확인하기]({link}) · [GitHub 원문]({topic.url})')
         critical = (event == 'workflow_run' or any(item['payload'].get('action')=='closed' or item['payload'].get('review',{}).get('state','').lower()=='changes_requested' for item in payload.get('_events',[])) or payload.get('action') == 'closed'
                     or payload.get('review', {}).get('state', '').lower() == 'changes_requested')
-        self.schedule(topic.key, title, description, link, event_key, channels, critical)
+        self.schedule(topic.key, title, description, link, event_key, channels, critical, bypass_dnd=event=='workflow_run')
 
     def ci(self, repo, payload, event_key):
         run = payload['workflow_run']
@@ -123,14 +132,17 @@ class TeamNotifications:
         if channel:
             description = ('[Open CI channel](' if self.english else '[CI 채널 확인하기](') + f'https://discord.com/channels/{self.binding.config["guild_id"]}/{channel}) · ' + description
         self.schedule(repo + ':ci:' + str(run['id']), ('CI failed · ' if self.english else 'CI 실패 · ') + clip(run.get('name', ''), 150),
-                      description, link, event_key, [self.binding.config['alert_channel']], True, 0xD1242F)
+                      description, link, event_key, [self.binding.config['alert_channel']], True, 0xD1242F, bypass_dnd=True)
 
     def flush(self):
+        self.dnd.flush()
         with self.queue.connect() as db:
             due = db.execute('SELECT channel,topic,bucket FROM notice_events WHERE sent=0 AND due<=? GROUP BY channel,topic,bucket LIMIT 20', (self.clock(),)).fetchall()
         for channel, topic, bucket in due:
-            if allowed_time(self.clock(), self.options) > self.clock():
-                return
+            if allowed_time(self.clock(), self.options) > self.clock() and ':ci:' not in topic:
+                with self.queue.connect() as db:
+                    failure=db.execute("SELECT 1 FROM notice_events WHERE sent=0 AND channel=? AND topic=? AND bucket=? AND (title LIKE '%CI failed%' OR title LIKE '%CI 실패%') LIMIT 1",(channel,topic,bucket)).fetchone()
+                if not failure:continue
             with self.queue.connect() as db:
                 rows = db.execute('SELECT event_key,title,description,url,color FROM notice_events WHERE sent=0 AND channel=? AND topic=? AND bucket=? ORDER BY event_key',
                                   (channel, topic, bucket)).fetchall()
