@@ -1,6 +1,7 @@
 """Route GitHub metadata into durable per-topic Discord threads. Standard library only."""
 import hashlib
 import json
+import logging
 import os
 import re
 import socket
@@ -305,9 +306,19 @@ class Threads:
         return None
 
     def start(self, channel, root_id, topic):
+        data={"name":topic.name,"auto_archive_duration":1440}
+        if self.notifications_suppressed():
+            # Experimental for ordinary text threads; Discord may ignore this undocumented field.
+            data['flags']=1<<12
+            logging.getLogger('discord-threads').info('Thread create silent requested channel=%s source=%s',channel,root_id)
         try:
-            return self.api.call("POST", f"/channels/{channel}/messages/{root_id}/threads",
-                                 {"name": topic.name, "auto_archive_duration": 1440})
+            try:
+                return self.api.call("POST", f"/channels/{channel}/messages/{root_id}/threads",data)
+            except ApiError as error:
+                if 'flags' not in data or error.status!=400 or error.code not in (None,50035):raise
+                logging.getLogger('discord-threads').warning('Thread create silent rejected; falling back channel=%s source=%s code=%s',channel,root_id,error.code)
+                fallback={key:value for key,value in data.items() if key!='flags'}
+                return self.api.call("POST", f"/channels/{channel}/messages/{root_id}/threads",fallback)
         except ApiError as error:
             if error.status != 400 or error.code != 160004:
                 raise
