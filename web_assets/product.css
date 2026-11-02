@@ -158,3 +158,15 @@ button.preview-channel{width:100%;border:0;background:transparent;text-align:lef
 .threadle-preview .preview-case:not(.preview-ci) .preview-arrival,.threadle-preview .preview-case:not(.preview-ci) .preview-message{animation-name:preview-notification-arrive;animation-duration:.7s;animation-delay:.4s}.threadle-preview .preview-case:not(.preview-ci) .preview-message.message-1{animation-delay:2s}.threadle-preview .preview-case:not(.preview-ci) .preview-message.message-2{animation-delay:3.8s}
 @keyframes preview-notification-arrive{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.threadle-preview .preview-case:not(.preview-ci) .preview-arrival,.threadle-preview .preview-case:not(.preview-ci) .preview-message{animation:none}}
+
+/* Constrain pane geometry while allowing long summaries to scroll. */
+.preview-case{grid-template-rows:minmax(0,1fr)}
+.preview-main,.preview-detail,.preview-sidebar{min-height:0;height:100%;overflow:hidden}
+.preview-feed,.preview-detail-scroll{overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.preview-feed{justify-content:safe flex-end}
+.preview-summary-feed{justify-content:flex-start}
+.preview-feed>*{flex-shrink:0}
+.preview-compose{flex-shrink:0;min-width:0}
+.preview-post article,.preview-detail-scroll{overflow-wrap:anywhere}
+.preview-post article>*{max-width:100%}
+@container(max-width:560px){.preview-case{grid-template-columns:25% 32% 43%}.preview-main>header .preview-tools{display:none}.preview-compose>.preview-tools{display:none}.preview-post{gap:3px}.preview-post>img{width:14px;height:14px}.preview-post article{padding:7px 5px}.preview-command-summary>b{margin-top:7px}}

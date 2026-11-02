@@ -28,7 +28,7 @@ class Api:
 
     def call(self, method, path, data=None):
         if isinstance(data, dict) and data.get('_files'):
-            if self.service != 'Discord' or method != 'POST' or not re.fullmatch(r'/channels/\d+/messages', path):
+            if self.service != 'Discord' or not ((method == 'POST' and re.fullmatch(r'/channels/\d+/messages', path)) or (method == 'PATCH' and re.fullmatch(r'/channels/\d+/messages/\d+', path))):
                 raise ValueError('Attachments are only supported for Discord channel messages')
             from notification_media import multipart_message
             encoded, content_type = multipart_message(data)
@@ -319,7 +319,7 @@ class Threads:
         if existing:
             return existing
         root = self.api.call("POST", f"/channels/{channel}/messages", {
-            "allowed_mentions": {"parse": []}, "nonce": nonce(topic.key), "enforce_nonce": True,
+            "allowed_mentions": {"parse": []}, "nonce": nonce(channel+":"+topic.key), "enforce_nonce": True,
             "embeds": [{"title": clip(f"{topic.kind.upper()} #{topic.number} · {topic.title}", 230),
                         "url": topic.url, **({"description": root_description(topic, self.language == 'en')} if root_description(topic, self.language == 'en') else {}),
                         "author": {"name": clip(topic.metadata.get('user', {}).get('login', 'GitHub'), 100)},
@@ -357,7 +357,7 @@ class Threads:
                 sent = self.api.call("POST", f"/channels/{thread_id}/messages", {
                     "embeds": embeds, "allowed_mentions": {"parse": []},
                     **({'_files': files} if files else {}),
-                    "nonce": nonce(receipt), "enforce_nonce": True})
+                    "nonce": nonce(thread_id+":"+receipt), "enforce_nonce": True})
                 self.remember_delivery(receipt, sent["id"])
         # Read current GitHub state after sending, not an older queued close/reopen event.
         if closed():
@@ -389,9 +389,8 @@ def make_embed(topic, event, payload, language='ko'):
     if event in ('issues', 'discussion', 'pull_request', 'pull_request_target') and action in ('review_requested', 'review_request_removed', 'synchronize', 'assigned', 'unassigned', 'milestoned', 'demilestoned', 'labeled', 'unlabeled', 'converted_to_draft', 'typed', 'untyped', 'field_added', 'field_removed', 'closed', 'merged', 'reopened', 'deleted', 'answered', 'unanswered', 'locked', 'unlocked'):
         body = ''
     if event in ('pull_request', 'pull_request_target') and action == 'synchronize':
-        before, after = str(payload.get('before', '')), str(payload.get('after', ''))
-        if re.fullmatch(r'[0-9a-f]{40}', before) and re.fullmatch(r'[0-9a-f]{40}', after):
-            body = f'[{before[:7]} → {after[:7]}](https://github.com/{topic.repo}/compare/{before}...{after})'
+        from commit_notifications import render_commits
+        body = render_commits(topic.repo,payload,english)
     if event == "pull_request_review" and str(obj.get("state", "")).lower() != "commented":
         body = ('Review: ' if english else '리뷰 결과: ') + obj.get('state', 'unknown') + '\n\n' + body
     if obj.get("path"):

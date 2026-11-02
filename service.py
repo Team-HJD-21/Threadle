@@ -197,6 +197,8 @@ class Service:
                 self.registry.rename(binding.id, canonical)
                 return False
             payload['repository']['full_name'] = binding.repo
+            from commit_notifications import enrich_commits
+            payload = enrich_commits(github,binding.repo,event,payload)
             route_event = ('pull_request' if payload.get('pull_request') else 'discussion' if payload.get('discussion') else 'issues') if event == 'threadle_bundle' else event
             if feed and event == 'workflow_run':
                 feed.ci_detail(binding.repo, payload, 'webhook:' + delivery)
@@ -223,8 +225,9 @@ class Service:
                     routed = CachedThreads(threads.api, binding.config['guild_id'], dict(binding.config['channels'], pr=destination), queue, binding.config.get('language', 'ko'))
                     routed.bot = threads.bot
                     routed.media_fetcher = getattr(github, "fetch_media", None)
-                thread = routed.deliver(topic, make_embed(topic, event, payload, binding.config.get('language', 'ko')), 'webhook:' + delivery,
-                                         lambda topic=topic: current_closed(topic, github))
+                from message_edits import deliver_events
+                thread = deliver_events(routed,topic,event,payload,'webhook:'+delivery,
+                                        lambda topic=topic: current_closed(topic,github),binding.config.get('language','ko'))
                 if notices:
                     if event == 'threadle_bundle':
                         for index,item in enumerate(payload['_events']):

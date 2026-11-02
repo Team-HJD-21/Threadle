@@ -36,7 +36,9 @@ class Images(HTMLParser):
 
 def media_embeds(original):
     embed=dict(original)
-    body=embed.get('description','')
+    from notification_markdown import protect_code,adapt
+    body,restore=protect_code(embed.get('description',''))
+    body=adapt(body)
     parser=Images()
     parser.feed(body)
     urls=list(parser.urls)
@@ -55,7 +57,8 @@ def media_embeds(original):
         if url and (re.search(r'\.(gif|png|jpe?g|webp)(?:[?#]|$)',url,re.I) or urlsplit(url).hostname=='github.com' and '/user-attachments/assets/' in urlsplit(url).path):
             urls.append(url)
     urls=list(dict.fromkeys(urls))
-    embed['description']=body.strip()
+    from discord_threads import clip
+    embed['description']=clip(restore(body).strip(),3500)
     if not urls:return [embed]
     embed['image']={'url':urls[0]}
     result=[embed]

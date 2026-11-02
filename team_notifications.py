@@ -13,7 +13,7 @@ def validate_options(options):
     if not isinstance(options, dict):
         raise ValueError('알림 설정을 확인해 주세요.')
     ranges = {'review_hours': (0, 720), 'batch_seconds': (0, 300), 'utc_offset': (-12, 14),
-              'digest_hour': (0, 23), 'digest_weekday': (0, 6), 'quiet_start': (0, 23), 'quiet_end': (0, 23)}
+              'weekly_digest_hour': (0, 23), 'digest_hour': (0, 23), 'digest_weekday': (0, 6), 'quiet_start': (0, 23), 'quiet_end': (0, 23)}
     for key, (low, high) in ranges.items():
         value = options.get(key, 0)
         if type(value) is not int or not low <= value <= high:
@@ -271,7 +271,8 @@ class TeamNotifications:
             return
         offset = self.options.get('utc_offset', 9) * 3600
         local = dt.datetime.fromtimestamp(self.clock() + offset, dt.timezone.utc)
-        scheduled = local.replace(hour=self.options.get('digest_hour', 9), minute=0, second=0, microsecond=0)
+        hour = self.options.get('weekly_digest_hour',self.options.get('digest_hour',9)) if kind=='weekly' else self.options.get('digest_hour',9)
+        scheduled = local.replace(hour=hour, minute=0, second=0, microsecond=0)
         if (local < scheduled or scheduled.timestamp() - offset < self.options.get('enabled_at', self.clock())
                 or kind == 'weekly' and local.weekday() != self.options.get('digest_weekday', 0)):
             return
