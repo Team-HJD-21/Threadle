@@ -38,14 +38,15 @@
     },
     "changelog.py": {
       "before": "261336f2f039d63348697c8fb4f9f7ec8f25c959ad6f0e2ccd74230f8c208e28",
-      "after": "25ec20eeb5b98801d0b01ade6fdea0a4d0218a2afd5ffa5e017e70247e12e358",
+      "after": "9f62f39e9485f5f1edf938cddaba379936895d04424678b608cdc8680afaba2b",
       "previous": [
         "ce59507c70872a51ef2bbd42a7ee232a5bd4e2692a6b0c8903887594a1e59b90",
         "70c46b09eeacc09189050699f22f47224d0f1b157c741d0f25f9f51bd23af677",
         "71df4c28e5e491425c100f00a84fa662cd1af28c53ea71675aa0667bf230b5e5",
         "04fa502c59d291c038e46fef1546a45474d636ad69471111b1fcf600d190034b",
         "c0f7130dcd4ef6199e40ccb51590900ab56d332eb7d24a6d7785df4304ed9da6",
-        "8bfe6edb80be94e6f8e62419b8315c1969802a00fdf37926420551259c9697a3"
+        "8bfe6edb80be94e6f8e62419b8315c1969802a00fdf37926420551259c9697a3",
+        "25ec20eeb5b98801d0b01ade6fdea0a4d0218a2afd5ffa5e017e70247e12e358"
       ]
     },
     "web_assets/preview.js": {
@@ -109,7 +110,10 @@
     },
     "workflow_notifications.py": {
       "before": null,
-      "after": "1c6f3299d4da35597604eee85b363e62c4c516bf098026877cd267f091d7554a"
+      "after": "ff565a1dd1a2b0046859008431e3d3147c54050609eaeeed849b17c60de28799",
+      "previous": [
+        "1c6f3299d4da35597604eee85b363e62c4c516bf098026877cd267f091d7554a"
+      ]
     },
     "webhook_recovery.py": {
       "before": null,

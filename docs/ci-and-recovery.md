@@ -11,3 +11,5 @@ One image per Discord message prevents the multi-image gallery crop. Image bytes
 ## One-time channel name migration
 
 On the first upgraded startup, snapshot the bot’s current guild membership. Within those guilds, match configured CI channel IDs or managed kind=ci topic markers, and rename only names ending in github-ci to github-ci-cd, preserving emoji prefixes. Persist scan targets and completed channels in the registry. Retry failed requests only; a lost PATCH response is reconciled from the current name. Completed targets and later user renames are never overwritten again. Existing IDs, topics, positions and history are unchanged. New layouts create github-ci-cd directly. No periodic CI/CD job lookup or stage classification is enabled.
+
+CI/CD channel messages use SUPPRESS_NOTIFICATIONS (4096) on creation. Completion edits omit flags, preserving the original flag; Discord does not support changing this notification flag via message edits. Failure heads-ups in github-alert are not marked silent. Existing old messages are not retroactively re-sent.
