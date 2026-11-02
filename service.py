@@ -284,6 +284,8 @@ class Service:
         from presence import Presence
         presence_worker = Presence(self).start(stop)
         self.guilds.start(stop)
+        from ci_channel_migration import CiChannelMigration
+        CiChannelMigration(self).start(stop)
         from webhook_recovery import WebhookRecovery
         WebhookRecovery(self).start(stop)
         from data_retention import Retention

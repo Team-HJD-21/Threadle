@@ -4,10 +4,11 @@
   "files": {
     "demo_web.py": {
       "before": "0c065593f354889a1c8d450b94b6b08f29a1055142e32ed2e35419d81a876ecf",
-      "after": "e14f17308ccd4970e55a428bee55aea09b7f622c3f681a2f28ed6bc609afa911",
+      "after": "ad21f85965c60bcc3ed39ba2c9bf5a819542e730aa1adae5e413b1ad23ff94af",
       "previous": [
         "fd87bc94261e94f959aa65b28a01bdb44c11054a0e84ac9f88b15e7018273438",
-        "afeb765fa4db1d2ab32f24cc05fead6a97e2c21acb17c1df38cb0727235facb9"
+        "afeb765fa4db1d2ab32f24cc05fead6a97e2c21acb17c1df38cb0727235facb9",
+        "e14f17308ccd4970e55a428bee55aea09b7f622c3f681a2f28ed6bc609afa911"
       ]
     },
     "web_assets/product.css": {
@@ -36,12 +37,13 @@
     },
     "changelog.py": {
       "before": "261336f2f039d63348697c8fb4f9f7ec8f25c959ad6f0e2ccd74230f8c208e28",
-      "after": "c0f7130dcd4ef6199e40ccb51590900ab56d332eb7d24a6d7785df4304ed9da6",
+      "after": "8bfe6edb80be94e6f8e62419b8315c1969802a00fdf37926420551259c9697a3",
       "previous": [
         "ce59507c70872a51ef2bbd42a7ee232a5bd4e2692a6b0c8903887594a1e59b90",
         "70c46b09eeacc09189050699f22f47224d0f1b157c741d0f25f9f51bd23af677",
         "71df4c28e5e491425c100f00a84fa662cd1af28c53ea71675aa0667bf230b5e5",
-        "04fa502c59d291c038e46fef1546a45474d636ad69471111b1fcf600d190034b"
+        "04fa502c59d291c038e46fef1546a45474d636ad69471111b1fcf600d190034b",
+        "c0f7130dcd4ef6199e40ccb51590900ab56d332eb7d24a6d7785df4304ed9da6"
       ]
     },
     "web_assets/preview.js": {
@@ -63,7 +65,10 @@
     },
     "service.py": {
       "before": "8ef021eb91f276ae424209884b25cd423995d41e1455bbb6bfd63a0ab0206d1e",
-      "after": "2b39caa084daa3eaa290f3bf3573d907c4d36513a97abf24be24bc9458e3f397"
+      "after": "a687e18707282836bb64ec6159556183889032368eacccaaacf86ba8116a1588",
+      "previous": [
+        "2b39caa084daa3eaa290f3bf3573d907c4d36513a97abf24be24bc9458e3f397"
+      ]
     },
     "auth.py": {
       "before": "be8ffb8d515312c5fb8390e4b31184cfe906d8711efc889621f7327b0ef2d09e",
@@ -83,7 +88,10 @@
     },
     "alert_feed.py": {
       "before": "c617136c345ffe142d18541874c1322549d2b489fdfc8f44e356a083f3bf0516",
-      "after": "21873e6a5f74799cdbab164298547048ad2ed7e6d04b852a365f0fc74ede9bb2"
+      "after": "5f9638e2cae12fc1e77e6129c86377a0ab45d778cf10212d49c5f067dab0b080",
+      "previous": [
+        "21873e6a5f74799cdbab164298547048ad2ed7e6d04b852a365f0fc74ede9bb2"
+      ]
     },
     "team_notifications.py": {
       "before": "6904471f68f57f58851b7e4f6c1c4f3d8d72ffedb177a5c20982b5a1ebf15eb6",
@@ -100,6 +108,14 @@
     "webhook_recovery.py": {
       "before": null,
       "after": "de3d3481761df79ae408739e9aa746a76eb3b063a7faca85cf0f9340ec34f63c"
+    },
+    "channel_layouts.py": {
+      "before": "717f589bd0b77f33e15e88d2802f3b05dadd3546fa8e36bed574f455e3b71e4a",
+      "after": "da26e586b4acd0b4ad58dd207accfb5e66cf05827309d4e01b96f62fafd387c3"
+    },
+    "ci_channel_migration.py": {
+      "before": null,
+      "after": "be82d11ea795e4d3d87041a799217dc7614287bbecf8b8a6c1086013d81a6767"
     }
   }
 }

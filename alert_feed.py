@@ -12,7 +12,7 @@ def alert_channel_config(api, config):
         raise ValueError('Could not uniquely identify the existing github-alert text channel; no channel was created.')
     updated = dict(config, alert_channel=matches[0]['id'])
     ci = [item for item in channels if item.get('type') == 0
-          and item.get('parent_id') == parent and item.get('name', '').endswith('github-ci')]
+          and item.get('parent_id') == parent and item.get('name', '').endswith(('github-ci', 'github-ci-cd'))]
     if len(ci) == 1:
         updated['ci_channel'] = ci[0]['id']
     return updated
