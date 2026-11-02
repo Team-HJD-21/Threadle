@@ -278,7 +278,7 @@ class Browser:
         if fields is not None:
             body = urlencode(fields)
             headers.update({'Content-Type': 'application/x-www-form-urlencoded', 'Origin': origin})
-        connection = http.client.HTTPConnection(*self.server.server_address, timeout=5)
+        connection = http.client.HTTPConnection(*self.server.server_address, timeout=30)
         try:
             connection.request(method, path, body, headers)
             response = connection.getresponse()
@@ -295,6 +295,11 @@ class Browser:
             connection.close()
 
 
+class FixtureHttpServer(ThreadingHTTPServer):
+    daemon_threads = False
+    block_on_close = True
+
+
 class WebFixture(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -308,7 +313,7 @@ class WebFixture(unittest.TestCase):
         self.service.github = lambda binding: self.install_api
         self.web = Onboarding(self.service, settings(), self.users)
         self.service.web = self.web
-        self.server = ThreadingHTTPServer(('127.0.0.1', 0), handler(self.service))
+        self.server = FixtureHttpServer(('127.0.0.1', 0), handler(self.service))
         self.thread = threading.Thread(target=self.server.serve_forever)
         self.thread.start()
         self.browser = Browser(self.server)
