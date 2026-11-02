@@ -37,12 +37,25 @@ class PreviewTests(unittest.TestCase):
             LANGUAGE.reset(token)
 
 
-    def test_ci_preview_shows_failed_run_and_alert_without_a_fictitious_ci_thread(self):
+    def test_ci_preview_shows_workflow_progress_and_success_without_comments(self):
         html = demonstration().split('class="preview-case preview-ci"',1)[1]
         self.assertIn('github-ci', html)
-        self.assertIn('github-alert', html)
         self.assertIn('Run #128', html)
         self.assertIn('Threadle CI and deployment', html)
+        self.assertIn('Run tests', html)
+        self.assertIn('preview-ci-running', html)
+        self.assertIn('preview-ci-success', html)
         self.assertNotIn('preview-thread-card', html)
         self.assertNotIn('[CI #', html)
         self.assertNotIn('새 댓글', html)
+        self.assertNotIn('Reply in thread', html)
+
+    def test_sidebar_navigation_matches_rotation_order_and_omits_unrelated_sections(self):
+        html = demonstration()
+        first = html.split('class="preview-case preview-pr"', 1)[1].split('</aside>', 1)[0]
+        markup = Markup(first)
+        for removed in ['preview-tabs', 'Server Boosts', 'TEXT CHANNELS', '>Events<']:
+            self.assertNotIn(removed, html)
+        positions = [first.index('data-preview-key="' + key + '"') for key in ['pr','issue','discussion','ci']]
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn('🔔 Threadle', first)

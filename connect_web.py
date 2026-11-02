@@ -100,7 +100,7 @@ def page(title, body, landing=False):
     extra = '<link rel="icon" type="image/png" href="/connect/assets/threadle-avatar.png"><meta name="description" content="' + esc(description) + '">'
     extra += '<meta name="robots" content="' + ('index,follow' if public else 'noindex,nofollow') + '">'
     if landing:
-        extra += '<link rel="stylesheet" href="/connect/assets/landing.css?v=20261102-2"><link rel="stylesheet" href="/connect/assets/product.css?v=20261102-7">'
+        extra += '<link rel="stylesheet" href="/connect/assets/landing.css?v=20261102-2"><link rel="stylesheet" href="/connect/assets/product.css?v=20261102-8"><script src="/connect/assets/preview.js?v=20261102-8" defer></script>'
     extra += '<link rel="stylesheet" href="/connect/assets/controls.css?v=20261102-6"><script src="/connect/assets/controls.js?v=1" defer></script>'
     if public:
         canonical_path = '/' if path in ('/', '/connect', '/connect/') else path
@@ -223,7 +223,7 @@ class Onboarding:
 
     def asset(self, request, path):
         name = path.removeprefix('/connect/assets/')
-        if name not in ('notify-logo.png', 'teamhjd-wordmark.png', 'threadle-icon.png', 'team-settings.js', 'landing.css', 'product.css', 'threadle-avatar.png', 'admin-update.js', 'controls.js', 'controls.css'):
+        if name not in ('notify-logo.png', 'teamhjd-wordmark.png', 'threadle-icon.png', 'team-settings.js', 'landing.css', 'product.css', 'threadle-avatar.png', 'admin-update.js', 'controls.js', 'controls.css', 'preview.js'):
             raise ConnectError('파일을 찾을 수 없습니다.', 404)
         asset = Path(__file__).parent / 'web_assets' / name
         if not asset.is_file():
