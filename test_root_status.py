@@ -102,6 +102,21 @@ class RootStatusTests(unittest.TestCase):
         self.assertTrue(TopicRoots(self.threads,self.github).handle_deleted(topic,'discussion',{'action':'deleted'}))
         self.assertNotIn(identity,self.api.threads)
 
+    def test_issue_410_gone_is_a_confirmed_missing_resource(self):
+        topic=Topic('owner/repo','issue',3,'Issue','https://github.com/owner/repo/issues/3');identity=self.root(topic)
+        self.github.call.side_effect=ApiError('GitHub',410)
+        self.assertTrue(TopicRoots(self.threads,self.github).handle_deleted(topic,'issues',{'action':'deleted'}))
+        self.assertNotIn(identity,self.api.roots);self.assertNotIn(identity,self.api.threads)
+    def test_issue_auth_and_server_errors_do_not_delete_discord_messages(self):
+        topic=Topic('owner/repo','issue',3,'Issue','https://github.com/owner/repo/issues/3');identity=self.root(topic)
+        for status in (401,403,500):
+            self.github.call.side_effect=ApiError('GitHub',status)
+            with self.assertRaises(ApiError):TopicRoots(self.threads,self.github).handle_deleted(topic,'issues',{'action':'deleted'})
+            self.assertIn(identity,self.api.roots);self.assertIn(identity,self.api.threads)
+    def test_pr_410_is_not_treated_as_a_deleted_issue(self):
+        self.root();self.github.call.side_effect=ApiError('GitHub',410)
+        with self.assertRaises(ApiError):TopicRoots(self.threads,self.github).closed(self.topic)
+
     def test_comment_delete_never_deletes_its_issue(self):
         topic=Topic('owner/repo','issue',3,'Issue','https://github.com/owner/repo/issues/3');identity=self.root(topic)
         self.assertFalse(self.deleted(topic,'issue_comment'));self.assertIn(identity,self.api.roots)
@@ -125,7 +140,7 @@ class RootStatusTests(unittest.TestCase):
         topic=Topic('owner/repo','issue',3,'Issue','https://github.com/owner/repo/issues/3');root=self.root(topic)
         def call(method,path,*args):
             if path=='/repositories/11':return {'id':11,'full_name':'owner/repo'}
-            if path=='/repos/owner/repo/issues/3':raise ApiError('GitHub',404)
+            if path=='/repos/owner/repo/issues/3':raise ApiError('GitHub',410)
             raise AssertionError(path)
         self.github.call.side_effect=call;service.github=lambda _:self.github
         payload={'repository':{'id':11,'full_name':'owner/repo'},'installation':{'id':1},'action':'deleted','issue':{'number':3,'title':'Issue'}}

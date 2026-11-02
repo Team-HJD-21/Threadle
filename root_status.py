@@ -62,7 +62,7 @@ class TopicRoots:
             path='pulls' if topic.kind=='pr' else 'issues'
             try:self.snapshot=self.github.call('GET',f'/repos/{topic.repo}/{path}/{topic.number}')
             except ApiError as error:
-                if error.status!=404:raise
+                if error.status!=404 and not (topic.kind=='issue' and error.status==410):raise
                 self.snapshot=None
         self.loaded=True
         return self.snapshot

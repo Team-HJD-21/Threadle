@@ -9,3 +9,7 @@ Ordinary alert heads-ups during DND are replaced by a durable roundup of unique 
 CI/CD requested/in-progress/completed state messages stay immediately event-driven and always silent in the CI/CD channel. Failure heads-ups and associated PR CI failure notices bypass DND and normal batching, with regular alert notifications. Existing deferred CI failures are released on the next scheduler tick. Review reminders and scheduled digests retain their existing DND behavior.
 
 All data remains per binding queue; no cross-server settings, category, permissions or channels are changed. There is no live Discord sending in tests.
+
+## beta.7 experimental thread creation flag
+
+At the user's request, normal public thread creation during DND also includes flags=4096. This field is undocumented for the start-from-message endpoint and may be ignored; a successful HTTP response does not prove notification sound suppression. Existing immediate creation, source IDs, names, archive duration, channels and visibility are preserved. Invalid-form HTTP 400 (50035 or an omitted code) falls back once without the experimental field. Already-created 160004 recovery remains unchanged, including after fallback; permission, network and unrelated errors retain normal retry handling. Safe logs record the attempt/rejection without message contents or credentials. Existing root/detail silent flags and CI failure exceptions remain unchanged. No thread-creation deferral or forum migration is added.

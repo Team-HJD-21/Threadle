@@ -9,3 +9,5 @@ Only authenticated Issue or Discussion deletion events (or an existing deletion 
 A durable per-binding deletion tombstone prevents older queued activity from recreating deleted topics. Deferred alert/DND rows and detail-source mappings are cleaned for the removed thread, and frozen DND batches omit tombstoned topics. Once cleanup succeeds, later old events do not rescan Discord history. Permission errors abort rather than masquerading as confirmed deletion. Existing settings, other topics, channels and other servers are untouched.
 
 References: https://docs.discord.com/developers/topics/threads and https://docs.github.com/en/graphql/guides/using-the-graphql-api-for-discussions
+
+GitHub REST returns 410 Gone for a deleted Issue visible to the installation. beta.7 handles this Issue-only response in addition to 404; PR 410 and 401/403/5xx errors remain errors. Pending failed delete deliveries retain their existing retry schedule. Reference: https://docs.github.com/en/rest/issues/issues#get-an-issue

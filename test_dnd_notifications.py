@@ -74,7 +74,7 @@ class DndTests(unittest.TestCase):
         self.assertNotIn('flags',api.posts[thread][-1])
     def test_mode_is_checked_for_each_post_at_dnd_boundary(self):
         api=EditingDiscord();threads=CachedThreads(api,'g',{'pr':'c'},self.queue);threads.bot={'id':'bot'}
-        mode=Mock(side_effect=[False,True]);threads.silent_notifications=mode
+        mode=Mock(side_effect=[False,True,True]);threads.silent_notifications=mode
         topic=Topic('owner/repo','pr',1,'Title','https://github.com/owner/repo/pull/1')
         thread=threads.deliver(topic,{'description':'Body'},'boundary',lambda:False)
         self.assertNotIn('flags',next(iter(api.roots.values())))
