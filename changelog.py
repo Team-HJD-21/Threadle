@@ -41,6 +41,9 @@ def content(t):
             ('관리 작업 기록과 진단 로그, 정상 종료된 업데이트와 자동 백업을 30일 기준으로 정리합니다. 진행 중이거나 복구가 필요한 자료와 외부 수동 백업은 자동 삭제에서 구분합니다.', 'Admin activity, diagnostic logs, completed updates, and automatic backups follow a 30-day cleanup period. Active or unresolved recovery materials and external manual backups are treated separately.'),
             ('이미지 처리 라이브러리를 보안 수정 버전 Pillow 13으로 격리 설치하고, 배포 전 이미지·GIF 확인과 파일 해시 검증을 수행합니다. 기존 봇 라이브러리 폴더는 변경하지 않습니다.', 'Pillow 13 security fixes are installed in isolation, with image/GIF checks and file hashes verified before deployment. The existing bot dependency folder stays unchanged.'),
             ('한국어·영어 정책에 처리 근거, 아동 이용 기준, 무료 베타 결제·환불 안내와 개인정보 요청 방법을 구체화했습니다.', 'Both language versions explain processing grounds, child eligibility, free-beta payment and refund status, and privacy requests.')])]))
+    groups.insert(0, ('2026.11.02.7', 'Discord 미리보기 아이콘', 'Discord preview icons', [
+        ('사용 화면', 'Interface', [
+            ('홈페이지 작동 예시의 채널·스레드·알림·핀·사용자·입력창 아이콘을 Discord 화면에 맞춘 SVG로 교체했습니다. 기존 3열 배치와 PR·Issue·Discussion·CI 애니메이션은 유지합니다.', 'The homepage demo now uses Discord-style SVG icons for channels, threads, notifications, pins, members, and message controls. The three-pane layout and PR, issue, discussion, and CI animations are preserved.')])]))
     for version,ko,en,sections in groups:
         body += '<article class="patch-entry"><p class="patch-label">' + version + ' · ' + t(ko,en) + '</p>'
         for heading_ko,heading_en,items in sections:

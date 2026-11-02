@@ -100,7 +100,7 @@ def page(title, body, landing=False):
     extra = '<link rel="icon" type="image/png" href="/connect/assets/threadle-avatar.png"><meta name="description" content="' + esc(description) + '">'
     extra += '<meta name="robots" content="' + ('index,follow' if public else 'noindex,nofollow') + '">'
     if landing:
-        extra += '<link rel="stylesheet" href="/connect/assets/landing.css?v=20261102-2"><link rel="stylesheet" href="/connect/assets/product.css?v=20261102-5">'
+        extra += '<link rel="stylesheet" href="/connect/assets/landing.css?v=20261102-2"><link rel="stylesheet" href="/connect/assets/product.css?v=20261102-7">'
     extra += '<link rel="stylesheet" href="/connect/assets/controls.css?v=20261102-6"><script src="/connect/assets/controls.js?v=1" defer></script>'
     if public:
         canonical_path = '/' if path in ('/', '/connect', '/connect/') else path
