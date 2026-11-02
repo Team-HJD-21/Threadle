@@ -24,7 +24,7 @@
     },
     "connect_web.py": {
       "before": "a10a26dc8a437897a74a705d18b2eed378b2ec30b7b95f9298d833ba91b81db9",
-      "after": "487b0e44181c6fbdc323271caf949037a6073e7cd18db6beb4192c00e09da3e1",
+      "after": "4fee75a812d26382d43b7ee186080263b663bdffe868c55fcfcce5ac84d16211",
       "previous": [
         "039da5474270896cb0d94cff9d8fbc012749be2cba8d41af02c9c38a98df280b",
         "c71b37f392a2f9bb79cbe8c361c5e7f45ea94591c0199f198598a1d360930c39",
@@ -35,7 +35,8 @@
         "117f3639cb662cac9459b4f915e9d44fad8b8ecf30242dc67c3f87a5d84702b2",
         "b86cf3b6bc717112bb5d188ad849dab7d2bb19199837ea80ed54211ceb330799",
         "331cfd4af48eddcd81a43f14f8a64e2ef9fea7e97718239f09a399c4c16f3898",
-        "4ccb03aa5cf863ec82e0a39d84088d01118bc113c1f27ba64ed60ee7a88a33f0"
+        "4ccb03aa5cf863ec82e0a39d84088d01118bc113c1f27ba64ed60ee7a88a33f0",
+        "487b0e44181c6fbdc323271caf949037a6073e7cd18db6beb4192c00e09da3e1"
       ]
     },
     "changelog.py": {
@@ -157,6 +158,10 @@
     "landing_web.py": {
       "before": "ea9e7d1ca83903f6baa6b71fb3fc86a869caa1ed98d5a8ea588ef4cf8337cfeb",
       "after": "d8a90b063eaec5364d432b18461296c7c40cef1d0059efa5c2c59f160cd1410d"
+    },
+    "web_locale.py": {
+      "before": "b63af655ba90793a9692eefd590b594aa192e56ca5e992688eff37f42f57c560",
+      "after": "ffdd12aa9ba145f77e86c56a129365f4deeefd08032a11428674665ac14826a7"
     }
   }
 }

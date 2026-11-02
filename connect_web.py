@@ -460,6 +460,7 @@ class Onboarding:
             else:
                 body += '<p>아래 카테고리와 채널을 자동으로 생성하고 연결합니다. 이 봇이 이미 만든 채널이 있으면 재사용합니다.</p>'
                 body += '<strong>' + esc(self.layouts.name(guild['id'], repo_id, repo['full_name'])) + '</strong><ul>' + ''.join('<li>' + esc(name) + '</li>' for _, name in CHANNELS) + '</ul>'
+                body += '<p class="muted">연결 후 채널 이름은 원하는 대로 바꿔도 알림이 유지됩니다.</p>'
                 fields = legal_consent.fields(session)
                 fields += '<label for="workflow">CI 워크플로 이름 필터 (선택)</label><input id="workflow" name="workflow" maxlength="1000" placeholder="비워두면 모든 워크플로, 여러 개는 쉼표로 구분">'
                 fields += '<p class="muted">새 카테고리는 서버의 기본 역할 권한을 따릅니다. 비공개 저장소의 알림도 이 채널을 볼 수 있는 서버 구성원에게 공개됩니다.</p><button>카테고리·채널 자동 생성하고 연결하기</button>'

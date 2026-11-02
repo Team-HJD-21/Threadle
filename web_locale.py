@@ -74,6 +74,7 @@ EN = {
     '기존 연결 확인하기': 'Continue with this connection',
     '카테고리와 알림 채널을 자동 생성하려면 봇의 채널 관리 권한이 필요합니다.': 'The bot needs Manage Channels permission to create your notification category and channels.',
     '채널 생성 권한 승인하기': 'Grant channel permissions',
+    '연결 후 채널 이름은 원하는 대로 바꿔도 알림이 유지됩니다.': 'You can rename the channels later; notifications will keep working.',
     '아래 카테고리와 채널을 자동으로 생성하고 연결합니다. 이 봇이 이미 만든 채널이 있으면 재사용합니다.': 'We will create the category and channels below and connect your repository. Channels already created for this connection will be reused.',
     'CI 워크플로 이름 필터 (선택)': 'CI workflow names (optional)',
     '비워두면 모든 워크플로, 여러 개는 쉼표로 구분': 'Leave blank for all workflows, or separate names with commas',
