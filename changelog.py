@@ -63,6 +63,10 @@ def content(t):
             ('CI/CD 시작·진행 상태를 보내고 같은 메시지를 완료 결과로 갱신합니다. 브랜치와 시작 시점 또는 소요 시간을 표시하며 alert에는 실패만 안내합니다.', 'CI/CD messages show running status and update in place on completion, with branch and start time or duration. Only failures appear in alert.'),
             ('서버 복구 후 최근 3일의 GitHub App 전송 실패를 재요청합니다. 이미 수신한 이벤트는 건너뛰며 기존 대기열로 처리합니다.', 'After recovery, recent GitHub App delivery failures are requested again within the three-day window. Already received events are skipped and delivery uses the existing queue.'),
             ('여러 이미지를 세로 메시지로 나누고 비공개 첨부의 인증된 Markdown 다운로드 경로를 추가합니다. 같은 마일스톤 변경의 중복 수신을 억제합니다.', 'Images are sent as separate vertical messages. Private attachments gain an authenticated Markdown download path, and duplicate milestone updates are suppressed.')])]))
+    groups.insert(0, ('v1.0.0-beta.3', '오류 기록과 수신 프로그램 자동 복구', 'Error diagnostics and receiver recovery', [
+        ('운영 안정성', 'Reliability', [
+            ('프로그램 시작 전부터 오류 로그를 준비하고 예외 종류·호출 경로·API 오류 코드·프로세스 정보를 기록합니다. 토큰·본문·로컬 변수는 진단 로그에서 보호합니다.', 'Logging starts before service initialization and records exception types, call stacks, API error codes and process identity. Tokens, payload bodies and frame locals are protected.'),
+            ('비정상 종료 시 기존 수신 예약 작업이 1분 간격으로 최대 255회 재시도하도록 배포에서 설정합니다. 기존 실행 시간 제한과 실행 명령은 유지하며, 실패 종료 코드 전달을 사전 확인합니다.', 'Deployment enables up to 255 restart attempts one minute apart for the existing receiver task. Existing time limits and actions are preserved, and failure exit propagation is checked first.')])]))
     for version,ko,en,sections in groups:
         body += '<article class="patch-entry"><p class="patch-label">' + version + ' · ' + t(ko,en) + '</p>'
         for heading_ko,heading_en,items in sections:

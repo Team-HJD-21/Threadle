@@ -38,8 +38,8 @@ def purge_operations(root, now):
             db.execute('PRAGMA secure_delete=ON')
             db.execute('DELETE FROM admin_audit WHERE happened < ?',
                        (datetime.fromtimestamp(cutoff, timezone.utc).strftime('%Y-%m-%d %H:%M:%S'),))
-    for path in root.glob('receiver.log.*'):
-        if not linked(path) and path.is_file() and re.fullmatch(r'receiver\.log\.(?:[1-3]|[0-9]{4}-[0-9]{2}-[0-9]{2})', path.name) and path.stat().st_mtime <= cutoff:
+    for path in list(root.glob('receiver.log.*')) + list(root.glob('receiver-fault.log.*')):
+        if not linked(path) and path.is_file() and re.fullmatch(r'receiver(?:-fault)?\.log\.(?:[1-3]|[0-9]{4}-[0-9]{2}-[0-9]{2})', path.name) and path.stat().st_mtime <= cutoff:
             path.unlink()
     # Windows denies opening this file while the CD job holds its exclusive handle.
     try:

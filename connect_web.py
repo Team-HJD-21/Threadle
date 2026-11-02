@@ -3,6 +3,7 @@ import hashlib
 import ipaddress
 from http.cookies import SimpleCookie, CookieError
 import logging
+from runtime_logging import log_exception
 from pathlib import Path
 import re
 import threading
@@ -84,7 +85,7 @@ def footer():
 <div><dt>사업자등록번호</dt><dd>622-10-17519 <a class="business-info-link" href="https://www.ftc.go.kr/bizCommPop.do?wrkr_no=6221017519" target="_blank" rel="noopener noreferrer">(사업자정보확인)</a></dd></div>
 <div><dt>통신판매업 신고번호</dt><dd translate="no" lang="ko">2026-수원영통-1221호</dd></div><div><dt>사업장 주소</dt><dd translate="no" lang="ko">경기도 수원시 영통구 태장로 71번길 19</dd></div>
 </dl><div class="footer-policy"><a href="https://teamhjd.com/press/index.html" target="_blank" rel="noopener noreferrer">프레스킷</a><a href="https://teamhjd.com/content-policy/index.html" target="_blank" rel="noopener noreferrer">콘텐츠 이용 · AI 학습 정책</a><p>AI 검색·정보 조회는 허용하며, 콘텐츠의 AI 학습 이용은 금지합니다.</p></div>
-<small class="footer-copyright">© 2026 TeamHJD. All rights reserved. · v1.0.0-beta.2</small>
+<small class="footer-copyright">© 2026 TeamHJD. All rights reserved. · v1.0.0-beta.3</small>
 <details class="related-sites"><summary>관련 사이트<svg class="footer-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m6 15 6-6 6 6"></path></svg></summary><ul><li><a href="https://teamhjd.com/" target="_blank" rel="noopener noreferrer">TeamHJD 메인</a></li><li><a href="https://docs.teamhjd.com/" target="_blank" rel="noopener noreferrer">TeamHJD Docs</a></li></ul></details>
 </div></footer>'''
 
@@ -688,7 +689,7 @@ class Onboarding:
         except (ValueError, TypeError, KeyError, UnicodeError):
             return self.send(request, 400, page('요청을 확인해 주세요.', '<p>입력이 올바르지 않거나 연결 정보가 변경됐습니다.</p><a href="/connect">다시 연결하기</a>'))
         except Exception as error:
-            LOG.error('Connection flow unavailable error=%s', type(error).__name__)
+            log_exception(LOG,'Connection flow unavailable error=%s', type(error).__name__)
             return self.send(request, 503, page('잠시 후 다시 시도해 주세요.', '<p>지금은 연결을 완료하지 못했습니다. 기존 알림 연결은 유지됩니다.</p><a href="/connect">연결 페이지</a>'))
         finally:
             LANGUAGE.reset(language_token)

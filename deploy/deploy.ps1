@@ -10,6 +10,9 @@ $scheduler = New-Object -ComObject 'Schedule.Service'
 $scheduler.Connect()
 $folder = $scheduler.GetFolder('\')
 $taskName = 'TeamHJD-GitHubDiscord-Receiver'
+. (Join-Path $PSScriptRoot 'recovery_settings.ps1')
+$recoveryChanged = $false
+$taskBackup = Join-Path $job 'receiver-task-before.xml'
 function Invoke-Patch([string]$Action) {
     & $runtime.python -B (Join-Path $PSScriptRoot 'patch_runtime.py') $Action --root $Root --source $source --job $job
     if ($LASTEXITCODE -ne 0) { throw ('Deployment phase failed: ' + $Action) }
@@ -50,6 +53,7 @@ try {
         if ($task.Name -eq 'TeamHJD-Threadle-Update' -and $task.State -in @(2,4)) { throw 'An admin update is running.' }
     }
     $folder.GetTask($taskName) | Out-Null
+    Test-ReceiverRecoveryTask -Task ($folder.GetTask($taskName)) -Root $Root
     Invoke-Patch 'prepare'
     if ($PreflightOnly) { 'preflight' | Set-Content -LiteralPath (Join-Path $job 'result.txt'); Write-Host ('PREFLIGHT PASSED. Service was not restarted. Job: ' + $job); return }
     $stopRequested = $true
@@ -57,12 +61,20 @@ try {
     $stopped = $true
     $applying = $true
     Invoke-Patch 'apply'
+    $recoveryChanged = $true
+    Enable-ReceiverRecovery -Folder $folder -TaskName $taskName -Root $Root -BackupFile $taskBackup
     Start-Receiver
     $stopped = $false
     'passed' | Set-Content -LiteralPath (Join-Path $job 'result.txt')
     Write-Host ('DEPLOYMENT PASSED. Backup: ' + $job)
 } catch {
     $failure = $_
+    if ($recoveryChanged -and (Test-Path -LiteralPath $taskBackup -PathType Leaf)) {
+        try {
+            $folder.RegisterTask($taskName,[IO.File]::ReadAllText($taskBackup),4,'SYSTEM',$null,5,$null) | Out-Null
+            Write-Host 'Previous Receiver task settings restored.'
+        } catch { Write-Error ('Receiver task restore failed: ' + $_.Exception.GetType().FullName) -ErrorAction Continue }
+    }
     if ($applying) {
         try {
             Stop-Receiver

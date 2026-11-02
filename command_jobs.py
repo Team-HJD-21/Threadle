@@ -2,6 +2,7 @@ import json
 import time
 import threading
 import logging
+from runtime_logging import log_exception
 
 from connect_auth import manages_guild
 from team_notifications import validate_options
@@ -34,7 +35,7 @@ class CommandJobs:
             try:
                 self.process()
             except Exception as error:
-                logging.getLogger('commands').warning('Command retry error=%s', type(error).__name__)
+                log_exception(logging.getLogger('commands'),'Command retry error=%s', type(error).__name__)
                 stop.wait(3)
             stop.wait(.25)
 
@@ -65,6 +66,7 @@ class CommandJobs:
             except ValueError as error:
                 message = str(error)
             except Exception:
+                log_exception(logging.getLogger('commands'),'Command execution failed')
                 message = 'The request could not be completed. Check repository access and try again.'
             with self.sessions.db() as db:
                 db.execute('UPDATE command_jobs SET result=? WHERE id=?', (self.sessions.cipher.encrypt((json.dumps({'format':'threadle-pages','pages':message}) if isinstance(message,list) else message).encode()), row[0]))

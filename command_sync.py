@@ -1,5 +1,6 @@
 import json
 import logging
+from runtime_logging import log_exception
 import threading
 import time
 
@@ -51,7 +52,7 @@ class CommandSync:
                     self.state('retrying')
                 except OSError:
                     pass
-                LOG.warning('Discord command registration retry error=%s',type(error).__name__)
+                log_exception(LOG,'Discord command registration retry error=%s',type(error).__name__, level=logging.WARNING)
             stop.wait(delay)
 
     def start(self, stop):
