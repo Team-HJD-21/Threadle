@@ -4,19 +4,23 @@
   "files": {
     "demo_web.py": {
       "before": "afeb765fa4db1d2ab32f24cc05fead6a97e2c21acb17c1df38cb0727235facb9",
-      "after": "6fdb111b420f23f9d22b725b648eb856cb61d322151846c1f3ffcb092f3efb28"
+      "after": "fd87bc94261e94f959aa65b28a01bdb44c11054a0e84ac9f88b15e7018273438"
     },
     "web_assets/product.css": {
       "before": "583a964565990306e2f7f8e324beb96ad937788c14c906da6e3b84ea6f814942",
-      "after": "e7fdb43ecb0b0e77ce05eed06c4c0a3e19a5c7cdd3405ac39c7352adb594cee1"
+      "after": "5e991577e9f581ce27e81e2f3f502bfdb28b267caca4b0a6fcdf9b1cd87009ff"
     },
     "connect_web.py": {
       "before": "c71b37f392a2f9bb79cbe8c361c5e7f45ea94591c0199f198598a1d360930c39",
-      "after": "5604e41b1ee201eb644369877d77d9c0fe3e5123bc1eec95c586be96bbfb350a"
+      "after": "039da5474270896cb0d94cff9d8fbc012749be2cba8d41af02c9c38a98df280b"
     },
     "changelog.py": {
       "before": "70c46b09eeacc09189050699f22f47224d0f1b157c741d0f25f9f51bd23af677",
-      "after": "fa7aa17f59f45d9a5bd9833e7186fa660ad360ca1e14dd5ea6b8aa74822efada"
+      "after": "ce59507c70872a51ef2bbd42a7ee232a5bd4e2692a6b0c8903887594a1e59b90"
+    },
+    "product_web.py": {
+      "before": "a6f93e5b8c23a1629b5f32702c422b5e9f975005cc72fc91f225a97db58260e7",
+      "after": "50f53e03551e2ad3f5a814d6994c5b3d1715b3d884466c0690fc0a6330a2de03"
     }
   }
 }

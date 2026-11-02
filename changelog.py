@@ -43,6 +43,7 @@ def content(t):
             ('한국어·영어 정책에 처리 근거, 아동 이용 기준, 무료 베타 결제·환불 안내와 개인정보 요청 방법을 구체화했습니다.', 'Both language versions explain processing grounds, child eligibility, free-beta payment and refund status, and privacy requests.')])]))
     groups.insert(0, ('2026.11.02.7', 'Discord 미리보기 아이콘', 'Discord preview icons', [
         ('사용 화면', 'Interface', [
+            ('CI 예시를 실패 실행 상세와 alert 채널 안내로 바꾸고, 요금제 제목 중복을 제거했습니다. 기능 포함 여부와 푸터 펼침 표시는 SVG로 통일했습니다.', 'The CI demo now shows failed-run details and an alert-channel heads-up. Plan headings no longer repeat, and feature checks and the footer chevron use SVG icons.'),
             ('홈페이지 작동 예시의 채널·스레드·알림·핀·사용자·입력창 아이콘을 Discord 화면에 맞춘 SVG로 교체했습니다. 기존 3열 배치와 PR·Issue·Discussion·CI 애니메이션은 유지합니다.', 'The homepage demo now uses Discord-style SVG icons for channels, threads, notifications, pins, members, and message controls. The three-pane layout and PR, issue, discussion, and CI animations are preserved.')])]))
     for version,ko,en,sections in groups:
         body += '<article class="patch-entry"><p class="patch-label">' + version + ' · ' + t(ko,en) + '</p>'
