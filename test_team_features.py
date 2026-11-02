@@ -319,6 +319,20 @@ class DeliveryIntegrationTests(unittest.TestCase):
 
 
 class TeamWebTests(WebFixture):
+    def test_new_basic_connection_defaults_to_friday_without_migrating_old_schedules(self):
+        self.configure()
+        self.post('/connect/save')
+        saved=self.service.registry.active()[0]
+        self.assertEqual(saved.config['team_notifications']['digest_weekday'],4)
+        old=dict(saved.config,team_notifications={'digest':'weekly','digest_hour':16,'digest_weekday':2})
+        self.service.registry.configure(saved.id,old,'1','1')
+        response=self.browser.request('GET','/connect/team?binding='+saved.id)
+        self.assertEqual(response[0],200)
+        self.assertEqual(self.service.registry.get(saved.id).config,old)
+        # The settings form displays the legacy weekly hour without saving a migration.
+        self.assertIn('name="weekly_digest_hour"',response[2])
+        self.assertIn('value="16" selected',response[2])
+
     def setup_directory_api(self):
         self.users.github = Mock(side_effect=lambda token, path: {'sha': 'root', 'tree': [
             {'path': 'web', 'type': 'tree', 'sha': 'websha'}, {'path': 'api', 'type': 'tree', 'sha': 'apisha'}]})
@@ -341,7 +355,7 @@ class TeamWebTests(WebFixture):
         saved = self.service.registry.active()[0]
         self.assertEqual(len(saved.config['routing_groups']), 2)
         self.assertEqual(len(self.bot.created_payloads), 8)
-        self.assertEqual(saved.config['team_notifications'], {})
+        self.assertEqual(saved.config['team_notifications'], {'digest_weekday':4,'weekly_digest_hour':9})
 
     def test_existing_connection_can_enable_options_without_changing_binding_or_queue(self):
         self.configure()
@@ -377,8 +391,8 @@ class TeamWebTests(WebFixture):
         self.assertEqual(self.browser.request('GET', '/connect/team?binding=' + saved.id)[0], 200)
         updated = self.post('/connect/team/options', {'apply': '1', 'review_hours': '24'})
         self.assertEqual(updated[0], 303)
-        self.assertEqual(updated[1]['Location'], '/connect/team?saved=1#team-options')
-        self.assertIn('설정이 적용됐어요.', self.browser.request('GET', updated[1]['Location'])[2])
+        self.assertEqual(updated[1]['Location'], '/connect/done')
+        self.assertIn('연결이 완료됐어요.', self.browser.request('GET', updated[1]['Location'])[2])
         self.assertEqual(self.service.registry.get(saved.id).config['team_notifications']['review_hours'], 24)
 
     def test_stale_settings_cannot_overwrite_a_newer_saved_configuration(self):

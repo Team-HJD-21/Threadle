@@ -104,7 +104,7 @@ def all_repository_summaries(service, bindings):
             visible=items if kind=='pr' else items[:10]
             for item in visible:
                 title=str(item['title']).replace('\n',' ').replace('@','@\u200b')
-                title=re.sub(r'([\\`*_{}\[\]()<>~|])',r'\\\1',title)
+                title=re.sub(r'([\\`*_{}\[\]<>~|])',r'\\\1',title)
                 line='\n• ['+title+'](https://github.com/'+binding.repo+'/'+path+'/'+str(int(item['number']))+')'
                 if len((page+line).encode('utf-16-le'))//2>1850:
                     pages.append(page);page='**'+binding.repo+' · '+label+'**'

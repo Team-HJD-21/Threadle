@@ -32,7 +32,7 @@ class TeamWeb:
             from web_locale import LANGUAGE
             draft = {'language':selected_language(session,key,existing,LANGUAGE.get()), 'key': key, 'groups': copy.deepcopy(config.get('routing_groups', [])),
                      'split': bool(config.get('routing_groups')), 'selected': [],
-                     'options': copy.deepcopy(config.get('team_notifications', {})),
+                     'options': copy.deepcopy(config.get('team_notifications', {})) if existing else {'digest_weekday':4,'weekly_digest_hour':9},
                      'binding': existing.id if existing else None, 'original': copy.deepcopy(config)}
             session.data['team_draft'] = draft
         return installation, repo_id, draft
@@ -135,7 +135,9 @@ class TeamWeb:
         fields += select('batch_seconds', '일반 알림 묶기', [('0', '즉시 전달'), ('60', '1분마다'), ('300', '5분마다')], str(options.get('batch_seconds', 0)))
         fields += '<p class="muted">종료·병합·CI 실패·변경 요청은 묶지 않습니다. 조용한 시간에는 함께 대기합니다.</p>'
         fields += select('digest', 'PR · Issue 현황 요약', [('off', '사용 안 함'), ('daily', '매일'), ('weekly', '매주')], options.get('digest', 'off'))
-        fields += select('digest_hour', '요약 시각', [(str(n), f'{n:02d}:00') for n in range(24)], str(options.get('digest_hour', 9)))
+        fields += select('digest_hour', '일일 요약 시각', [(str(n), f'{n:02d}:00') for n in range(24)], str(options.get('digest_hour', 9)))
+        fields += select('weekly_digest_hour', '주간 요약 시각', [(str(n), f'{n:02d}:00') for n in range(24)], str(options.get('weekly_digest_hour', options.get('digest_hour', 9))))
+        fields += '<p class="muted">요약은 발송 시점의 열린 PR · Issue 현황입니다.</p>'
         fields += select('digest_weekday', '주간 요약 요일', [(str(n), label) for n, label in enumerate(['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'])], str(options.get('digest_weekday', 0)))
         fields += select('utc_offset', '시간대 (UTC 기준)', [(str(n), f'UTC{n:+d}') for n in range(-12, 15)], str(options.get('utc_offset', 9)))
         fields += '<p class="muted">고정 UTC 시차입니다. 서머타임은 자동 변경하지 않습니다.</p>'
@@ -208,10 +210,10 @@ class TeamWeb:
             from notification_language import normalize_language
             draft['language'] = normalize_language(fields.get('notification_language',draft.get('language','ko')))
             options = {key: int(fields.get(key, default)) for key, default in [('review_hours', 0), ('batch_seconds', 0),
-                       ('utc_offset', 9), ('digest_hour', 9), ('digest_weekday', 0), ('quiet_start', 22), ('quiet_end', 8)]}
+                       ('utc_offset', 9), ('digest_hour', 9), ('digest_weekday', draft['options'].get('digest_weekday',0)), ('weekly_digest_hour', draft['options'].get('weekly_digest_hour',draft['options'].get('digest_hour',9))), ('quiet_start', 22), ('quiet_end', 8)]}
             options.update({'digest': fields.get('digest', 'off'), 'quiet': fields.get('quiet') == '1'})
             validate_options(options)
-            same = all(options.get(k) == draft['options'].get(k) for k in ('digest', 'digest_hour', 'digest_weekday', 'utc_offset'))
+            same = all(options.get(k) == draft['options'].get(k) for k in ('digest', 'digest_hour', 'weekly_digest_hour', 'digest_weekday', 'utc_offset'))
             options['enabled_at'] = draft['options'].get('enabled_at', time.time()) if same else time.time()
             options['review_since'] = (draft['options'].get('review_since', 0) if draft['options'].get('review_hours')
                                        else time.time()) if options['review_hours'] else time.time()

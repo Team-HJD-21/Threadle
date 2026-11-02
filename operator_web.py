@@ -137,7 +137,7 @@ class OperatorWeb:
         selected = [r for r in rows if query.casefold() in (r['repo'] + ' ' + r['guild'] + ' ' + (r.get('guild_name') or '') + ' ' + (r.get('github_login') or '')).casefold()]
         enabled = [r for r in rows if r['enabled'] and r['installation_enabled']]
         body = '<div class="admin-heading"><p>Threadle 운영 관리</p><p class="muted">' + esc(claims['email']) + '</p></div>'
-        body += '<div class="admin-stats">' + ''.join('<div class="card"><strong>' + str(value) + '</strong><span>' + label + '</span></div>' for value, label in [(len({r['guild'] for r in enabled}), '연결된 서버'), (len(enabled), '연결된 저장소'), (sum(r['paused'] for r in enabled), '일시중지')]) + '</div>'
+        body += '<div class="admin-stats">' + ''.join('<div class="card"><strong>' + str(value) + '</strong><span>' + label + '</span></div>' for value, label in [(len({r['guild'] for r in enabled}), '연결된 서버'), (len({r['repo_id'] for r in enabled}), '연결된 저장소'), (len(enabled), '서버별 연결'), (sum(r['paused'] for r in enabled), '일시중지')]) + '</div>'
         body += '<form method="get" action="/connect/admin" class="admin-search"><label for="admin-query">저장소 또는 서버 ID 검색</label><input id="admin-query" name="q" maxlength="100" value="' + esc(query) + '"><button>검색</button><a class="button secondary" href="/connect/admin">전체 보기</a></form>'
         body += '<p class="muted">일시중지 중에도 새 웹후크는 대기열에 보관합니다. 재개하면 순서대로 처리합니다. 이미 전송 중인 요청 하나는 완료될 수 있습니다.</p>'
         for heading, group in [('현재 연결', [r for r in selected if r['enabled']]), ('연결 해제 기록', [r for r in selected if not r['enabled']])]:

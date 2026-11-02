@@ -92,7 +92,7 @@ class AlertFeed:
                     return
         message = self.api.call('POST', '/channels/' + self.channel + '/messages', {
             'content': clip(content, 500), 'allowed_mentions': {'parse': []},
-            'nonce': nonce(receipt), 'enforce_nonce': True,
+            'nonce': nonce(self.channel+':'+receipt), 'enforce_nonce': True,
             'embeds': [{'title': clip(title, 230), 'description': description, 'url': url,
                         'color': color, 'footer': {'text': receipt}}] + (extra_embeds or [])})
         self.remember(receipt, message['id'])
