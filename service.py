@@ -3,7 +3,6 @@ import hashlib
 import hmac
 import json
 import logging
-from logging.handlers import TimedRotatingFileHandler
 import os
 from pathlib import Path
 import re
@@ -15,6 +14,7 @@ import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 
+from runtime_logging import log_exception
 from registry import Registry
 from auth import InstallationTokens, RepositoryApi
 from delivery import Queue, CachedThreads
@@ -49,6 +49,9 @@ class HttpServer(ThreadingHTTPServer):
         except Exception:
             self.capacity.release()
             raise
+
+    def handle_error(self, request, client_address):
+        log_exception(LOG,'HTTP worker failed')
 
     def process_request_thread(self, request, address):
         try:
@@ -147,7 +150,7 @@ class Service:
                         self.queue(binding).put(delivery, event, payload)
                     except sqlite3.OperationalError:
                         complete = False
-                        LOG.warning('Fan-out will retry binding=%s delivery=%s', binding.id, delivery)
+                        log_exception(LOG,'Fan-out will retry binding=%s delivery=%s', binding.id, delivery, level=logging.WARNING)
             if complete:
                 self.registry.finish(identity)
 
@@ -237,7 +240,7 @@ class Service:
             queue.finish_group(group_ids)
             LOG.info('Delivered binding=%s event=%s delivery=%s', binding.id, event, delivery)
         except Exception as error:
-            LOG.error('Retry binding=%s event=%s error=%s', binding.id, event, type(error).__name__)
+            log_exception(LOG,'Retry binding=%s event=%s error=%s', binding.id, event, type(error).__name__)
             queue.retry(delivery, attempts)
         return True
 
@@ -261,7 +264,7 @@ class Service:
                         try:
                             runtime.tick(self.github(binding))
                         except Exception as error:
-                            LOG.error('Scheduled notifications retry binding=%s error=%s', binding.id, type(error).__name__)
+                            log_exception(LOG,'Scheduled notifications retry binding=%s error=%s', binding.id, type(error).__name__)
                         scheduled_stop.wait(1)
                 scheduler = threading.Thread(target=scheduled, daemon=True) if notices else None
                 if scheduler:
@@ -276,7 +279,7 @@ class Service:
                         scheduler.join(timeout=1)
                 return
             except Exception as error:
-                LOG.error('Connection retry binding=%s error=%s', binding.id, type(error).__name__)
+                log_exception(LOG,'Connection retry binding=%s error=%s', binding.id, type(error).__name__)
                 stop.wait(5)
 
     def run(self, stop):
@@ -317,7 +320,7 @@ class Service:
                 self.dispatch()
                 stop.wait(.2)
         except Exception:
-            LOG.error('Coordinator stopped')
+            log_exception(LOG,'Coordinator stopped; receiver will exit with failure')
             raise
         finally:
             stop.set()
@@ -368,7 +371,7 @@ def handler(service):
                 except (ValueError, TypeError):
                     return self.respond(400, 'invalid interaction')
                 except Exception as error:
-                    LOG.error('Discord command unavailable error=%s', type(error).__name__)
+                    log_exception(LOG,'Discord command unavailable error=%s', type(error).__name__)
                     return self.respond(503, 'retry later')
             if urlsplit(self.path).path.startswith('/connect/'):
                 if service.web is not None:
@@ -387,7 +390,7 @@ def handler(service):
             except (ValueError, TypeError, KeyError, AttributeError, UnicodeError):
                 self.respond(400, 'invalid payload')
             except Exception:
-                LOG.error('Ingress unavailable')
+                log_exception(LOG,'Ingress unavailable')
                 self.respond(503, 'retry later')
     return Handler
 
@@ -401,10 +404,11 @@ def main():
     parser.add_argument('--binding')
     parser.add_argument('--port', type=int, default=8787)
     args = parser.parse_args()
+    from runtime_logging import configure
+    configure(args.state_dir)
     service = Service(args.state_dir)
-    log = TimedRotatingFileHandler(service.root / 'receiver.log', when='midnight', interval=1, backupCount=30, encoding='utf-8', utc=True)
-    logging.basicConfig(level=logging.INFO, handlers=[log], format='%(asctime)s %(levelname)s %(message)s')
     bindings = service.registry.active()
+    LOG.info('Service initialized active_bindings=%s',len(bindings))
     if not bindings and service.web is None:
         raise RuntimeError('No active connections; migrate or register one with admin.py first')
     if args.check:
@@ -439,11 +443,13 @@ def main():
         return
     stop = threading.Event()
     server = HttpServer(('127.0.0.1', args.port), handler(service))
+    LOG.info('HTTP receiver listening port=%s',server.server_address[1])
     failed = threading.Event()
     def coordinator():
         try:
             service.run(stop)
         except Exception:
+            log_exception(LOG,'Coordinator failure is stopping HTTP receiver')
             failed.set()
             server.shutdown()
     threading.Thread(target=coordinator, daemon=True).start()
@@ -452,6 +458,7 @@ def main():
     finally:
         stop.set()
         server.server_close()
+    LOG.info('Receiver stopped coordinator_failed=%s',failed.is_set())
     if failed.is_set():
         raise RuntimeError('Coordinator failed; restart required')
 

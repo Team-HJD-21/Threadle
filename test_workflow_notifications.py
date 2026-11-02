@@ -44,5 +44,15 @@ class WorkflowTests(unittest.TestCase):
         self.feed.ci_detail(REPO,self.run_payload('in_progress'),'start')
         self.assertEqual(len(self.api.posts),1)
 
+    def test_ci_is_silent_but_failure_alert_remains_normal(self):
+        self.feed.ci_detail(REPO,self.run_payload('in_progress'),'start')
+        self.feed.ci(REPO,self.run_payload('completed','failure'),'end')
+        self.assertEqual([row['channel_id'] for row in self.api.posts],['ci','alerts'])
+        self.assertEqual(self.api.posts[0]['flags'],1 << 12)
+        self.assertEqual(self.api.posts[1].get('flags',0) & (1 << 12),0)
+        updates=[data for method,path,data in self.api.calls if method=='PATCH']
+        self.assertTrue(updates)
+        self.assertTrue(all('flags' not in data for data in updates))
+
 
 REPO='owner/repo'

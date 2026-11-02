@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+from runtime_logging import log_exception
 import threading
 import time
 
@@ -111,7 +112,7 @@ class Presence:
                 return
             except Exception as error:
                 self.state('reconnecting')
-                LOG.warning('Presence retry error=%s', type(error).__name__)
+                log_exception(LOG,'Presence retry error=%s', type(error).__name__, level=logging.WARNING)
             if not stop.is_set():
                 stop.wait(delay)
                 delay = min(60, delay * 2)

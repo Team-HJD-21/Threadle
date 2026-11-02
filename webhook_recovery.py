@@ -1,5 +1,6 @@
 import datetime as dt
 import logging
+from runtime_logging import log_exception
 import re
 import threading
 import time
@@ -75,7 +76,7 @@ class WebhookRecovery:
             try:
                 self.check()
             except Exception as error:
-                LOG.warning('Webhook recovery will retry error=%s',type(error).__name__)
+                log_exception(LOG,'Webhook recovery will retry error=%s',type(error).__name__, level=logging.WARNING)
             stop.wait(60)
 
     def start(self, stop):

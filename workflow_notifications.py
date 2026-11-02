@@ -62,7 +62,7 @@ def update_run(feed, repo, payload):
     if message:
         feed.api.call('PATCH', f'/channels/{channel}/messages/{message}', data)
     else:
-        result = feed.api.call('POST', f'/channels/{channel}/messages', dict(data, nonce=nonce(receipt), enforce_nonce=True))
+        result = feed.api.call('POST', f'/channels/{channel}/messages', dict(data, flags=1 << 12, nonce=nonce(receipt), enforce_nonce=True))
         message = result['id']
     with feed.queue.connect() as db:
         db.execute('UPDATE ci_runs SET message=?,phase=? WHERE identity=?', (message, phase, key))

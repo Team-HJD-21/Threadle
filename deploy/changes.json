@@ -1,5 +1,5 @@
 {
-  "version": "v1.0.0-beta.2",
+  "version": "v1.0.0-beta.3",
   "baseline": "2026.11.02.8",
   "files": {
     "demo_web.py": {
@@ -24,7 +24,7 @@
     },
     "connect_web.py": {
       "before": "a10a26dc8a437897a74a705d18b2eed378b2ec30b7b95f9298d833ba91b81db9",
-      "after": "b86cf3b6bc717112bb5d188ad849dab7d2bb19199837ea80ed54211ceb330799",
+      "after": "331cfd4af48eddcd81a43f14f8a64e2ef9fea7e97718239f09a399c4c16f3898",
       "previous": [
         "039da5474270896cb0d94cff9d8fbc012749be2cba8d41af02c9c38a98df280b",
         "c71b37f392a2f9bb79cbe8c361c5e7f45ea94591c0199f198598a1d360930c39",
@@ -32,18 +32,21 @@
         "6a13c0e069becb5dbf9265c4fbbe5439ce5cf7fe41331b071e1a53a0acf92400",
         "19e6a586a669df88364a0d5cfd0e8b249c456b7abae40467db8435e3c443eb23",
         "bca1d013825c5631faeb4fb19548c45344cec377f2857640e2a46aa45600e744",
-        "117f3639cb662cac9459b4f915e9d44fad8b8ecf30242dc67c3f87a5d84702b2"
+        "117f3639cb662cac9459b4f915e9d44fad8b8ecf30242dc67c3f87a5d84702b2",
+        "b86cf3b6bc717112bb5d188ad849dab7d2bb19199837ea80ed54211ceb330799"
       ]
     },
     "changelog.py": {
       "before": "261336f2f039d63348697c8fb4f9f7ec8f25c959ad6f0e2ccd74230f8c208e28",
-      "after": "8bfe6edb80be94e6f8e62419b8315c1969802a00fdf37926420551259c9697a3",
+      "after": "9f62f39e9485f5f1edf938cddaba379936895d04424678b608cdc8680afaba2b",
       "previous": [
         "ce59507c70872a51ef2bbd42a7ee232a5bd4e2692a6b0c8903887594a1e59b90",
         "70c46b09eeacc09189050699f22f47224d0f1b157c741d0f25f9f51bd23af677",
         "71df4c28e5e491425c100f00a84fa662cd1af28c53ea71675aa0667bf230b5e5",
         "04fa502c59d291c038e46fef1546a45474d636ad69471111b1fcf600d190034b",
-        "c0f7130dcd4ef6199e40ccb51590900ab56d332eb7d24a6d7785df4304ed9da6"
+        "c0f7130dcd4ef6199e40ccb51590900ab56d332eb7d24a6d7785df4304ed9da6",
+        "8bfe6edb80be94e6f8e62419b8315c1969802a00fdf37926420551259c9697a3",
+        "25ec20eeb5b98801d0b01ade6fdea0a4d0218a2afd5ffa5e017e70247e12e358"
       ]
     },
     "web_assets/preview.js": {
@@ -61,13 +64,17 @@
     },
     "presence.py": {
       "before": "279304f830e3ec011c0b95ea4764cef0132593252c7e9ea88b0506d6771c0bf4",
-      "after": "78e99f719ed87d8df3431c0e7147fb42ec26c8f5d93e43149a5c7d88447fa7c5"
+      "after": "13b54ba50d2c2573a7193a1ba8885e1001ca4181f1285a9c8238993a2a88c4da",
+      "previous": [
+        "78e99f719ed87d8df3431c0e7147fb42ec26c8f5d93e43149a5c7d88447fa7c5"
+      ]
     },
     "service.py": {
       "before": "8ef021eb91f276ae424209884b25cd423995d41e1455bbb6bfd63a0ab0206d1e",
-      "after": "a687e18707282836bb64ec6159556183889032368eacccaaacf86ba8116a1588",
+      "after": "d9fcdfc98170c6eef7ea26bed0d37aa1aad4a93cf35b80ebaa58397a2feaeae0",
       "previous": [
-        "2b39caa084daa3eaa290f3bf3573d907c4d36513a97abf24be24bc9458e3f397"
+        "2b39caa084daa3eaa290f3bf3573d907c4d36513a97abf24be24bc9458e3f397",
+        "a687e18707282836bb64ec6159556183889032368eacccaaacf86ba8116a1588"
       ]
     },
     "auth.py": {
@@ -103,11 +110,17 @@
     },
     "workflow_notifications.py": {
       "before": null,
-      "after": "1c6f3299d4da35597604eee85b363e62c4c516bf098026877cd267f091d7554a"
+      "after": "ff565a1dd1a2b0046859008431e3d3147c54050609eaeeed849b17c60de28799",
+      "previous": [
+        "1c6f3299d4da35597604eee85b363e62c4c516bf098026877cd267f091d7554a"
+      ]
     },
     "webhook_recovery.py": {
       "before": null,
-      "after": "de3d3481761df79ae408739e9aa746a76eb3b063a7faca85cf0f9340ec34f63c"
+      "after": "d299e4c06752e058eacbb311a928d3200d9500e3b63dfef7270a6a80c7aa36ff",
+      "previous": [
+        "de3d3481761df79ae408739e9aa746a76eb3b063a7faca85cf0f9340ec34f63c"
+      ]
     },
     "channel_layouts.py": {
       "before": "717f589bd0b77f33e15e88d2802f3b05dadd3546fa8e36bed574f455e3b71e4a",
@@ -116,6 +129,22 @@
     "ci_channel_migration.py": {
       "before": null,
       "after": "be82d11ea795e4d3d87041a799217dc7614287bbecf8b8a6c1086013d81a6767"
+    },
+    "command_jobs.py": {
+      "before": "39936268968c7409b91e752b689f036a2eaf436d7b82b263b9696639baf6ef94",
+      "after": "4a9ba1b03697397412617c4db0d30c0f4b1e012e54945ced3632fa2a1b3368cc"
+    },
+    "command_sync.py": {
+      "before": "1e6f93d7dde07fbec7f69af7ab62b4ba39d94690d7a22f4d48aa993146280314",
+      "after": "2e1f765656f81f00c9f76fbf3b98cdd4fcb46eb45bf88683bbada599127393b1"
+    },
+    "operational_retention.py": {
+      "before": "2583b22d3763363622d9b7115fc2a40927f3490adfaf333216308fb250e200a6",
+      "after": "764081e0f1c416965eb6822aac815932bfa1934b4a263d8cc4d49caaf976f56c"
+    },
+    "runtime_logging.py": {
+      "before": null,
+      "after": "fe519fa7eb47ec651bfaebff1693ae735e17fb31dad57d75dfa285fae861a212"
     }
   }
 }
