@@ -1,5 +1,5 @@
 (() => {
-  const order = ['pr', 'issue', 'discussion', 'ci'];
+  const order = ['pr', 'issue', 'discussion', 'ci', 'alert'];
   document.querySelectorAll('.threadle-preview').forEach(preview => {
     const toggle = preview.querySelector('[data-preview-pause]');
     const motion = matchMedia('(prefers-reduced-motion: reduce)');
@@ -7,7 +7,7 @@
     function schedule() {
       clearTimeout(timer);
       if (!paused && !document.hidden && !preview.querySelector('.preview-window').contains(document.activeElement)) {
-        timer = setTimeout(() => select((index + 1) % order.length), 10000);
+        timer = setTimeout(() => select((index + 1) % order.length), order[index] === 'ci' ? 6000 : 3500);
       }
     }
     function select(next) {

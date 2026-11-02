@@ -6,7 +6,7 @@ import time
 
 
 LOG = logging.getLogger('presence')
-DEFAULT_TEXT = 'GitHub updates | /connect'
+DEFAULT_TEXT = 'Delivering GitHub updates'
 
 
 def settings(root):
@@ -16,6 +16,8 @@ def settings(root):
         raise ValueError('Invalid presence settings')
     enabled = values.get('enabled', True)
     text = values.get('text', DEFAULT_TEXT)
+    if text == 'GitHub updates | /connect':
+        text = DEFAULT_TEXT
     status = values.get('status', 'online')
     if type(enabled) is not bool or not isinstance(text, str) or not text.strip() or not 1 <= len(text) <= 128 or any(ord(c) < 32 for c in text):
         raise ValueError('Invalid presence settings')
@@ -41,7 +43,7 @@ class Presence:
         intents = discord.Intents.none()
         intents.guilds = True
         client = discord.Client(intents=intents,
-                                activity=discord.Activity(type=discord.ActivityType.watching, name=text),
+                                activity=discord.CustomActivity(name=text),
                                 status=getattr(discord.Status, status))
 
         @client.event

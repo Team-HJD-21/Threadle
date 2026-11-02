@@ -49,6 +49,10 @@ def content(t):
         ('홈페이지', 'Homepage', [
             ('왼쪽 채널을 눌러 PR·Issue·Discussion·CI 예시를 전환할 수 있고, 10초마다 순서대로 자동 재생합니다. 불필요한 사이드바 항목을 정리했습니다.', 'Switch previews from the channel list or let PR, issue, discussion, and CI examples rotate every ten seconds. Removed unrelated sidebar sections.'),
             ('CI 예시는 댓글 대신 워크플로 실행과 검사 성공 과정을 보여줍니다. 동작 줄이기 설정을 존중하며 자동 재생을 일시정지할 수 있습니다.', 'The CI example shows workflow progress and successful checks rather than comments. Autoplay can be paused and respects reduced-motion preferences.')])]))
+    groups.insert(0, ('2026.11.02.9', '요약 예시와 Threadle 미리보기', 'Summary previews and Threadle sharing', [
+        ('사용 화면', 'Interface', [
+            ('github-alert에서 일일 요약과 /summary 결과를 보여주고, 예시의 마지막 메시지가 나타나면 다음 채널로 빠르게 전환합니다.', 'The alert preview shows scheduled digests and /summary replies. Previews move on shortly after their final message appears.'),
+            ('공유 링크 미리보기 이미지를 Threadle 배너로 바꾸고 봇 상태 문구를 Delivering GitHub updates로 변경합니다.', 'Shared links use the Threadle banner. The bot status now reads Delivering GitHub updates.')])]))
     for version,ko,en,sections in groups:
         body += '<article class="patch-entry"><p class="patch-label">' + version + ' · ' + t(ko,en) + '</p>'
         for heading_ko,heading_en,items in sections:

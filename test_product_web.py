@@ -26,6 +26,8 @@ class ProductPageTests(WebFixture):
     def test_public_page_has_working_sections_and_existing_oauth_entry(self):
         status, headers, body = self.browser.request('GET', '/connect')
         self.assertEqual(status, 200)
+        self.assertIn('property="og:image" content="https://notify.example/connect/assets/threadle-banner.png', body)
+        self.assertIn('name="twitter:card" content="summary_large_image"', body)
         markup = Structure(body)
         self.assertEqual(len(markup.ids), len(set(markup.ids)))
         for href in markup.anchors:
@@ -35,7 +37,7 @@ class ProductPageTests(WebFixture):
         self.assertTrue(all(f['method'].lower() == 'post' for f in markup.forms))
         self.assertTrue(all(i['value'] == self.session().data['csrf'] for i in markup.inputs if i.get('name') == 'csrf'))
         self.assertIn('작동 예시입니다.', body)
-        self.assertEqual(len([i for i in markup.inputs if i.get('type') == 'radio']), 4)
+        self.assertEqual(len([i for i in markup.inputs if i.get('type') == 'radio']), 5)
         self.assertIn('preview-detail', body)
         self.assertNotIn('href="#preview"', body)
         self.assertEqual(body.count('class="site-footer"'), 1)

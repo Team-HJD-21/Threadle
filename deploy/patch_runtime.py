@@ -21,8 +21,8 @@ def read_manifest(source):
         if path.is_absolute() or '..' in path.parts or '\\' in name or ':' in name:
             raise ValueError('Invalid patch path')
         if not (len(path.parts) == 1 and path.suffix == '.py' or
-                len(path.parts) == 2 and path.parts[0] == 'web_assets' and path.suffix in ('.css', '.js')):
-            raise ValueError('Patch targets application Python, CSS and JavaScript files only')
+                len(path.parts) == 2 and path.parts[0] == 'web_assets' and path.suffix in ('.css', '.js', '.png')):
+            raise ValueError('Patch targets application Python and web assets only')
         data = (source / name).read_bytes()
         if digest(data) != rule['after']:
             raise ValueError('Source checksum mismatch: ' + name)
@@ -74,7 +74,7 @@ def prepare(root, source, job):
              'import service, auth, discord_threads, notification_media, demo_web; '
              'assert callable(auth.RepositoryApi.fetch_media); '
              'assert callable(notification_media.installation_image); '
-             'assert demo_web.demonstration(lambda ko,en:en).count("preview-case ")==4; '
+             'assert demo_web.demonstration(lambda ko,en:en).count("preview-case ")==5; '
              'print("Candidate imports and media dependency verified")')
     subprocess.run([os.sys.executable, '-B', '-I', '-c', check, str(candidate)], check=True)
     from deploy.media_dependency import stage
