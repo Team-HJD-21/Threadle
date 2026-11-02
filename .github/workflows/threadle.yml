@@ -1,0 +1,49 @@
+name: Threadle CI and deployment
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      preflight_only:
+        description: Check the installed baseline without restarting
+        type: boolean
+        default: true
+permissions:
+  contents: read
+concurrency:
+  group: threadle-${{ github.event_name == 'pull_request' && github.ref || 'production' }}
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements-app.txt "Pillow>=11,<13"
+      - name: Regression tests and deployment file checks
+        run: python -B deploy/ci.py
+  deploy:
+    needs: verify
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && vars.THREADLE_CD_ENABLED == 'true'))
+    runs-on: [self-hosted, Windows, X64, threadle-production]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Apply scoped changes with backup and health checks
+        shell: powershell
+        env:
+          PREFLIGHT_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.preflight_only || false }}
+        run: |
+          if ($env:PREFLIGHT_ONLY -eq 'true') {
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\deploy\deploy.ps1 -PreflightOnly
+          } else {
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\deploy\deploy.ps1
+          }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
