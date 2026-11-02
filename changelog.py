@@ -68,6 +68,8 @@ def content(t):
             ('github-ci-cd의 실행 상태 메시지는 푸시·데스크톱 알림 없이 전송합니다. github-alert의 실패 안내는 기존 알림 방식을 유지합니다.', 'Run status messages in github-ci-cd suppress push and desktop notifications. Failure heads-ups in github-alert keep their existing notification behavior.'),
             ('프로그램 시작 전부터 오류 로그를 준비하고 예외 종류·호출 경로·API 오류 코드·프로세스 정보를 기록합니다. 토큰·본문·로컬 변수는 진단 로그에서 보호합니다.', 'Logging starts before service initialization and records exception types, call stacks, API error codes and process identity. Tokens, payload bodies and frame locals are protected.'),
             ('비정상 종료 시 기존 수신 예약 작업이 1분 간격으로 최대 255회 재시도하도록 배포에서 설정합니다. 기존 실행 시간 제한과 실행 명령은 유지하며, 실패 종료 코드 전달을 사전 확인합니다.', 'Deployment enables up to 255 restart attempts one minute apart for the existing receiver task. Existing time limits and actions are preserved, and failure exit propagation is checked first.')])]))
+    groups.insert(0, ('v1.0.0-beta.4', '공개 페이지 메뉴 정리', 'Public navigation cleanup', [
+        ('사용 화면', 'Interface', [('공개 페이지의 연결 관리 버튼을 제거했습니다.', 'Removed the Manage connections button from public pages.')])]))
     for version,ko,en,sections in groups:
         body += '<article class="patch-entry"><p class="patch-label">' + version + ' · ' + t(ko,en) + '</p>'
         for heading_ko,heading_en,items in sections:
