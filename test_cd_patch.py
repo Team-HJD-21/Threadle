@@ -26,6 +26,9 @@ class DeploymentTests(unittest.TestCase):
         (self.root / 'credentials.json').write_text('preserve credentials')
         (self.root / 'queue.sqlite3').write_bytes(b'preserve queued events')
         self.job = self.base / 'job'
+        media = patch('deploy.media_dependency.stage')
+        media.start()
+        self.addCleanup(media.stop)
 
     def tearDown(self):
         self.temp.cleanup()

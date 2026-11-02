@@ -10,7 +10,6 @@ from urllib.error import HTTPError
 from discord_threads import Api, make_embed, topic_from
 from notification_layout import group_payload
 from notification_media import attach_public_images, public_image, installation_image, multipart_message, MAX_IMAGE_BYTES
-sys.path.insert(0,str(Path(__file__).parent/'vendor-presence-v1'))
 import test_readable_notifications as readable
 import test_team_features as team
 

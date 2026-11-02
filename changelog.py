@@ -39,6 +39,7 @@ def content(t):
         ('계정과 개인정보', 'Accounts and privacy', [
             ('연결 전에 약관·최소 이용 연령·Discord 공개 범위를 확인하고 안내 버전과 확인 시각을 연결별로 기록합니다. 기존 알림은 유지하며 기존 이용자에게 과거 동의 기록을 임의 생성하지 않습니다.', 'Setup now checks the terms, minimum age, and Discord audience and records the notice version and confirmation time per connection. Existing notifications stay active; past acceptance is never invented.'),
             ('관리 작업 기록과 진단 로그, 정상 종료된 업데이트와 자동 백업을 30일 기준으로 정리합니다. 진행 중이거나 복구가 필요한 자료와 외부 수동 백업은 자동 삭제에서 구분합니다.', 'Admin activity, diagnostic logs, completed updates, and automatic backups follow a 30-day cleanup period. Active or unresolved recovery materials and external manual backups are treated separately.'),
+            ('이미지 처리 라이브러리를 보안 수정 버전 Pillow 13으로 격리 설치하고, 배포 전 이미지·GIF 확인과 파일 해시 검증을 수행합니다. 기존 봇 라이브러리 폴더는 변경하지 않습니다.', 'Pillow 13 security fixes are installed in isolation, with image/GIF checks and file hashes verified before deployment. The existing bot dependency folder stays unchanged.'),
             ('한국어·영어 정책에 처리 근거, 아동 이용 기준, 무료 베타 결제·환불 안내와 개인정보 요청 방법을 구체화했습니다.', 'Both language versions explain processing grounds, child eligibility, free-beta payment and refund status, and privacy requests.')])]))
     for version,ko,en,sections in groups:
         body += '<article class="patch-entry"><p class="patch-label">' + version + ' · ' + t(ko,en) + '</p>'

@@ -41,3 +41,9 @@ Caddy·Cloudflare·GitHub·Discord의 자체 기록은 이 코드로 삭제하�
 - 접근성 점검 기준: https://www.w3.org/TR/WCAG22/
 
 이 문서는 현재 구현과 운영자가 확정한 절차를 맞추기 위한 기록이며 법적 적합성 인증을 뜻하지 않는다. 실제 국외 이전·외부 사업자 계약·결제 출시 범위는 서비스 운영 형태에 맞춘 추가 확인이 필요하다.
+
+## 이미지 처리 라이브러리 보안 보완
+
+실제 노트북의 `vendor-presence-v1/PIL`은 12.3.0으로 확인됐다. Pillow 공식 13.0.0 릴리스의 보안 수정을 적용한다. CD는 공식 PyPI Windows Python 3.12 x64 wheel의 URL·용량·SHA-256을 고정해 서비스 정지 전에 다운로드하고 PNG·GIF 읽기/쓰기 검사를 수행한다. `vendor-pillow-13`에만 격리 설치하며 기존 `vendor-presence-v1`을 덮어쓰지 않는다. 바이트 해시가 다른 기존 격리 폴더는 임의로 교체하지 않는다. 적용 실패 시 이번에 추가한 격리 폴더도 확인 후 원복한다. 이미지 축소는 13 이상에서 허용된 이미지 형식만 디코딩한다.
+
+공식 수정 내역: https://pillow.readthedocs.io/en/stable/releasenotes/13.0.0.html

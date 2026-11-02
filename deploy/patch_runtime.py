@@ -6,6 +6,8 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
+sys.path.insert(0,str(Path(__file__).resolve().parent.parent))
 
 
 def digest(data):
@@ -75,6 +77,8 @@ def prepare(root, source, job):
              'assert demo_web.demonstration(lambda ko,en:en).count("preview-case ")==4; '
              'print("Candidate imports and media dependency verified")')
     subprocess.run([os.sys.executable, '-B', '-I', '-c', check, str(candidate)], check=True)
+    from deploy.media_dependency import stage
+    stage(root,source,job)
     print('Preflight passed: ' + manifest['version'])
 
 
@@ -91,6 +95,8 @@ def apply(root, job):
         data = (job / 'candidate' / name).read_bytes()
         if digest(data) != rule['after']:
             raise ValueError('Staged file changed: ' + name)
+    from deploy.media_dependency import install
+    install(root,job)
     for name, rule in manifest['files'].items():
         target = root / name
         if not target.exists() or digest(target.read_bytes()) != rule['after']:
@@ -109,6 +115,8 @@ def restore(root, job):
             target.unlink(missing_ok=True)
         else:
             atomic_write(target, (job / 'backup' / name).read_bytes())
+    from deploy.media_dependency import restore as restore_media
+    restore_media(root,job)
     print('Previous files restored and verified')
 
 

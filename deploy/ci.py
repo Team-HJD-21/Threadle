@@ -16,7 +16,7 @@ suite = unittest.defaultTestLoader.loadTestsFromNames([
     'test_readable_notifications', 'test_notification_polish', 'test_notification_update',
     'test_private_media_regression', 'test_cd_patch', 'test_demo_preview', 'test_product_web',
     'test_team_features.NotificationTests', 'test_team_features.TeamWebTests',
-    'test_connect', 'test_privacy_controls', 'test_legal_and_lifecycle',
+    'test_connect', 'test_privacy_controls', 'test_legal_and_lifecycle', 'test_media_dependency',
 ])
 result = unittest.TextTestRunner(verbosity=2).run(suite)
 raise SystemExit(not result.wasSuccessful())

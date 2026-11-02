@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import re
 import sqlite3
+import sys
 import threading
 import time
 import uuid
@@ -75,6 +76,9 @@ class Service:
     def __init__(self, root, env=None, api_factory=Api, token_provider=None):
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
+        media = self.root / 'vendor-pillow-13'
+        if media.is_dir() and str(media) not in sys.path:
+            sys.path.insert(0,str(media))
         self.env = os.environ if env is None else env
         self.registry = Registry(self.root / 'connections.sqlite3')
         self.api_factory = api_factory
