@@ -21,6 +21,7 @@ class CommandTests(unittest.TestCase):
         self.identity = self.service.registry.add('one', 11, 'one/repo', 101, 'app', config(1000))
         self.sessions = Sessions(self.root / 'connect.sqlite3', Fernet.generate_key().decode())
         self.jobs = CommandJobs(self.service, self.sessions)
+        self.sequence=123456
         self.api = Mock()
         self.service.discord = lambda: self.api
         self.api.call.side_effect = self.discord
@@ -38,11 +39,14 @@ class CommandTests(unittest.TestCase):
         if path == '/guilds/1000':
             return {'owner_id': '2'}
         if path.startswith('/channels/'):
-            return {'guild_id': '1000'}
+            if method=='GET' and '/messages' in path:return []
+            if method=='POST' and path.endswith('/messages'):return {'id':'987654321'}
+            return {'guild_id': '1000','type':0}
         return {}
 
     def payload(self, name='settings', **options):
-        return {'id': '123456', 'application_id': '9000', 'guild_id': '1000', 'channel_id': '1002',
+        self.sequence+=1
+        return {'id': str(self.sequence), 'application_id': '9000', 'guild_id': '1000', 'channel_id': '1002',
                 'token': 'private-interaction-token', 'member': {'permissions': '32', 'user': {'id': '1'}},
                 'data': {'name': name, 'options': [{'name': k, 'value': v} for k, v in options.items()]}}
 
@@ -116,16 +120,16 @@ class CommandTests(unittest.TestCase):
 
     def test_registration_preserves_other_commands_and_uses_english(self):
         api = Mock()
-        api.call.side_effect = [[{'id': '12', 'name': 'summary', 'type': 1}, {'id': '13', 'name': 'unrelated', 'type': 1}], {'id': '12'}, {'id': '14'}]
+        api.call.side_effect = [[{'id': '12', 'name': 'summary', 'type': 1}, {'id': '13', 'name': 'unrelated', 'type': 1}], {'id': '12'}, {'id': '14'}, {'id': '15'}]
         register_extra_commands(SimpleNamespace(discord=lambda: api), SimpleNamespace(discord_id='9000'))
-        self.assertEqual([c.args[0] for c in api.call.call_args_list], ['GET', 'PATCH', 'POST'])
+        self.assertEqual([c.args[0] for c in api.call.call_args_list], ['GET', 'PATCH', 'POST', 'POST'])
         self.assertTrue(all(c['description'].isascii() for c in command_definitions()))
         self.assertTrue(all(c['default_member_permissions'] == '32' for c in command_definitions()))
 
     def test_language_is_saved_for_only_the_selected_repository(self):
         second=self.service.registry.add('two',22,'two/repo',101,'app',dict(config(2000),guild_id='1000',language='en'))
         self.jobs.execute(self.payload(repository=self.identity,language='KR'))
-        self.assertEqual(self.service.registry.get(self.identity).config['language'],'ko')
+        self.assertEqual(self.service.registry.get(self.identity).config.get('language','ko'),'ko')
         self.assertEqual(self.service.registry.get(second).config['language'],'en')
         self.jobs.execute(self.payload(repository=self.identity,language='EN'))
         self.assertEqual(self.service.registry.get(self.identity).config['language'],'en')

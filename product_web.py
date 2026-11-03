@@ -72,4 +72,5 @@ def content(path, session):
     else:
         body += extract(source, 'faq')
         body += '<section class="faq-support"><h2>'+t('더 궁금한 점이 있나요?','Still have questions?')+'</h2><p>'+t('Threadle Support 커뮤니티에서 질문하거나 개선 사항과 오류를 알려 주세요.','Ask questions, request improvements, or report issues in the Threadle Support community.')+'</p><a class="button" href="https://discord.gg/6faZbNBdv" target="_blank" rel="noopener noreferrer">'+t('Threadle Support 참여하기','Join Threadle Support')+'</a></section>'
+    if path=='/connect/setup':body+='<p><code>/settings-history</code> — '+t('누가 알림 설정을 변경했는지 최근 기록을 확인합니다.','See who changed notification settings and their recent changes.')+'</p>'
     return titles[path], body

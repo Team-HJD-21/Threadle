@@ -58,6 +58,7 @@ class Retention:
                 db.execute('INSERT OR IGNORE INTO backup_expiry VALUES(?)',(identity,))
                 db.execute('DELETE FROM bindings WHERE id=? AND enabled=0',(identity,))
                 db.execute('DELETE FROM retired_bindings WHERE id=?',(identity,))
+                db.execute('DELETE FROM settings_changes WHERE binding=?',(identity,))
                 db.execute('DELETE FROM connection_audit WHERE binding=?',(identity,))
                 db.execute('DELETE FROM legal_acceptances WHERE binding=?',(identity,))
                 db.execute('DELETE FROM connection_welcomes WHERE binding=?',(identity,))
