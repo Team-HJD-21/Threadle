@@ -13,6 +13,13 @@ def starter_states(kind,number,title,detail=''):
     return '<div class="preview-state-before">'+markup(initial)+'</div><div class="preview-state-after">'+markup(changed)+'</div>'
 
 
+def thread_states(kind,number,title):
+    from topic_state import thread_title
+    topic=Topic('TeamHJD/threadle',kind,int(number),title,'',{})
+    final={'pr':{'merged':True},'issue':{'state':'closed'},'discussion':{'isAnswered':True}}[kind]
+    return '<span class="preview-state-before">'+escape(thread_title(topic))+'</span><span class="preview-state-after">'+escape(thread_title(topic,final))+'</span>'
+
+
 ICONS = {
     'hash': '<path d="m9 3-2 18M17 3l-2 18M4 9h17M3 15h17" stroke-width="2.6"/>',
     'chevron': '<path d="m6 9 6 6 6-6"/>',
@@ -118,8 +125,8 @@ def demonstration(t):
         if key == 'alert':
             out += alert_panes(t, avatar)
             continue
-        out += '<div class="preview-main"><header>' + icon('hash') + '<span class="preview-header-name">' + channel + '</span>' + tools('thread','bell','pin','members','search') + '</header><div class="preview-feed"><div class="preview-welcome"><div class="preview-hash">' + icon('hash') + '</div><h2>' + t('환영합니다!', 'Welcome to #') + ' ' + channel + '!</h2><p>' + t('이 채널의 시작이에요.', 'This is the start of this channel.') + '</p></div><div class="preview-date">' + t('오늘', 'Today') + '</div><div class="preview-post preview-arrival">' + avatar + '<div><b>Threadle <em>' + icon('check') + ' APP</em></b><article class="preview-state-card">' + starter_states(key,number,title,detail) + '</article><div class="preview-thread-card"><b>[' + topic + '] ' + title + '</b><span>' + t('메시지 2개', '2 messages') + ' ' + icon('right') + '</span></div></div></div></div>' + compose(t, channel) + '</div>'
-        out += '<div class="preview-detail"><header>' + icon('thread') + '<span class="preview-header-name">[' + topic + '] ' + title + '</span>' + tools('muted','more','close') + '</header><div class="preview-detail-scroll"><h2>' + title + '</h2><p class="preview-started">' + t('Threadle이 시작함', 'Started by Threadle') + '</p><div class="preview-date">' + t('오늘', 'Today') + '</div>'
+        out += '<div class="preview-main"><header>' + icon('hash') + '<span class="preview-header-name">' + channel + '</span>' + tools('thread','bell','pin','members','search') + '</header><div class="preview-feed"><div class="preview-welcome"><div class="preview-hash">' + icon('hash') + '</div><h2>' + t('환영합니다!', 'Welcome to #') + ' ' + channel + '!</h2><p>' + t('이 채널의 시작이에요.', 'This is the start of this channel.') + '</p></div><div class="preview-date">' + t('오늘', 'Today') + '</div><div class="preview-post preview-arrival">' + avatar + '<div><b>Threadle <em>' + icon('check') + ' APP</em></b><article class="preview-state-card">' + starter_states(key,number,title,detail) + '</article><div class="preview-thread-card"><b>' + thread_states(key,number,title) + '</b><span>' + t('메시지 2개', '2 messages') + ' ' + icon('right') + '</span></div></div></div></div>' + compose(t, channel) + '</div>'
+        out += '<div class="preview-detail"><header>' + icon('thread') + '<span class="preview-header-name">' + thread_states(key,number,title) + '</span>' + tools('muted','more','close') + '</header><div class="preview-detail-scroll"><h2>' + title + '</h2><p class="preview-started">' + t('Threadle이 시작함', 'Started by Threadle') + '</p><div class="preview-date">' + t('오늘', 'Today') + '</div>'
         for i, (author, heading, text) in enumerate([
             ('Threadle', topic + ' · ' + title, detail.replace('`', '')),
             ('Jae', topic + ' · ' + title, description),

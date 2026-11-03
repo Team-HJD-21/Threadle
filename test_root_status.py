@@ -73,7 +73,7 @@ class RootStatusTests(unittest.TestCase):
         identity=self.root();self.api.roots[identity]['embeds'][0]['title']='PR #1 · Old title';self.api.threads[identity]['name']='Custom thread name'
         self.refresh({'state':'closed','merged':True,'title':'Latest title'})
         self.assertEqual(self.api.roots[identity]['embeds'][0]['fields'][-1]['value'],'`Merged`')
-        self.assertEqual(self.api.threads[identity]['name'],'Custom thread name')
+        self.assertEqual(self.api.threads[identity]['name'],'[PR #1 · Merged] repo · Latest title')
         self.assertEqual(marker(self.api.roots[identity]),[self.topic.key])
     def deleted(self,topic,event):
         self.github.call.side_effect=ApiError('GitHub',404)

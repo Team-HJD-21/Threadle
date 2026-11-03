@@ -34,10 +34,10 @@ class MetadataEditTests(unittest.TestCase):
         self.meta_send(self.meta(second=2),'label-edit',102)
         self.send({'action':'closed','pull_request':dict(self.topic.metadata)},'closed','pull_request')
         self.send({'action':'reopened','pull_request':dict(self.topic.metadata)},'reopened','pull_request')
-        self.assertEqual(len(self.api.posts[thread]),5)
+        self.assertEqual(len(self.api.posts[thread]),3)
         self.assertIn('Original PR body',json.dumps(self.api.posts[thread][0]['embeds'][0],ensure_ascii=False))
         self.assertEqual([p['embeds'][0]['description'] for p in self.api.posts[thread][1:3]],['A','B'])
-        self.assertIn('Closed',self.api.posts[thread][-2]['embeds'][0]['title']);self.assertIn('Reopened',self.api.posts[thread][-1]['embeds'][0]['title'])
+        self.assertFalse(any('Closed' in p['embeds'][0]['title'] or 'Reopened' in p['embeds'][0]['title'] for p in self.api.posts[thread]))
     def test_restart_and_lost_response_recover_original_message(self):
         self.api.lose_post=True
         with self.assertRaises(ApiError):self.meta_send(self.meta(),'one',100)
@@ -103,6 +103,11 @@ class MetadataEditTests(unittest.TestCase):
         thread=self.send({'action':'opened','pull_request':obj},'opened','pull_request')
         identities=[m['id'] for m in self.api.posts[thread]]
         obj=dict(obj,draft=True,updated_at='2026-11-04T00:00:00Z')
-        self.send({'action':'converted_to_draft','pull_request':obj},'draft','pull_request')
+        from root_status import TopicRoots
+        from message_edits import deliver_events
+        def refresh():
+            TopicRoots(self.threads,None).update_descriptions(self.topic,obj)
+            return False
+        deliver_events(self.threads,self.topic,'pull_request',{'action':'converted_to_draft','pull_request':obj},'draft',refresh,'ko')
         self.assertEqual([m['id'] for m in self.api.posts[thread]],identities)
         self.assertTrue(all(e['color']==0x8B949E for m in self.api.posts[thread] for e in m['embeds']))

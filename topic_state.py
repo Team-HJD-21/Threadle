@@ -41,3 +41,10 @@ def event_color(kind,event,payload):
     if action in ('opened','reopened','ready_for_review'):return GREEN
     if action=='converted_to_draft':return GRAY
     return BLUE
+
+
+def thread_title(topic,obj=None):
+    from discord_threads import clip
+    obj=topic.metadata if obj is None else obj
+    title=str(obj.get('title',topic.title))
+    return clip(f'[{topic.kind.upper()} #{topic.number} · {state_label(topic.kind,obj)}] '+topic.repo.split('/')[-1]+' · '+title,100)

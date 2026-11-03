@@ -101,15 +101,15 @@ class EditTests(unittest.TestCase):
         self.send(self.payload('X changed','edited',9,'2026-11-03T00:01:00Z'),'edit-x')
         self.assertEqual(len(self.api.posts[thread]),3)
         self.assertEqual(len(self.api.posts[thread][1]['embeds']),2)
-    def test_body_edits_do_not_replace_closed_history(self):
+    def test_body_edits_after_closed_do_not_create_a_status_message(self):
         obj=dict(self.topic.metadata)
         self.send({'action':'opened','pull_request':obj},'opened','pull_request')
         thread=self.send({'action':'closed','pull_request':obj},'closed','pull_request')
         edited=dict(obj,body='Changed PR body',updated_at='2026-11-03T00:01:00Z')
         self.send({'action':'edited','pull_request':edited},'edited','pull_request')
-        self.assertEqual(len(self.api.posts[thread]),2)
+        self.assertEqual(len(self.api.posts[thread]),1)
         self.assertIn('Changed PR body',self.api.posts[thread][0]['embeds'][0]['description'])
-        self.assertIn('Closed',self.api.posts[thread][1]['embeds'][0]['title'])
+        self.assertNotIn('Closed',self.api.posts[thread][0]['embeds'][0]['title'])
 
     def test_body_bundle_out_of_order_keeps_latest_description(self):
         older=dict(self.topic.metadata,body='Older',updated_at='2026-11-03T00:01:00Z')
