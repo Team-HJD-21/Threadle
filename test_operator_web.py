@@ -61,6 +61,15 @@ class OperatorTests(WebFixture):
         session = self.web.sessions.get(self.cookie)
         return {'binding': row['id'], 'revision': revision(row), 'action': action, 'csrf': session.data['csrf'], 'confirmation': row['repo']}
 
+    def test_verified_backup_status_is_visible_to_authenticated_admin(self):
+        from state_backups import create
+        create(self.service.root)
+        self.enable()
+        status,_,body=self.request()
+        self.assertEqual(status,200)
+        self.assertIn('DB 백업·복원 검증',body)
+        self.assertNotIn('database-backups/',body)
+
     def test_disabled_and_forged_identity_headers_cannot_read_registry(self):
         for _ in range(2):
             response = self.request(headers={'Cf-Access-Authenticated-User-Email': 'owner@example.com'}, signed=False)

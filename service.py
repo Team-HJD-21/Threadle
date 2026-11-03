@@ -347,6 +347,8 @@ class Service:
         presence_worker = Presence(self).start(stop)
         self.guilds.start(stop)
         self.conflicts.start(stop)
+        from state_backups import StateBackups
+        StateBackups(self.root).start(stop)
         from channel_topics import ChannelTopics
         ChannelTopics(self).start(stop)
         from ci_channel_migration import CiChannelMigration

@@ -1,5 +1,6 @@
 """User-facing release highlights. Operational details live in repository documentation."""
-RELEASES = [('v1.0.0-beta.15', '설정 변경 알림을 한 카드로', 'One card for metadata changes', [('라벨·담당자·유형·마일스톤 변경을 시간 제한 없이 하나의 상태 카드에 반영합니다.', 'Labels, assignees, types and milestones update one state card without a time limit.')]),
+RELEASES = [('v1.0.0-beta.16', '운영 데이터 복구 대비 보완', 'Verified operational backups', [('운영 데이터를 자동 백업하고 관리자 화면에서 최근 복원 검증 시각을 확인할 수 있게 했습니다.', 'Operational data is backed up automatically, with the last restore-check time visible to administrators.')]),
+ ('v1.0.0-beta.15', '설정 변경 알림을 한 카드로', 'One card for metadata changes', [('라벨·담당자·유형·마일스톤 변경을 시간 제한 없이 하나의 상태 카드에 반영합니다.', 'Labels, assignees, types and milestones update one state card without a time limit.')]),
  ('v1.0.0-beta.14', '오류 발생 시 알림 처리 개선', 'Keep notifications moving during retries', [('일부 알림의 재시도가 다른 알림을 오래 지연시키지 않도록 개선했습니다.', 'Retries for one notification no longer hold other ready notifications unnecessarily.')]),
  ('v1.0.0-beta.13', '알림 전달 상태 확인 개선', 'Delivery visibility improvements', [('관리자 화면에서 알림 전달 지연을 확인할 수 있도록 개선했습니다.', 'Administrators can now check notification delivery latency.')]),
  ('v1.0.0-beta.12', '바로 전송하고 변경은 갱신', 'Immediate notifications with editable updates', [('알림을 기다리지 않고 보내며, 연속된 라벨·담당자 등 설정 변경은 기존 메시지를 갱신합니다.', 'Notifications send without a batching delay; related label, assignee and other metadata changes update the existing message.')]),

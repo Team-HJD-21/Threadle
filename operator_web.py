@@ -174,6 +174,13 @@ class OperatorWeb:
         with self.service.registry.db() as db:
             inbox = db.execute('SELECT count(*) FROM inbox WHERE done=0').fetchone()[0]
         body += '<p class="muted">분배 대기 웹후크 ' + str(inbox) + ' · 디스크 여유 ' + str(round(shutil.disk_usage(self.service.root).free / 1024**3, 1)) + ' GB · 조회 시각 ' + time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime()) + '</p>'
+        from state_backups import latest
+        from web_locale import LANGUAGE
+        snapshot=latest(self.service.root)
+        if snapshot:
+            stamp=time.strftime('%Y-%m-%d %H:%M:%S UTC',time.gmtime(snapshot['created']))
+            text=(f"Last DB backup / restore check: {stamp} · {snapshot['files']} databases" if LANGUAGE.get()=='en' else f"마지막 DB 백업·복원 검증: {stamp} · DB {snapshot['files']}개")
+            body+='<p class="muted">'+esc(text)+'</p>'
         body += self.update_panel(session)
         body += '<details class="card"><summary>최근 관리자 작업</summary><ul class="admin-audit">'
         for happened, actor, action, binding in self.audit():

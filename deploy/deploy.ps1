@@ -59,6 +59,8 @@ try {
     $stopRequested = $true
     Stop-Receiver
     $stopped = $true
+    & $runtime.python -B (Join-Path $source 'state_backups.py') create --root $Root --reason predeploy
+    if ($LASTEXITCODE -ne 0) { throw 'State backup validation failed; previous receiver will restart without applying changes.' }
     $applying = $true
     Invoke-Patch 'apply'
     $recoveryChanged = $true
