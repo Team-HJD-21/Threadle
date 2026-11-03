@@ -305,7 +305,10 @@ class TeamNotifications:
         drafts = sum(bool(p.get('draft')) for p in prs)
         lines = [(f'{len(prs)} open PRs · {len(review)} awaiting review · {drafts} drafts' if self.english else f'현재 열린 PR {len(prs)}개 · 리뷰 요청 대기 {len(review)}개 · 초안 {drafts}개'), '']
         for pr in sorted(prs, key=lambda p: p.get('updated_at', ''))[:15]:
-            lines.append(f'• #{pr["number"]} {clip(pr.get("title", ""), 100)}')
+            pr_title=clip(str(pr.get('title','')).replace('\n',' ').replace('@','@\u200b'),85)
+            pr_title=re.sub(r'([\\`*_\[\]<>~|])',r'\\\1',pr_title)
+            link=f'https://github.com/{self.binding.repo}/pull/{int(pr["number"])}'
+            lines.append(f'• [#{pr["number"]} {pr_title}]({link})')
         url = f'https://github.com/{self.binding.repo}/pulls'
         if len(prs) > 15:
             lines.append(f'… {len(prs)-15} more PRs · /summary')
@@ -315,7 +318,18 @@ class TeamNotifications:
             {'title': 'Oldest open issues' if self.english else '가장 오래된 미해결 Issue',
              'description': item_lines(oldest), 'color':0x2DA44E,
              'footer':{'text':f'{count} remaining issues…'}}]
-        self.feed(self.binding.config['alert_channel']).send('digest:'  + self.binding.repo, period, ('🧵 Here’s your team roundup.' if self.english else '🧵 오늘 확인할 개발 소식을 모아왔어요.'), title, clip('\n'.join(lines), 2900), url, 0x0969DA, extra_embeds=issue_embeds)
+        from notification_text import split_description,units
+        pr_pages=split_description('\n'.join(lines),2700)
+        cards=[{'title':title,'description':part,'url':url,'color':0x0969DA} for part in pr_pages]+issue_embeds
+        groups=[];group=[];size=0
+        for card in cards:
+            weight=units(card.get('title',''))+units(card.get('description',''))+units(card.get('footer',{}).get('text',''))
+            if group and size+weight>5200:groups.append(group);group=[];size=0
+            group.append(card);size+=weight
+        if group:groups.append(group)
+        for index,cards in enumerate(groups):
+            first=cards[0]
+            self.feed(self.binding.config['alert_channel']).send('digest:'+self.binding.repo,period if index==0 else period+':page:'+str(index),('🧵 Here’s your team roundup.' if self.english else '🧵 오늘 확인할 개발 소식을 모아왔어요.'),first['title'],first['description'],url,first['color'],extra_embeds=cards[1:])
         with self.queue.connect() as db:
             db.execute('INSERT OR IGNORE INTO team_schedule VALUES(?)', (period,))
 

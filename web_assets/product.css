@@ -170,3 +170,16 @@ button.preview-channel{width:100%;border:0;background:transparent;text-align:lef
 .preview-post article,.preview-detail-scroll{overflow-wrap:anywhere}
 .preview-post article>*{max-width:100%}
 @container(max-width:560px){.preview-case{grid-template-columns:25% 32% 43%}.preview-main>header .preview-tools{display:none}.preview-compose>.preview-tools{display:none}.preview-post{gap:3px}.preview-post>img{width:14px;height:14px}.preview-post article{padding:7px 5px}.preview-command-summary>b{margin-top:7px}}
+
+/* Use a shared HTML state clock: SVG opacity animations can desync on mobile WebKit. */
+.preview-check-step>svg{animation:none;opacity:1}
+.preview-ci-running{animation:none;display:none}
+.preview-ci-success{animation:none;visibility:visible;display:flex}
+.threadle-preview.has-ci-clock .preview-check-step>svg{opacity:.15}
+.threadle-preview.has-ci-clock .preview-check-step.is-complete>svg{opacity:1}
+.threadle-preview.has-ci-clock .preview-ci:not(.is-complete) .preview-ci-running{display:block}
+.threadle-preview.has-ci-clock .preview-ci:not(.is-complete) .preview-ci-success{display:none}
+@media(prefers-reduced-motion:reduce){.threadle-preview.has-ci-clock .preview-check-step>svg{opacity:1}}
+
+.changelog-page .card li{word-break:keep-all;overflow-wrap:break-word;line-height:1.75;margin-block:.6em}
+.changelog-page .card h2{word-break:keep-all;line-height:1.4}

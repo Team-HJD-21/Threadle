@@ -120,7 +120,7 @@ def creation_embed(topic, payload, language='ko'):
         fields.insert(position, {'name':'Details', 'value':clip('\n'.join(lines),1000),'inline':False})
     body = str(obj.get('body') or '').strip()
     result = {'title': clip(f'{topic.kind.upper()} #{topic.number} · {topic.title}',230), 'url':topic.url,
-              'description':clip(body,3000) or ('No description provided.' if en else '설명 없음'),
+              'description':body or ('No description provided.' if en else '설명 없음'),
               'author':{'name':clip(actor,100)},
               'fields':fields,'color':{'issue':0x2DA44E,'pr':0x8957E5,'discussion':0x0969DA}[topic.kind]}
     posted=iso_timestamp(obj.get('created_at'))
@@ -200,7 +200,8 @@ def bundle_embed(topic, payload, language):
 
 def message_pages(embed):
     from notification_media import media_embeds
-    source=[item for original in (embed.get('_embeds') or [embed]) for item in media_embeds(original)]
+    from notification_text import description_embeds
+    source=[part for original in (embed.get('_embeds') or [embed]) for item in media_embeds(original) for part in description_embeds(item)]
     units=lambda value:len(str(value).encode('utf-16-le'))//2
     embeds=[]
     for original in source:

@@ -1,96 +1,147 @@
+"""User-facing release highlights. Operational details live in repository documentation."""
+RELEASES = [('v1.0.0-beta.8',
+  '긴 설명과 모바일 예시 개선',
+  'Long descriptions and mobile previews',
+  [('긴 설명을 끝까지 읽을 수 있도록 나눠 보내고, 요약의 PR 제목에 바로가기 링크를 추가했습니다.',
+    'Long descriptions are split into readable messages, and digest PR titles now link directly to each PR.'),
+   ('모바일 CI 예시의 체크 표시를 수정하고 패치노트를 핵심 내용 중심으로 정리했습니다.',
+    'Fixed mobile CI preview checkmarks and shortened the changelog to the changes that matter.')]),
+ ('v1.0.0-beta.7',
+  '삭제된 Issue 정리 수정',
+  'Deleted issue cleanup',
+  [('Issue를 삭제하면 연결된 시작 메시지와 스레드도 정상적으로 정리됩니다.',
+    'Deleting an issue now correctly removes its starter message and thread.')]),
+ ('v1.0.0-beta.6',
+  '현재 상태와 요약을 더 편하게',
+  'Clearer states and independent digests',
+  [('시작 카드에서 Open·Draft·Closed·Merged·Answered 상태를 확인할 수 있습니다. 삭제한 Issue·Discussion은 스레드도 정리합니다.',
+    'Starter cards show Open, Draft, Closed, Merged or Answered. Deleted issues and discussions also have '
+    'their threads removed.'),
+   ('일일·주간 요약을 각각 켜고 끌 수 있습니다. /settings도 관련 항목끼리 모았습니다.',
+    'Daily and weekly digests can be switched on independently. Related /settings options are grouped '
+    'together.'),
+   ('방해금지 중 메시지는 무음으로 보내고 종료 후 변경된 항목을 모아 안내합니다. 새 스레드 생성 알림음은 남을 수 있습니다.',
+    'Messages are silent during Do Not Disturb, followed by a catch-up roundup. New-thread creation sounds '
+    'may still occur.')]),
+ ('v1.0.0-beta.5',
+  '수정된 내용은 같은 메시지에',
+  'Keep edited content in place',
+  [('설명·댓글을 수정하면 기존 알림도 갱신됩니다. 새 커밋 알림에는 커밋 제목을 보여줍니다.',
+    'Description and comment edits update the existing notification. New commits show their commit titles.'),
+   ('여러 서버로 보내는 알림과 작은 화면의 예시를 개선하고 Markdown을 더 읽기 쉽게 표시합니다.',
+    'Improved multi-server delivery, small-screen previews and Markdown readability.')]),
+ ('v1.0.0-beta.4',
+  '처음 연결하기 더 쉽게',
+  'An easier first connection',
+  [('연결한 저장소의 첫 안내와 현황을 보내드립니다. 알림 언어도 저장소마다 선택할 수 있습니다.',
+    'New repository connections receive a welcome and snapshot. Each repository can have its own '
+    'notification language.'),
+   ('연결 완료 화면과 채널 안내를 정리하고, 상태 알림에서 설명을 반복하지 않도록 개선했습니다.',
+    'Simplified connection confirmation and channel guidance, and reduced repeated descriptions in status '
+    'updates.')]),
+ ('v1.0.0-beta.3',
+  '더 안정적인 알림',
+  'More reliable notifications',
+  [('서비스가 중단됐을 때 복구를 개선했습니다. CI/CD 상태 메시지는 무음으로 전달합니다.',
+    'Improved recovery after interruptions. CI/CD status messages arrive silently.')]),
+ ('v1.0.0-beta.2',
+  'CI/CD 진행 상황과 이미지',
+  'CI/CD progress and images',
+  [('CI/CD 시작부터 완료까지 같은 메시지에서 상태와 브랜치를 확인할 수 있습니다. 실패는 alert에서도 알려드립니다.',
+    'Follow CI/CD status and branch from start to finish in one message. Failures also appear in alert.'),
+   ('비공개 이미지·GIF 전달을 개선하고, 여러 이미지는 세로로 보여줍니다. 중단 중 누락된 알림 복구도 추가했습니다.',
+    'Improved private images and GIFs, with multiple images shown vertically. Added recovery for missed '
+    'notifications.')]),
+ ('v1.0.0-beta.1',
+  '베타 버전과 작동 예시',
+  'Beta versions and previews',
+  [('베타 버전 표시를 통일하고 예시 알림을 여유 있게 읽을 수 있도록 속도와 크기를 조절했습니다.',
+    'Standardized beta version labels and adjusted preview timing and size for easier reading.')]),
+ ('2026.11.02.9',
+  '요약 작동 예시',
+  'Digest previews',
+  [('홈페이지에서 일일 요약과 /summary 결과를 미리 볼 수 있습니다.',
+    'Preview daily digests and /summary results on the homepage.')]),
+ ('2026.11.02.8',
+  '직접 눌러보는 예시',
+  'Clickable previews',
+  [('채널 목록을 눌러 예시를 바꾸고 자동 재생을 잠시 멈출 수 있습니다. CI 검사 과정도 보여줍니다.',
+    'Switch examples from the channel list, pause autoplay and follow an illustrative CI run.')]),
+ ('2026.11.02.7',
+  '더 익숙한 Discord 미리보기',
+  'A more familiar Discord preview',
+  [('홈페이지 예시의 아이콘과 화면 구성을 Discord에 더 가깝게 다듬었습니다.',
+    'Refined preview icons and layout to feel more like Discord.')]),
+ ('2026.11.02.6',
+  '연결 전 안내 개선',
+  'Clearer guidance before connecting',
+  [('저장소 연결 전 이용 조건과 알림 공개 범위를 더 분명하게 안내합니다. 개인정보 안내도 보완했습니다.',
+    'Clarified connection requirements, who can see notifications and privacy information.')]),
+ ('2026.11.02.5',
+  'CI 알림과 작동 예시 개선',
+  'CI alerts and preview improvements',
+  [('PR에 연결되지 않은 실패 실행도 CI 채널과 alert에서 확인할 수 있습니다.',
+    'Failed runs without a linked PR are visible in the CI channel and alert.'),
+   ('이미지 전달과 홈페이지 작동 예시를 개선했습니다.', 'Improved image delivery and the homepage demonstration.')]),
+ ('2026.11.02.4',
+  '비공개 이미지와 GIF',
+  'Private images and GIFs',
+  [('비공개 저장소의 이미지와 GIF도 Discord에서 볼 수 있습니다.',
+    'Images and GIFs from private repositories can now appear in Discord.')]),
+ ('2026.11.02.2',
+  '간결한 알림과 이미지',
+  'Cleaner notifications and images',
+  [('종료·병합 알림의 반복 설명을 줄이고 열린 PR 재알림을 목록으로 모았습니다.',
+    'Reduced repeated descriptions in close/merge updates and grouped open-PR reminders into lists.'),
+   ('큰 이미지·GIF 전달과 모바일 화면을 개선했습니다.', 'Improved large image and GIF delivery, plus the mobile layout.')]),
+ ('2026.11.02.1',
+  '업데이트 안정성 개선',
+  'Safer updates',
+  [('업데이트 도중 문제가 생겼을 때 이전 상태로 복구하는 과정을 개선했습니다.', 'Improved recovery when an update encounters a problem.')]),
+ ('2026.11.01.4',
+  '항목별로 보기 좋은 알림',
+  'Clearer notifications for each item',
+  [('PR·Issue·Discussion에 맞는 정보를 보여주고 연이어 들어온 변경을 모아서 전달합니다.',
+    'Show relevant information for PRs, issues and discussions, and group related changes.'),
+   ('/summary에서 연결된 저장소의 열린 항목을 제목과 링크로 확인할 수 있습니다.',
+    'Use /summary to browse open items across connected repositories with titles and links.')]),
+ ('2026.11.01.3',
+  '모바일과 메뉴 개선',
+  'Mobile and menu improvements',
+  [('메뉴와 입력창을 통일하고 작은 화면에서도 설정과 예시를 보기 편하게 정리했습니다.',
+    'Made menus and fields consistent, with clearer settings and previews on smaller screens.')]),
+ ('2026.11.01.2',
+  '계정과 개인정보 안내',
+  'Account and privacy guidance',
+  [('새 명령어는 봇을 다시 초대하지 않아도 사용할 수 있습니다.', 'New commands become available without reinviting the bot.'),
+   ('이용약관과 개인정보 안내를 한국어·영어로 확인할 수 있습니다.',
+    'Terms and privacy information are available in Korean and English.')]),
+ ('2026.11.01',
+  '알림과 현황 요약 개선',
+  'Better updates and snapshots',
+  [('변경된 내용과 작성자·브랜치를 보기 쉽게 표시하고 불필요한 반복 설명을 줄였습니다.',
+    'Made changes, authors and branches easier to read, with less repeated text.'),
+   ('PR·Issue 현황 요약과 열린 PR 재알림을 개선했습니다.', 'Improved PR and issue digests and reminders for open PRs.')]),
+ ('Beta',
+  '팀별 알림 설정',
+  'Team notification settings',
+  [('작업 영역별 PR 분류, 알림 묶기, 예약 요약과 /settings를 추가했습니다.',
+    'Added PR routing by work area, batched notifications, scheduled digests and /settings.'),
+   ('한국어·영어 화면을 지원하며 베타 기간에는 무료로 사용할 수 있습니다.',
+    'Korean and English are supported, with free access during beta.')]),
+ ('Beta',
+  'Threadle 첫 공개',
+  'Meet Threadle',
+  [('GitHub 저장소를 연결하면 Discord 알림 채널을 자동으로 준비합니다.',
+    'Connect a GitHub repository to automatically set up Discord notification channels.'),
+   ('PR·Issue·Discussion의 활동을 각각 하나의 스레드에 모아 보여줍니다.',
+    'Keep each PR, issue and discussion together in its own thread.')])]
+
+
 def content(t):
-    body = '<section class="changelog-page"><h1>' + t('패치노트', 'Changelog') + '</h1><p class="page-intro">' + t('Threadle의 기능과 사용 흐름이 어떻게 달라졌는지 확인하세요.', 'Follow what’s new in Threadle and how it improves your workflow.') + '</p>'
-    groups = [('2026.11.02.5', '비공개 첨부와 Discord 미리보기 수정', 'Private attachments and Discord preview fixes', [('이번 수정', 'This update', [('PR에 연결되지 않은 실패 실행은 CI 채널에 상세 결과를 남기고 alert 채널에서도 안내합니다. 조용한 시간은 alert 안내에 적용됩니다.', 'Failed runs without an associated PR are delivered to the CI channel, with a heads-up in the alert channel. Quiet hours apply to the heads-up.'),('미디어 인증 모듈을 포함해 배포 파일의 의존성을 확인합니다. 이미지 처리에 실패해도 텍스트 알림은 전달합니다.', 'Deployment now includes the media authentication module and checks dependencies. Text notifications continue when an image cannot be fetched.'), ('PR·Issue·Discussion·CI 예시를 Discord의 채널·메시지·스레드 3열 구성으로 다시 만들었습니다.', 'Rebuilt the PR, issue, discussion, and CI previews with Discord-style channels, messages, and threads in three panes.'), ('GitHub Actions 배포 구성을 추가했습니다. 실제 서버 연결과 첫 운영 배포 확인은 별도로 필요합니다.', 'Added GitHub Actions deployment configuration. Runner registration and the first production deployment still require verification.')])]),("2026.11.02.4", "비공개 저장소 첨부 이미지 전달", "Private repository image delivery", [("알림 첨부", "Notification attachments", [("비공개 저장소의 이미지와 GIF도 저장소별 GitHub App 권한으로 가져와 Discord 파일 첨부로 전달합니다. 인증은 GitHub 원본 요청에만 사용하고, 허용된 이미지 CDN으로 이동한 뒤에는 인증 정보를 보내지 않습니다. 원본 크기와 Discord 업로드 한도를 확인하며 GIF 애니메이션을 유지합니다.", "Images and GIFs from private repositories can now be fetched with that repository’s GitHub App access and delivered as Discord attachments. Credentials are sent only to the original GitHub request and are never forwarded to an approved image CDN. Source and Discord upload limits are checked while preserving GIF animation.")])]),('2026.11.02.2', '반복 알림과 사용 화면 정리', 'Cleaner notifications and a more responsive site', [('알림', 'Notifications', [('병합·종료 알림에서 PR 설명을 반복하지 않습니다. 작성자를 카드 상단에 표시하고 생성 정보는 넓은 행으로 정리합니다.', 'Merge and close notices no longer repeat the PR description. Authors appear above the title, and creation details use full-width rows.'), ('같은 채널로 보낼 열린 PR 재알림을 제목·링크 목록으로 묶습니다. 재시도와 재시작 중에도 전송 기록을 유지합니다.', 'Open PR reminders are grouped into linked title lists per channel. Delivery receipts survive retries and restarts.'), ('공개 GitHub 첨부 사진이 4 MiB를 넘으면 해상도·품질을 조정해 전송합니다. 원본은 최대 20 MiB까지 처리하며 GIF는 프레임을 유지해 축소합니다. 처리할 수 없는 첨부는 원문 링크를 유지합니다.', 'Public GitHub photos over 4 MiB are resized and compressed before delivery. Source files up to 20 MiB are supported, with animated GIFs resized without dropping their frames. Unavailable or unsupported attachments keep their original links.')]), ('사이트', 'Website', [('버튼·카드·FAQ의 상호작용과 작은 화면 배치를 개선하고 장식 화살표를 제거했습니다. 동작 줄이기 설정도 따릅니다.', 'Refined button, card, and FAQ interactions and small-screen layouts. Decorative arrows are removed, and reduced-motion preferences are respected.')])]),('2026.11.02.1', 'Windows 업데이트와 복구 개선', 'Safer Windows updates and recovery', [('업데이트', 'Updates', [('파일 교체·복구 전에 Receiver를 정지하고 변경 없는 파일은 건너뜁니다. 백업과 복구 파일의 해시를 확인하고 실패 단계를 로그에 남깁니다.', 'Updates stop the Receiver before replacing or restoring files, skip unchanged files, verify backup hashes, and record the stage of any failure.')])]),('2026.11.01.4', '항목별 생성 템플릿과 읽기 쉬운 요약', 'Per-item templates and cleaner summaries', [('알림 정리', 'Clearer notifications', [('PR·Issue·Discussion별 생성 템플릿을 추가하고, 같은 항목에서 8초 안에 들어온 변경은 한 번에 정리합니다.', 'New PR, issue, and discussion templates show the right metadata for each item. Updates arriving within eight seconds are grouped by item.'), ('GIF와 이미지 첨부를 Discord 미리보기로 표시합니다.', 'GIFs and images in GitHub content now appear as Discord previews.'), ('Issue 유형과 추가 필드 값을 표시합니다. 시간은 식별 코드 뒤에 표시하고 PR 브랜치를 작성자보다 먼저 안내합니다.', 'Issue types and custom fields are now shown. Timestamps follow receipt IDs, and PR branches appear before the author.'), ('/summary 한 번으로 모든 연결 저장소를 조회합니다. 열린 PR은 전부, Issue와 Discussion은 가장 오래된 10개까지 제목·링크로 보여주며 완료 목록은 제외합니다.', 'Run /summary without options to see all connected repositories. Every open PR is linked, with up to ten oldest open issues and discussions. Completed items are omitted.')])]),('2026.11.01.3', '사이트 메뉴와 반응형 개선', 'Consistent menus and responsive layouts', [('사용 화면', 'Interface', [('사이트 전체 선택 메뉴의 색상과 모서리를 통일하고 키보드 탐색을 지원합니다.', 'Selection menus now share the site’s colors and rounded corners, with keyboard navigation.'), ('작은 화면에서는 설정 카드와 입력·버튼을 줄바꿈하며, Discord 예시는 가로 3분할을 유지합니다.', 'Settings cards, fields, and buttons adapt to smaller screens. The Discord demo keeps its three panes side by side.')])]) ,
-        ('2026.11.01.2', '이번 업데이트 · 계정과 개인정보 안내', 'This update · accounts and privacy', [
-            ('명령어 자동 동기화', 'Automatic command synchronization', [
-                ('서버 시작 시 Discord 명령어를 확인하고 변경된 이름·옵션을 자동 등록합니다. 실패하면 재시도하며 관리자 화면에 상태를 표시합니다.', 'At startup, Threadle checks Discord command definitions and registers changed names and options. Failed registration is retried and shown in the admin page.'),
-                ('기존 사용자의 봇 재초대나 저장소 재연결은 필요하지 않습니다. Discord 클라이언트의 명령어 표시는 캐시 갱신까지 시간이 걸릴 수 있습니다.', 'Existing users do not need to reinvite the bot or reconnect repositories. Discord clients may take time to refresh cached command displays.')]),
-            ('이용약관과 개인정보처리방침', 'Terms and privacy', [
-                ('한국어·영어 약관과 개인정보처리방침을 별도 공개 페이지로 추가하고 모든 페이지의 푸터에 연결했습니다.', 'Added public Terms of Service and Privacy Policy pages in Korean and English, linked from every footer.'),
-                ('해제한 연결은 30일 이후 다음 일일 정리에서 설정·대기열·전송 기록을 자동 삭제합니다. 다른 서버의 활성 연결과 이미 Discord에 보낸 메시지는 삭제하지 않습니다.', 'Disconnected connections are cleaned up at the next daily cleanup after 30 days. Settings, queues, and delivery records are deleted, while other servers’ active connections and messages already sent to Discord are preserved.')])]),
-
-        ('2026.11.01', '이번 업데이트 · 적용 후 사용 가능', 'This update · available after installation', [
-            ('알림을 더 읽기 쉽게', 'Clearer notifications', [
-                ('담당자·라벨·마일스톤 변경과 초안 전환에서는 PR 설명을 반복하지 않고 변경 내용을 보여줍니다.', 'Assignee, label, milestone, and draft updates show what changed without repeating the PR description.'),
-                ('commented 리뷰는 결과 문구를 빼고 실제 댓글을 보여줍니다. 새 스레드에는 작성자와 작성 시각을, PR에는 브랜치 방향도 표시합니다.', 'Comment-only reviews keep the actual comment without an extra verdict. New threads show the author and posting time, plus source and target branches for PRs.'),
-                ('시간은 Discord 사용자의 시간대에 맞춰 표시합니다. 알림 채널에서는 Threadle이 새 소식을 안내합니다.', 'Posting times follow each Discord viewer’s time zone. Threadle adds a friendly heads-up in the alert channel.')]),
-            ('요약과 반복 알림', 'Summaries and follow-ups', [
-                ('/summary에 PR·Issue·Discussion 제목 목록과 페이지 조회를 추가하고, 연결된 저장소를 목록에서 선택할 수 있게 했습니다.', '/summary now lists PR, issue, and discussion titles with pagination. Pick a connected repository from the suggestions.'),
-                ('일일·주간 요약에 열린 PR 제목, 가장 오래된 미해결 Issue 5개, 최근 완료된 Issue 5개와 남은 개수를 추가했습니다.', 'Scheduled roundups include open PR titles, the five oldest open issues, the five most recently completed issues, and the remaining issue count.'),
-                ('담당자가 없거나 리뷰 요청 전인 PR도 열려 있으면 설정한 간격으로 반복 안내합니다. 초안도 포함하며 종료되면 중단합니다.', 'Open PR reminders repeat at your chosen interval, even without an assignee or review request. Drafts are included; closed PRs stop receiving reminders.')]),
-            ('전달 성능과 서버 연결 관리', 'Delivery and server management', [
-                ('과거 스레드 기록을 매번 다시 읽지 않도록 전송 기록을 저장하고, 한 서버의 가득 찬 대기열이 다른 서버의 분배를 막지 않게 했습니다.', 'Stored delivery receipts avoid rescanning old thread history. A full queue in one server no longer blocks delivery to other servers.'),
-                ('봇 추방·서버 삭제를 확인하면 해당 서버의 연결만 자동 해제합니다. 일시적인 장애는 연결 해제로 처리하지 않습니다.', 'Confirmed bot removal or server deletion disconnects that server’s repositories. Temporary outages do not disconnect them.'),
-                ('관리자 목록에서 현재 연결과 해제 기록을 분리하고 서버 이름·연결한 GitHub 사용자를 표시합니다.', 'The admin page separates current and disconnected connections, with server names and the GitHub user who connected them.'),
-                ('관리자 페이지에서 서명된 업데이트 ZIP을 확인하고 적용할 수 있습니다. 실패하면 이전 파일로 복구합니다.', 'Admins can inspect and apply signed update ZIPs from the website, with file rollback if the update fails.')]),
-            ('사이트 개선', 'Website improvements', [
-                ('Threadle 캐릭터를 로고와 프로필에 적용하고 요금표 열 정렬을 맞췄습니다. 휴대전화에서도 작동 예시는 가로 3분할을 유지합니다.', 'The Threadle character now appears in the logo and profile images. Pricing columns are aligned, and the demo keeps all three panes side by side on phones.'),
-                ('패치노트를 별도 페이지로 추가하고 간편한 연결 과정을 더 분명하게 안내합니다.', 'A dedicated changelog and clearer setup copy make the service easier to explore.')])]),
-        ('Beta', '이전 업데이트 · 팀별 알림 설정', 'Earlier beta · team notification controls', [
-            ('팀에 맞춘 알림', 'Notifications for your team', [
-                ('디렉터리별 작업 영역, PR 분류 미리보기, 알림 묶기, 조용한 시간, 예약 요약과 /settings 명령어를 추가했습니다.', 'Added directory-based work areas, PR routing previews, batching, quiet hours, scheduled summaries, and the /settings command.'),
-                ('한국어·영어 선택, 영어 Discord 명령어, 별도 기능·연결 방법·요금제·FAQ 페이지와 관리자 인증을 추가했습니다.', 'Added Korean and English support, English Discord commands, dedicated feature, setup, pricing, and FAQ pages, and protected admin access.'),
-                ('Pro는 서버당 저장소 5개와 모든 팀 기능을 제공하는 구성으로 준비 중입니다. 베타에는 결제나 요금제별 제한을 적용하지 않습니다.', 'Pro is planned for five repositories per server and all team features. Payments and plan restrictions are not enabled during the beta.')])]),
-        ('Beta', '이전 업데이트 · Threadle 시작', 'Earlier beta · the Threadle foundation', [
-            ('GitHub에서 Discord까지', 'From GitHub to Discord', [
-                ('GitHub App 승인으로 개인 토큰 없이 저장소를 연결하고, 저장소 이름의 카테고리와 알림 채널을 자동 구성합니다.', 'Connect repositories through GitHub App approval without sharing a personal token. Repository categories and notification channels are created for you.'),
-                ('PR·Issue·Discussion마다 스레드를 만들고 관련 댓글·리뷰·커밋·PR CI 소식을 같은 스레드로 모읍니다. 새 활동은 별도 알림 채널에서도 안내합니다.', 'Each PR, issue, and discussion gets its own thread. Related comments, reviews, commits, and PR CI updates stay together, with a separate alert feed for new activity.')])])]
-    groups.insert(0, ('2026.11.02.6', '연결 확인과 개인정보 보관 기준', 'Setup confirmations and privacy retention', [
-        ('계정과 개인정보', 'Accounts and privacy', [
-            ('연결 전에 약관·최소 이용 연령·Discord 공개 범위를 확인하고 안내 버전과 확인 시각을 연결별로 기록합니다. 기존 알림은 유지하며 기존 이용자에게 과거 동의 기록을 임의 생성하지 않습니다.', 'Setup now checks the terms, minimum age, and Discord audience and records the notice version and confirmation time per connection. Existing notifications stay active; past acceptance is never invented.'),
-            ('관리 작업 기록과 진단 로그, 정상 종료된 업데이트와 자동 백업을 30일 기준으로 정리합니다. 진행 중이거나 복구가 필요한 자료와 외부 수동 백업은 자동 삭제에서 구분합니다.', 'Admin activity, diagnostic logs, completed updates, and automatic backups follow a 30-day cleanup period. Active or unresolved recovery materials and external manual backups are treated separately.'),
-            ('이미지 처리 라이브러리를 보안 수정 버전 Pillow 13으로 격리 설치하고, 배포 전 이미지·GIF 확인과 파일 해시 검증을 수행합니다. 기존 봇 라이브러리 폴더는 변경하지 않습니다.', 'Pillow 13 security fixes are installed in isolation, with image/GIF checks and file hashes verified before deployment. The existing bot dependency folder stays unchanged.'),
-            ('한국어·영어 정책에 처리 근거, 아동 이용 기준, 무료 베타 결제·환불 안내와 개인정보 요청 방법을 구체화했습니다.', 'Both language versions explain processing grounds, child eligibility, free-beta payment and refund status, and privacy requests.')])]))
-    groups.insert(0, ('2026.11.02.7', 'Discord 미리보기 아이콘', 'Discord preview icons', [
-        ('사용 화면', 'Interface', [
-            ('CI 예시를 실패 실행 상세와 alert 채널 안내로 바꾸고, 요금제 제목 중복을 제거했습니다. 기능 포함 여부와 푸터 펼침 표시는 SVG로 통일했습니다.', 'The CI demo now shows failed-run details and an alert-channel heads-up. Plan headings no longer repeat, and feature checks and the footer chevron use SVG icons.'),
-            ('홈페이지 작동 예시의 채널·스레드·알림·핀·사용자·입력창 아이콘을 Discord 화면에 맞춘 SVG로 교체했습니다. 기존 3열 배치와 PR·Issue·Discussion·CI 애니메이션은 유지합니다.', 'The homepage demo now uses Discord-style SVG icons for channels, threads, notifications, pins, members, and message controls. The three-pane layout and PR, issue, discussion, and CI animations are preserved.')])]))
-    groups.insert(0, ('2026.11.02.8', '채널에서 전환하는 작동 예시', 'Interactive channel previews', [
-        ('홈페이지', 'Homepage', [
-            ('왼쪽 채널을 눌러 PR·Issue·Discussion·CI 예시를 전환할 수 있고, 10초마다 순서대로 자동 재생합니다. 불필요한 사이드바 항목을 정리했습니다.', 'Switch previews from the channel list or let PR, issue, discussion, and CI examples rotate every ten seconds. Removed unrelated sidebar sections.'),
-            ('CI 예시는 댓글 대신 워크플로 실행과 검사 성공 과정을 보여줍니다. 동작 줄이기 설정을 존중하며 자동 재생을 일시정지할 수 있습니다.', 'The CI example shows workflow progress and successful checks rather than comments. Autoplay can be paused and respects reduced-motion preferences.')])]))
-    groups.insert(0, ('2026.11.02.9', '요약 예시와 Threadle 미리보기', 'Summary previews and Threadle sharing', [
-        ('사용 화면', 'Interface', [
-            ('github-alert에서 일일 요약과 /summary 결과를 보여주고, 예시의 마지막 메시지가 나타나면 다음 채널로 빠르게 전환합니다.', 'The alert preview shows scheduled digests and /summary replies. Previews move on shortly after their final message appears.'),
-            ('공유 링크 미리보기 이미지를 Threadle 배너로 바꾸고 봇 상태 문구를 Delivering GitHub updates로 변경합니다.', 'Shared links use the Threadle banner. The bot status now reads Delivering GitHub updates.')])]))
-    groups.insert(0, ('v1.0.0-beta.1', '베타 버전 표기와 작동 예시 개선', 'Beta versioning and preview improvements', [
-        ('베타 업데이트', 'Beta update', [
-            ('현재 서비스는 베타입니다. 버전을 v1.0.0-beta.1 형식으로 표시하며, 정식 출시 전 업데이트는 beta 번호를 올립니다.', 'Threadle is in beta. Versions now use v1.0.0-beta.1, with increasing beta numbers before the stable release.'),
-            ('예시 안의 알림 등장 간격을 늘리고 화면 폭에 따라 예시창 높이를 조절합니다. CI 예시는 모든 검사 완료 후 다음 채널로 전환합니다.', 'Preview notifications arrive more slowly and the window height adapts to screen width. The CI preview waits for every check before advancing.')])]))
-    groups.insert(0, ('v1.0.0-beta.2', 'CI/CD 진행 알림과 누락 알림 복구', 'CI/CD status and missed event recovery', [
-        ('알림 개선', 'Notification improvements', [
-            ('기존 관리 CI 채널 이름을 github-ci-cd로 한 번 변경합니다. 채널 ID와 기록은 유지하며, 완료 후 사용자가 바꾼 이름을 다시 덮어쓰지 않습니다.', 'Existing managed CI channels are renamed to github-ci-cd once. IDs and history remain unchanged, and later custom names are preserved.'),
-            ('CI/CD 시작·진행 상태를 보내고 같은 메시지를 완료 결과로 갱신합니다. 브랜치와 시작 시점 또는 소요 시간을 표시하며 alert에는 실패만 안내합니다.', 'CI/CD messages show running status and update in place on completion, with branch and start time or duration. Only failures appear in alert.'),
-            ('서버 복구 후 최근 3일의 GitHub App 전송 실패를 재요청합니다. 이미 수신한 이벤트는 건너뛰며 기존 대기열로 처리합니다.', 'After recovery, recent GitHub App delivery failures are requested again within the three-day window. Already received events are skipped and delivery uses the existing queue.'),
-            ('여러 이미지를 세로 메시지로 나누고 비공개 첨부의 인증된 Markdown 다운로드 경로를 추가합니다. 같은 마일스톤 변경의 중복 수신을 억제합니다.', 'Images are sent as separate vertical messages. Private attachments gain an authenticated Markdown download path, and duplicate milestone updates are suppressed.')])]))
-    groups.insert(0, ('v1.0.0-beta.3', '오류 기록과 수신 프로그램 자동 복구', 'Error diagnostics and receiver recovery', [
-        ('운영 안정성', 'Reliability', [
-            ('github-ci-cd의 실행 상태 메시지는 푸시·데스크톱 알림 없이 전송합니다. github-alert의 실패 안내는 기존 알림 방식을 유지합니다.', 'Run status messages in github-ci-cd suppress push and desktop notifications. Failure heads-ups in github-alert keep their existing notification behavior.'),
-            ('프로그램 시작 전부터 오류 로그를 준비하고 예외 종류·호출 경로·API 오류 코드·프로세스 정보를 기록합니다. 토큰·본문·로컬 변수는 진단 로그에서 보호합니다.', 'Logging starts before service initialization and records exception types, call stacks, API error codes and process identity. Tokens, payload bodies and frame locals are protected.'),
-            ('비정상 종료 시 기존 수신 예약 작업이 1분 간격으로 최대 255회 재시도하도록 배포에서 설정합니다. 기존 실행 시간 제한과 실행 명령은 유지하며, 실패 종료 코드 전달을 사전 확인합니다.', 'Deployment enables up to 255 restart attempts one minute apart for the existing receiver task. Existing time limits and actions are preserved, and failure exit propagation is checked first.')])]))
-    groups.insert(0, ('v1.0.0-beta.4', '연결 설정과 첫 안내 개선', 'Connection setup and first-run guidance', [
-        ('사용 화면', 'Interface', [('Closed·Deleted·Reopened·Merged 등 개발 상태명은 영어로 유지하고 Threadle의 안내 문장만 선택한 언어로 보냅니다. Issue·PR·Discussion 묶음 알림은 Updates 대신 마지막 상태를 제목에 표시하며 Reopened 등 상태 알림에는 기존 설명을 반복하지 않습니다.', 'Developer statuses such as Closed, Deleted, Reopened and Merged stay in English while Threadle guidance follows the selected language. Issue, PR and Discussion bundles use the final lifecycle status in their title, without repeating descriptions for Reopened and other status notices.'), ('저장소별 알림 언어를 연결 화면과 /settings에서 선택하며 사이트 언어와 별개로 유지합니다. 최초 연결 시 alert 채널에 인사와 현재 현황을 한 번 보냅니다.', 'Choose each repository’s notification language during setup or with /settings, independently of the website. First connections receive a welcome and current roundup in alert.'), ('채널 생성 중 복구 표식은 ID 저장 후 일반 Threadle 설명으로 바꿉니다. 기존 표식도 정리하며 사용자 지정 토픽은 보존합니다.', 'Temporary channel recovery markers become plain Threadle descriptions after IDs are saved. Existing markers are cleaned up while custom topics are preserved.'), ('공개 페이지의 연결 관리 버튼을 제거했습니다.', 'Removed the Manage connections button from public pages.'), ('팀 알림 설정에서 첫 연결을 완료하면 연결 완료 화면을 표시합니다. 기존 연결의 설정 수정은 현재 화면에서 저장 결과를 안내합니다.', 'The first connection through team settings now opens the connection confirmation page. Updates to existing connections retain inline save feedback.')])]))
-    groups.insert(0, ('v1.0.0-beta.5', '메시지 갱신과 여러 서버 알림 안정화', 'Message updates and multi-server delivery', [
-        ('알림과 설정', 'Notifications and settings', [
-            ('댓글과 설명 수정은 기존 메시지를 갱신하며 새 커밋은 PR 설명 대신 커밋 제목을 표시합니다. 서로 다른 서버의 전송 중복 방지 키를 분리합니다.', 'Comment and description edits update existing messages. New commits show commit titles rather than the PR description. Delivery nonces are isolated per destination.'),
-            ('Markdown 서식을 유지하고 표·체크박스·접기 영역은 Discord에서 읽기 쉽게 변환합니다. /summary 제목의 괄호 앞 불필요한 역슬래시를 제거합니다.', 'Markdown is preserved, with readable Discord equivalents for tables, task lists and details. Summary titles no longer escape parentheses.'),
-            ('새 연결의 주간 요약 기본 요일은 금요일이며 주간 시각을 별도로 설정할 수 있습니다. 기존 연결은 저장된 요일과 시간을 유지합니다. 요약은 발송 시점의 열린 PR·Issue 현황입니다.', 'New connections default to Friday for weekly digests, with a separate weekly time. Existing connections keep their schedule. Digests are snapshots of open PRs and issues.'),
-            ('예시 패널의 크기와 스크롤을 보완하고 팀 설정 적용 후 완료 화면을 표시합니다. 관리 화면은 고유 저장소 수와 서버별 연결 수를 구분합니다.', 'Preview panes constrain and scroll their content. Applying team settings opens confirmation. Admin counts distinguish unique repositories from server connections.')])]))
-    groups.insert(0, ('v1.0.0-beta.6', '방해금지 시간과 종료 요약', 'Do Not Disturb and catch-up roundups', [
-        ('알림', 'Notifications', [
-            ('스레드 시작 카드에 PR Open·Draft·Closed·Merged와 Issue·Discussion의 현재 상태를 표시하고 같은 메시지를 갱신합니다. Discussion Answered와 답변 채택 해제도 반영합니다.', 'Thread starter cards update in place to show PR Open, Draft, Closed or Merged and current issue/discussion state, including Discussion Answered and answer removal.'),
-            ('Issue·Discussion 자체가 삭제되면 해당 시작 메시지와 스레드를 함께 삭제하며, 늦게 도착한 과거 이벤트로 다시 만들지 않습니다. Closed 상태는 기록을 유지합니다.', 'Deleting an issue or discussion removes its starter and thread. Late old events do not recreate them; closed topics retain their history.'),
-            ('일일·주간 요약을 각각 켜거나 끄고 동시에 받을 수 있습니다. 각 요약의 시간·요일과 기존 발송 기록을 독립적으로 유지하며 /settings 옵션과 조회 결과를 관련 항목끼리 정리합니다.', 'Daily and weekly digests can be enabled independently or received together. Schedules and delivery records stay independent, and settings options and replies are grouped by topic.'),
-            ('조용한 시간의 표시 이름을 방해금지 시간으로 변경합니다. 기존 시간 설정은 그대로 유지합니다.', 'Quiet hours are now called Do Not Disturb. Existing configured times are preserved.'),
-            ('방해금지 중 PR·Issue·Discussion 상세 알림은 silent로 바로 전달하고, 종료 후 변경된 항목의 스레드 링크를 alert 채널에서 모아 안내합니다. 기존 대기 알림도 이 요약으로 전환하며 재시작·전송 재시도 기록을 유지합니다.', 'PR, issue and discussion updates arrive immediately and silently during Do Not Disturb. Afterwards, alert shows a roundup linking to changed threads. Previously deferred heads-ups join the roundup, with durable restart and retry recovery.'),
-            ('CI/CD 상태와 실패 경고는 방해금지 시간에도 즉시 전달합니다. CI/CD 채널은 항상 silent이며 alert의 실패 경고는 일반 알림으로 전송합니다.', 'CI/CD status and failure alerts bypass Do Not Disturb. The CI/CD channel always stays silent, while failure warnings in alert use regular notifications.')])]))
-    groups.insert(0, ('v1.0.0-beta.7', '삭제된 Issue 처리 수정', 'Fix deleted issue cleanup', [
-        ('오류 수정', 'Fix', [('방해금지 중 일반 스레드 생성 요청에도 무음 플래그를 전달하는 실험적 처리를 추가합니다. 즉시 생성과 기존 구조를 유지하며 해당 플래그가 거절되면 기존 요청으로 복구합니다. 실제 생성 알림음 억제 여부는 운영 확인이 필요합니다.', 'Experimentally include a silent flag in ordinary thread creation during Do Not Disturb. Creation stays immediate and retains the existing structure, falling back if the flag is rejected. Actual notification sound suppression remains unverified.'), ('삭제된 Issue 조회 시 GitHub의 410 Gone 응답을 처리해 시작 메시지와 스레드를 정리합니다. 404 호환 처리는 유지하고 인증·권한·서버 오류는 삭제로 취급하지 않습니다.', 'Handle GitHub 410 Gone responses for deleted issues so their starter message and thread are removed. Existing 404 handling remains, while authentication, permission and server errors never authorize deletion.')])]))
-    for version,ko,en,sections in groups:
-        body += '<article class="patch-entry"><p class="patch-label">' + version + ' · ' + t(ko,en) + '</p>'
-        for heading_ko,heading_en,items in sections:
-            body += '<div class="card"><h2>' + t(heading_ko,heading_en) + '</h2><ul>'
-            body += ''.join('<li>'+t(ko,en)+'</li>' for ko,en in items) + '</ul></div>'
-        body += '</article>'
-    return body + '</section>'
-
+    body='<section class="changelog-page"><h1>'+t('패치노트','Changelog')+'</h1><p class="page-intro">'+t('새 기능과 달라진 점을 간단히 확인하세요.','A quick look at new features and improvements.')+'</p>'
+    for version,ko,en,items in RELEASES:
+        body+='<article class="patch-entry"><p class="patch-label">'+version+'</p><div class="card"><h2>'+t(ko,en)+'</h2><ul>'
+        body+=''.join('<li>'+t(ko,en)+'</li>' for ko,en in items)
+        body+='</ul></div></article>'
+    return body+'</section>'

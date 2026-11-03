@@ -428,7 +428,7 @@ def make_embed(topic, event, payload, language='ko'):
         label = activity(event, payload)
     return {"title": clip(f"{topic.kind.upper()} #{topic.number} · {label}", 230),
             "url": obj.get("html_url") or topic.url,
-            "description": clip(body, 3500),
+            "description": body,
             "author": {"name": clip(actor,100)},
             "color": {"issue": 0x2DA44E, "pr": 0x8957E5, "discussion": 0x0969DA}[topic.kind],
             **({"timestamp": posted} if posted else {})}

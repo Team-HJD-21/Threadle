@@ -52,7 +52,7 @@ def ci_panes(t, avatar):
     out += '<div class="preview-detail"><header>' + icon('check') + '<span class="preview-header-name">Run #128</span>' + tools('more','close') + '</header><div class="preview-detail-scroll"><p class="preview-started">GITHUB ACTIONS</p><h2>' + title + '</h2><p><code>main</code> · <code>a1b2c3d</code></p><div class="preview-checks">'
     for index, (name, duration) in enumerate([('Set up job','2s'),('Checkout','4s'),('Install dependencies','9s'),('Run tests','32s'),('Build','12s')]):
         out += '<div class="preview-check-step step-' + str(index) + '">' + icon('check') + '<span>' + name + '</span><time>' + duration + '</time></div>'
-    out += '</div><p class="preview-ci-success preview-ci-complete">' + icon('check') + ' ' + t('모든 검사가 통과했어요.', 'All checks passed.') + '</p><p class="preview-ci-note">' + t('워크플로 실행을 재현한 예시예요. 현재 실제 알림은 실패한 실행을 전달하며, PR의 CI 결과는 해당 PR 스레드에 모여요.', 'An illustrative workflow run. Live notifications currently report failures; PR check results stay in their PR thread.') + '</p></div></div></div>'
+    out += '</div><p class="preview-ci-success preview-ci-complete">' + icon('check') + ' ' + t('모든 검사가 통과했어요.', 'All checks passed.') + '</p><p class="preview-ci-note">' + t('실행 상태는 같은 메시지에서 갱신되고, 실패는 alert 채널에서도 알려드려요.', 'Run status updates in one message. Failures also appear in the alert channel.') + '</p></div></div></div>'
     return out
 
 
