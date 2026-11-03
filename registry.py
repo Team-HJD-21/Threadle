@@ -49,6 +49,8 @@ class Registry:
                 CREATE TABLE IF NOT EXISTS github_profiles(user TEXT PRIMARY KEY, login TEXT NOT NULL,
                     checked REAL NOT NULL DEFAULT 0);
             ''')
+            from settings_audit import schema
+            schema(db)
             db.execute('CREATE TABLE IF NOT EXISTS connection_welcomes(guild TEXT NOT NULL,repo_id INTEGER NOT NULL,binding TEXT NOT NULL,phase INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(guild,repo_id))')
             db.execute('CREATE TABLE IF NOT EXISTS connection_retention(id TEXT PRIMARY KEY, disconnected_at REAL NOT NULL)')
             db.execute('CREATE TABLE IF NOT EXISTS retention_scopes(scope TEXT PRIMARY KEY)')
@@ -98,18 +100,22 @@ class Registry:
             if not re.fullmatch('[0-9]+', str(value)) or int(value) <= 0:
                 raise ValueError('Discord IDs must be numeric')
 
-    def configure(self, identity, config, discord_user, github_user, consent=None):
+    def configure(self, identity, config, discord_user, github_user, consent=None, command_id=None):
         binding = self.get(identity)
         if binding is None or binding.auth != 'app' or config['guild_id'] != binding.config['guild_id']:
             raise ValueError('연결 정보가 변경됐습니다. 다시 확인해 주세요.')
         self.validate(binding.repo_id, binding.repo, binding.installation, binding.auth, config)
         with self.db() as db:
+            if command_id and db.execute('SELECT 1 FROM settings_changes WHERE id=?',(command_id,)).fetchone():return
             changed = db.execute('UPDATE bindings SET config=? WHERE id=? AND enabled=1 AND config=?',
                                  (json.dumps(config), identity, json.dumps(binding.config))).rowcount
             if changed != 1:
                 raise ValueError('연결 정보가 변경됐습니다. 다시 확인해 주세요.')
-            db.execute('INSERT INTO connection_audit(binding,action,discord_user,github_user) VALUES(?,?,?,?)',
+            audit=db.execute('INSERT INTO connection_audit(binding,action,discord_user,github_user) VALUES(?,?,?,?)',
                        (identity, 'configure', discord_user, github_user))
+            if command_id:
+                from settings_audit import record,snapshot
+                record(db,binding,command_id,discord_user,snapshot(binding.config),snapshot(config),audit.lastrowid)
             self.acceptance(db, identity, discord_user, github_user, consent)
 
     def add(self, tenant, repo_id, repo, installation, auth, config, legacy_state=False):

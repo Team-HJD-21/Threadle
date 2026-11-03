@@ -48,7 +48,7 @@ class DiscordConnect:
             if payload.get('type') == 4:
                 choices = []
                 data = payload.get('data', {})
-                if data.get('name') in ('summary', 'settings') and manages_guild(payload.get('member', {})):
+                if data.get('name') in ('summary', 'settings', 'settings-history') and manages_guild(payload.get('member', {})):
                     focused = next((v for v in data.get('options', []) if v.get('focused')), {})
                     if focused.get('name') == 'repository':
                         guild = str(payload.get('guild_id', ''))
@@ -58,7 +58,7 @@ class DiscordConnect:
                                           key=lambda b:b.repo.casefold())
                         choices = [{'name': b.repo[:100], 'value': b.id} for b in bindings[:25]]
                 return 200, {'type': 8, 'data': {'choices': choices}}
-            if payload.get('type') == 2 and payload.get('data', {}).get('name') in ('summary', 'settings'):
+            if payload.get('type') == 2 and payload.get('data', {}).get('name') in ('summary', 'settings', 'settings-history'):
                 if not all(re.fullmatch(r'[1-9][0-9]*', str(value or '')) for value in (payload.get('guild_id'), payload.get('channel_id'), payload.get('id'), payload.get('member', {}).get('user', {}).get('id'))):
                     return self.message('Run this command in a connected server text channel.')
                 error = self.jobs.enqueue(payload)

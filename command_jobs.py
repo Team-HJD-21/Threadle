@@ -45,6 +45,8 @@ class CommandJobs:
         return thread
 
     def process(self):
+        from settings_audit import flush
+        flush(self.service)
         with self.sessions.db() as db:
             db.execute('UPDATE command_jobs SET payload=NULL,result=NULL,done=1 WHERE expires<?', (time.time(),))
             db.execute('DELETE FROM command_jobs WHERE expires<?', (time.time() - 86400,))
@@ -130,6 +132,11 @@ class CommandJobs:
             raise ValueError('The command channel does not belong to this server.')
         if payload['data']['name'] == 'summary':
             return self.summary(binding, options.get('type', 'pr'), options.get('page', 1))
+        from settings_audit import history,exists,snapshot
+        if payload['data']['name']=='settings-history':
+            return history(self.service.registry,binding)
+        if exists(self.service.registry,str(payload['id'])):
+            return self.describe(binding.repo,binding.config.get('team_notifications',{}),binding.config.get('language','ko'))+('\nThis change was already applied.' if binding.config.get('language')=='en' else '\n이미 적용된 변경입니다.')
         updates = {k: v for k, v in options.items() if k != 'repository'}
         current = dict({'review_hours': 0, 'batch_seconds': 0, 'digest': 'off', 'digest_hour': 9, 'digest_weekday': 0, 'utc_offset': 9, 'quiet': False, 'quiet_start': 22, 'quiet_end': 8}, **binding.config.get('team_notifications', {}))
         if not updates:
@@ -148,7 +155,9 @@ class CommandJobs:
         if updates.get('review_hours') and not binding.config.get('team_notifications', {}).get('review_hours'):
             current['review_since'] = time.time()
         config = dict(binding.config, team_notifications=current, language=language)
-        self.service.registry.configure(binding.id, config, user, 'discord-command')
+        if snapshot(binding.config)==snapshot(config):
+            return self.describe(binding.repo,current,language)+('\nNo settings changed.' if language=='en' else '\n변경된 설정이 없습니다.')
+        self.service.registry.configure(binding.id, config, user, 'discord-command',command_id=str(payload['id']))
         return self.describe(binding.repo, current, language) + '\nNotification settings updated.'
 
     @staticmethod
@@ -199,7 +208,7 @@ def command_definitions():
     for item in options:
         if item['name'] in prefixes:item['description']='['+prefixes[item['name']]+'] '+item['description']
     base = {'type':1,'default_member_permissions':'32','contexts':[0],'integration_types':[0],'name_localizations':None,'description_localizations':None}
-    return [dict(base,name='summary',description='Show open PRs, issues, and discussions for every connected repository.',options=[]),dict(base,name='settings',description='View or change notification preferences for a connected repository.',options=options)]
+    return [dict(base,name='summary',description='Show open PRs, issues, and discussions for every connected repository.',options=[]),dict(base,name='settings',description='View or change notification preferences for a connected repository.',options=options),dict(base,name='settings-history',description='Show who changed notification settings and what changed.',options=[repository])]
 
 
 def register_extra_commands(service, settings):
