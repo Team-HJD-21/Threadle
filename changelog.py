@@ -1,5 +1,5 @@
 """Separate bot release notes from authenticated site/operations notes."""
-RELEASES = [('v1.0.0-beta.15',
+RELEASES = [('v1.0.0-beta.18','처음 알림에서 세부 정보 갱신','Keep details in the original notification',[('라벨·담당자·마일스톤 등 변경을 처음 설명 알림의 Details·Labels에 반영합니다.','Labels, assignees and milestones update Details and Labels in the original description message.'),('Discussion의 Answered는 파란색, 일반 댓글은 회색으로 구분합니다.','Answered discussions use blue; ordinary comments use gray.')]), ('v1.0.0-beta.15',
   '설정 변경 알림을 한 카드로',
   'One card for metadata changes',
   [('라벨·담당자·유형·마일스톤 변경을 시간 제한 없이 하나의 상태 카드에 반영합니다.',
@@ -129,7 +129,7 @@ RELEASES = [('v1.0.0-beta.15',
    ('PR·Issue·Discussion의 활동을 각각 하나의 스레드에 모아 보여줍니다.',
     'Keep each PR, issue and discussion together in its own thread.')])]
 
-ADMIN_RELEASES = [('v1.0.0-beta.17',
+ADMIN_RELEASES = [('v1.0.0-beta.18','여유로운 예시와 지원 커뮤니티','Readable previews and support community',[('예시의 시작과 상태 변경 뒤 여유를 늘리고, 요금제 버튼 정렬과 기능 비교표를 보완했습니다.','Previews allow more time before arrival and after state changes; plan buttons and feature comparisons are improved.'),('FAQ에 Threadle Support 커뮤니티 바로가기를 추가했습니다.','The FAQ now links to the Threadle Support community.')]), ('v1.0.0-beta.17',
   '실제 알림 예시와 운영 화면 개선',
   'Realistic previews and administration improvements',
   [('실제 알림 문구와 상태별 카드 색상을 예시에 반영하고, 패치노트도 봇·사이트 변경으로 나눴습니다.',

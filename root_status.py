@@ -15,7 +15,7 @@ def decorate(topic,embed,obj):
     result=copy.deepcopy(embed)
     state=state_label(topic.kind,obj)
     result['title']=clip(f'{topic.kind.upper()} {state} #{topic.number} · '+str(obj.get('title',topic.title)),230)
-    result['color']={'Open':0x2DA44E,'Draft':0x8B949E,'Closed':0xD1242F,'Merged':0x8957E5,'Answered':0x2DA44E}[state]
+    result['color']={'Open':0x2DA44E,'Draft':0x8B949E,'Closed':0xD1242F,'Merged':0x8957E5,'Answered':0x0969DA}[state]
     if topic.kind=='pr' and obj.get('head') and obj.get('base'):
         value=Topic(topic.repo,topic.kind,topic.number,topic.title,topic.url,obj)
         result['description']=root_description(value)

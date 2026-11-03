@@ -1,4 +1,4 @@
-"""One durable editable metadata state card per topic, without a delivery delay."""
+"""Refresh original creation details; retain legacy metadata-card recovery helpers."""
 import json
 from discord_threads import nonce
 
@@ -58,3 +58,22 @@ def render(embed,obj,english,queue,topic,version):
     result['title']=embed.get('title','').split(' · ',1)[0]+' · Details updated'
     result['description']='\n'.join(lines)
     return result
+
+
+def creation_snapshot(queue,topic,obj,event,payload,language,version):
+    """All metadata and body edits refresh the original creation card, including fields.
+
+    Merge omitted webhook fields with the last accepted snapshot only after the
+    shared source revision check, so late events cannot overwrite newer content.
+    """
+    from discord_threads import Topic
+    from notification_layout import merge_snapshot,creation_embed
+    with queue.connect() as db:
+        db.execute('CREATE TABLE IF NOT EXISTS creation_snapshots(topic TEXT PRIMARY KEY,value TEXT NOT NULL)')
+        row=db.execute('SELECT value FROM creation_snapshots WHERE topic=?',(topic.key,)).fetchone()
+        previous=json.loads(row[0]) if row else dict(topic.metadata)
+        base=Topic(topic.repo,topic.kind,topic.number,previous.get('title',topic.title),topic.url,previous)
+        snapshot=merge_snapshot(base,[(event,payload)])
+        snapshot=Topic(topic.repo,topic.kind,topic.number,snapshot.metadata.get('title',topic.title),topic.url,snapshot.metadata)
+        db.execute('INSERT OR REPLACE INTO creation_snapshots VALUES(?,?)',(topic.key,json.dumps(snapshot.metadata)))
+    return creation_embed(snapshot,payload,language)

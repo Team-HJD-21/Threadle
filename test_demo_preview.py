@@ -72,7 +72,7 @@ class PreviewTests(unittest.TestCase):
         from demo_web import starter_states
         from root_status import decorate
         from discord_threads import Topic
-        for kind,state in [('pr',{'merged':True}),('issue',{'state':'closed'}),('discussion',{'closed':True})]:
+        for kind,state in [('pr',{'merged':True}),('issue',{'state':'closed'}),('discussion',{'isAnswered':True})]:
             topic=Topic('TeamHJD/threadle',kind,1,'Example','',{})
             self.assertIn(decorate(topic,{},dict(title='Example',**state))['title'],starter_states(kind,'1','Example'))
         self.assertIn('DISCUSSION Answered #1',starter_states('discussion','1','Example'))

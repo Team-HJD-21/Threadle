@@ -450,7 +450,7 @@ def make_embed(topic, event, payload, language='ko'):
             "url": obj.get("html_url") or topic.url,
             "description": body,
             "author": {"name": clip(actor,100)},
-            "color": {"issue": 0x2DA44E, "pr": 0x8957E5, "discussion": 0x0969DA}[topic.kind],
+            "color": 0x8B949E if event in ("issue_comment","discussion_comment","pull_request_review_comment") else {"issue": 0x2DA44E, "pr": 0x8957E5, "discussion": 0x0969DA}[topic.kind],
             **({"timestamp": posted} if posted else {})}
 
 

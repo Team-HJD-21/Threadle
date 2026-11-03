@@ -5,10 +5,10 @@ from root_status import decorate
 
 def starter_states(kind,number,title):
     topic=Topic('TeamHJD/threadle',kind,int(number),title,'',{})
-    final={'pr':{'merged':True},'issue':{'state':'closed'},'discussion':{'closed':True}}[kind]
+    final={'pr':{'merged':True},'issue':{'state':'closed'},'discussion':{'isAnswered':True}}[kind]
     initial=decorate(topic,{}, {'title':title})
     changed=decorate(topic,{}, {'title':title,**final})
-    middle=('<strong class="preview-state-middle">'+escape(decorate(topic,{}, {'title':title,'isAnswered':True})['title'])+'</strong>') if kind=='discussion' else ''
+    middle=''
     return middle+'<strong class="preview-state-before">'+escape(initial['title'])+'</strong><strong class="preview-state-after">'+escape(changed['title'])+'</strong>'
 
 

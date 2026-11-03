@@ -8,8 +8,8 @@
     function renderState() {
       preview.querySelectorAll('.preview-case').forEach(pane => {
         const active = pane.classList.contains('preview-' + order[index]);
-        pane.classList.toggle('is-state-updated', motion.matches || (active && ciElapsed >= 4800));
-        pane.classList.toggle('is-state-answered', !motion.matches && active && ciElapsed >= 3800 && ciElapsed < 4800);
+        pane.classList.toggle('is-state-updated', motion.matches || (active && ciElapsed >= 8500));
+        pane.classList.remove('is-state-answered');
       });
     }
     preview.classList.add('has-ci-clock');
@@ -28,12 +28,12 @@
       if (ciLast !== null) ciElapsed += now - ciLast;
       ciLast = now;
       renderCi(); renderState();
-      if (ciElapsed < 5000) ciTimer = setTimeout(ciClock, 100);
+      if (ciElapsed < (order[index] === 'ci' ? 5000 : 8500)) ciTimer = setTimeout(ciClock, 100);
     }
     function schedule() {
       clearTimeout(timer);
       if (!paused && !document.hidden && !preview.querySelector('.preview-window').contains(document.activeElement)) {
-        timer = setTimeout(advance, 6000);
+        timer = setTimeout(advance, 12500);
       }
     }
     function advance() {
