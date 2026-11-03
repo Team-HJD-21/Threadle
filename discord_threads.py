@@ -36,6 +36,11 @@ class Api:
         else:
             encoded = None if data is None else json.dumps(data).encode()
             content_type = 'application/json'
+        from api_cooldowns import remaining,yield_delivery,delay as retry_delay,remember
+        cooldown=remaining(self,path)
+        if cooldown>0:
+            if yield_delivery():raise ApiError(self.service,429,retry_after=cooldown)
+            self.sleep(cooldown)
         for attempt in range(6):
             headers = {"User-Agent": "TeamHJD-Discord-Threads/1.0", "Content-Type": content_type}
             if self.token:
@@ -58,13 +63,20 @@ class Api:
                     detail = json.loads(error.read())
                 except (ValueError, UnicodeError):
                     detail = {}
-                delay = detail.get("retry_after", error.headers.get("Retry-After", 2 ** attempt))
-                if attempt < 5 and (error.code == 429 or error.code >= 500):
-                    self.sleep(min(60, max(.1, float(delay))))
+                if not isinstance(detail,dict):detail={}
+                explicit,wait=retry_delay(error.headers,detail,attempt)
+                limited=error.code==429 or error.code==403 and (explicit is not None or error.headers.get('X-RateLimit-Remaining')=='0')
+                if limited:
+                    global_limit=self.service=='GitHub' or bool(detail.get('global')) or error.headers.get('X-RateLimit-Global')=='true'
+                    remember(self,path,wait,global_limit)
+                if yield_delivery() and (limited or error.code>=500):
+                    raise ApiError(self.service,error.code,detail.get('code'),wait if limited else explicit) from None
+                if attempt < 5 and (limited or error.code>=500):
+                    self.sleep(max(.1,wait))
                     continue
-                raise ApiError(self.service, error.code, detail.get("code")) from None
+                raise ApiError(self.service,error.code,detail.get('code'),wait if limited else explicit) from None
             except (URLError, TimeoutError):
-                if attempt == 5:
+                if yield_delivery() or attempt == 5:
                     raise ApiError(self.service, "network") from None
                 self.sleep(2 ** attempt)
         raise AssertionError("Unreachable")

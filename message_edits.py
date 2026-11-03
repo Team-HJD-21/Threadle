@@ -145,7 +145,7 @@ class MutableMessages:
             for table in ('source_delete_pages','source_pages','source_revisions','message_sources'):db.execute('DELETE FROM '+table+' WHERE source=?',(source,))
             db.execute('UPDATE deleted_sources SET done=1 WHERE source=?',(source,))
 
-    def update(self,topic,kind,obj,event,payload,event_key,embed,closed):
+    def update(self,topic,kind,obj,event,payload,event_key,embed,closed,language='ko'):
         if self.is_deleted(topic,kind):return None
         threads=self.threads;thread=threads.ensure(topic);thread_id=str(thread['id'])
         if thread.get('thread_metadata',{}).get('locked'):raise RuntimeError('The topic thread is moderator-locked')
@@ -166,6 +166,9 @@ class MutableMessages:
                 with self.queue.connect() as db:db.execute('UPDATE message_sources SET revision=? WHERE source=?',(recovered_version,source))
                 return thread_id
         if thread.get('thread_metadata',{}).get('archived'):threads.api.call('PATCH','/channels/'+thread_id,{'archived':False})
+        if kind.startswith('metadata:'):
+            from metadata_notifications import render
+            embed=render(embed,obj,language=='en',self.queue,topic,version)
         pages=message_pages(embed)
         for index,items in enumerate(pages):
             receipt='github-event:'+nonce(topic.key+':'+event_key+':'+source+':page:'+str(index))
@@ -259,10 +262,7 @@ def deliver_events(threads,topic,event,payload,event_key,closed,language):
             rendered=creation_embed(merged,value,language)
         else:
             rendered=make_embed(topic,kind,value,language)
-            if source.startswith('metadata:'):
-                from metadata_notifications import render
-                rendered=render(rendered,obj,language=='en')
-        thread=mutable.update(topic,source,obj,kind,value,event_key+':'+source,rendered,closed)
+        thread=mutable.update(topic,source,obj,kind,value,event_key+':'+source,rendered,closed,language=language)
     if remaining:
         rest=dict(payload,_events=remaining,_created=False)
         thread=threads.deliver(topic,make_embed(topic,'threadle_bundle',rest,language),event_key+':state',closed)

@@ -52,8 +52,22 @@ class Queue:
     def next(self, window_seconds=0):
         now=time.time()
         with self.connect() as db:
-            return db.execute('SELECT id,event,payload,attempts FROM jobs '
-                              'WHERE done=0 AND next<=? AND NOT EXISTS (SELECT 1 FROM deferred_thread_jobs d JOIN deferred_thread_pace p ON p.id=1 WHERE d.delivery=jobs.id AND p.next>?) AND NOT EXISTS (SELECT 1 FROM coalescing_jobs c WHERE c.id=jobs.id AND c.group_id IS NULL AND ?>0 AND c.received>?) AND NOT EXISTS (SELECT 1 FROM coalescing_jobs c JOIN delivery_groups g ON g.id=c.group_id WHERE c.id=jobs.id AND g.leader<>jobs.id) ORDER BY rowid LIMIT 1', (now,now,window_seconds,now-window_seconds)).fetchone()
+            return db.execute("""
+                SELECT id,event,payload,attempts FROM jobs
+                WHERE done=0 AND next<=?
+                AND NOT EXISTS (SELECT 1 FROM deferred_thread_jobs d JOIN deferred_thread_pace p ON p.id=1
+                    WHERE d.delivery=jobs.id AND p.next>?)
+                AND NOT EXISTS (SELECT 1 FROM coalescing_jobs c WHERE c.id=jobs.id
+                    AND c.group_id IS NULL AND ?>0 AND c.received>?)
+                AND NOT EXISTS (SELECT 1 FROM coalescing_jobs current
+                    JOIN coalescing_jobs older ON older.topic=current.topic JOIN jobs prior ON prior.id=older.id
+                    WHERE current.id=jobs.id AND prior.done=0 AND prior.rowid<jobs.rowid
+                    AND CASE WHEN json_valid(jobs.payload) THEN coalesce(json_extract(jobs.payload,'$.action'),'') ELSE '' END<>'deleted'
+                    AND NOT EXISTS (SELECT 1 FROM deferred_thread_jobs d WHERE d.delivery=prior.id AND prior.attempts=0))
+                AND NOT EXISTS (SELECT 1 FROM coalescing_jobs c JOIN delivery_groups g ON g.id=c.group_id
+                    WHERE c.id=jobs.id AND g.leader<>jobs.id)
+                ORDER BY rowid LIMIT 1
+            """,(now,now,window_seconds,now-window_seconds)).fetchone()
 
     def group(self, job, seconds=COALESCE_SECONDS):
         delivery,event,raw,attempts=job
@@ -98,10 +112,13 @@ class Queue:
     def finish(self, delivery):
         self.finish_group([delivery])
 
-    def retry(self, delivery, attempts):
+    def retry(self, delivery, attempts, retry_after=None):
+        from api_cooldowns import number
+        requested=number(retry_after)
+        delay=max(.1,requested) if requested is not None else min(900,2**min(attempts+1,10))
         with self.connect() as db:
             db.execute('UPDATE jobs SET attempts=?,next=? WHERE id=?',
-                       (attempts + 1, time.time() + min(900, 2 ** min(attempts + 1, 10)), delivery))
+                       (attempts + 1, time.time() + delay, delivery))
 
 
 class CachedThreads(Threads):

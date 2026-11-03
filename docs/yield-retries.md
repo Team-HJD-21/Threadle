@@ -1,0 +1,7 @@
+# Yield webhook retries (beta.14)
+
+Within the webhook processing context, API 429, retryable GitHub 403, 5xx and network errors yield to the durable queue after one HTTP attempt instead of performing six inline attempts/sleeps. API Retry-After/retry_after and GitHub exhausted-quota reset times are persisted without the former 60/900-second truncation. Invalid values use finite exponential backoff. A single in-flight request still has its existing 30-second timeout and cannot be preempted.
+
+Server-requested cooldowns are shared in memory by service/API origin and hashed credential. Discord channel cooldowns do not block other channels; global Discord limits and GitHub quota cooldowns apply to the token. This is reactive cooldown sharing, not a full proactive rate-limit-bucket scheduler. Restart loses only the shared memory cooldown; each queued job retains its persisted retry due time. Non-webhook callers retain inline retries and honor full server-requested delays.
+
+Other topics and workflow events can proceed while a failed topic waits. Later ordinary events for the same topic wait behind its failed job to preserve update order. Deleted events bypass that barrier; fresh DND-deferred creation jobs do not block later card updates/deletions during DND. Existing source receipts, uncertain-send recovery and frozen groups remain unchanged. Windows Python 3.12's SQLite JSON support identifies deletion actions safely without treating malformed payloads as deletions.
