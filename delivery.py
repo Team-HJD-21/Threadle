@@ -4,6 +4,8 @@ import time
 from contextlib import contextmanager
 from discord_threads import Threads, marker
 
+COALESCE_SECONDS=0
+
 
 class Queue:
     def __init__(self, path):
@@ -44,12 +46,13 @@ class Queue:
             if topic:
                 db.execute('INSERT OR IGNORE INTO coalescing_jobs VALUES(?,?,?,NULL)',(delivery,topic,time.time()))
 
-    def next(self):
+    def next(self, window_seconds=0):
+        now=time.time()
         with self.connect() as db:
             return db.execute('SELECT id,event,payload,attempts FROM jobs '
-                              'WHERE done=0 AND next<=? AND NOT EXISTS (SELECT 1 FROM deferred_thread_jobs d JOIN deferred_thread_pace p ON p.id=1 WHERE d.delivery=jobs.id AND p.next>?) AND NOT EXISTS (SELECT 1 FROM coalescing_jobs c JOIN delivery_groups g ON g.id=c.group_id WHERE c.id=jobs.id AND g.leader<>jobs.id) ORDER BY rowid LIMIT 1', (time.time(),time.time())).fetchone()
+                              'WHERE done=0 AND next<=? AND NOT EXISTS (SELECT 1 FROM deferred_thread_jobs d JOIN deferred_thread_pace p ON p.id=1 WHERE d.delivery=jobs.id AND p.next>?) AND NOT EXISTS (SELECT 1 FROM coalescing_jobs c WHERE c.id=jobs.id AND c.group_id IS NULL AND ?>0 AND c.received>?) AND NOT EXISTS (SELECT 1 FROM coalescing_jobs c JOIN delivery_groups g ON g.id=c.group_id WHERE c.id=jobs.id AND g.leader<>jobs.id) ORDER BY rowid LIMIT 1', (now,now,window_seconds,now-window_seconds)).fetchone()
 
-    def group(self, job, seconds=8):
+    def group(self, job, seconds=COALESCE_SECONDS):
         delivery,event,raw,attempts=job
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')

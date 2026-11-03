@@ -12,6 +12,9 @@ FOLDED={'assigned','unassigned','labeled','unlabeled','milestoned','demilestoned
 
 def identity(event,payload):
     action=payload.get('action')
+    from metadata_notifications import FAMILIES
+    if event in CREATION and action in FAMILIES:
+        return 'metadata:'+event+':'+FAMILIES[action],payload.get('pull_request') or payload.get('issue') or payload.get('discussion') or {}
     if event in CREATION and action in ('opened','created','edited'):
         return 'body',payload.get('pull_request') or payload.get('issue') or payload.get('discussion') or {}
     obj=payload.get('comment') if event in COMMENTS and action in ('created','edited','deleted') else payload.get('review') if event=='pull_request_review' and action in ('submitted','edited') else None
@@ -53,6 +56,7 @@ class MutableMessages:
                             if tag.startswith(source+':revision:'):
                                 try:latest_version=max(latest_version,float(tag.rsplit(':',1)[1]))
                                 except ValueError:pass
+            if kind.startswith('metadata:'):continue
             # Old mixed-message/image groups are deliberately not adopted: editing them could erase another source.
             if kind!='body' and not obj.get('html_url'):continue
             url=obj.get('html_url') or topic.url
@@ -156,7 +160,7 @@ class MutableMessages:
             db.execute('INSERT OR IGNORE INTO source_revisions VALUES(?,?)',(source,event_key))
             db.execute('INSERT INTO message_sources VALUES(?,?,?,?) ON CONFLICT(source) DO UPDATE SET thread=excluded.thread,revision=excluded.revision,event=excluded.event',(source,thread_id,version,event_key))
             mapped=db.execute('SELECT 1 FROM source_pages WHERE source=?',(source,)).fetchone()
-        if not mapped:
+        if not mapped and (not kind.startswith('metadata:') or current):
             recovered_version=self.recover(topic,source,thread_id,kind,obj)
             if recovered_version>version:
                 with self.queue.connect() as db:db.execute('UPDATE message_sources SET revision=? WHERE source=?',(recovered_version,source))
@@ -226,7 +230,11 @@ def deliver_events(threads,topic,event,payload,event_key,closed,language):
             mutable.delete(topic,key,obj)
     created=any(e in CREATION and value.get('action') in ('opened','created') for e,value in entries)
     for index,(kind,value) in enumerate(entries):
+        if created and kind in CREATION and value.get('action') in FOLDED:continue
         key,obj=identity(kind,value)
+        if key and key.startswith('metadata:'):
+            from metadata_notifications import source_key
+            key=source_key(threads.queue,topic,key,event_key)
         if key:
             if mutable is None:mutable=MutableMessages(threads)
             if mutable.is_deleted(topic,key):continue
@@ -251,6 +259,9 @@ def deliver_events(threads,topic,event,payload,event_key,closed,language):
             rendered=creation_embed(merged,value,language)
         else:
             rendered=make_embed(topic,kind,value,language)
+            if source.startswith('metadata:'):
+                from metadata_notifications import render
+                rendered=render(rendered,obj,language=='en')
         thread=mutable.update(topic,source,obj,kind,value,event_key+':'+source,rendered,closed)
     if remaining:
         rest=dict(payload,_events=remaining,_created=False)

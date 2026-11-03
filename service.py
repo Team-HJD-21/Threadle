@@ -17,7 +17,7 @@ from urllib.parse import urlsplit
 from runtime_logging import log_exception
 from registry import Registry
 from auth import InstallationTokens, RepositoryApi
-from delivery import Queue, CachedThreads
+from delivery import Queue, CachedThreads, COALESCE_SECONDS
 from deferred_threads import DeferredThread
 from alert_feed import AlertFeed
 from discord_threads import Api, route, make_embed, current_closed, Topic, silent_review, topic_from
@@ -160,7 +160,7 @@ class Service:
 
     def process(self, binding, threads, feed, notices=None, window_seconds=0):
         queue = self.queue(binding)
-        job = queue.next()
+        job = queue.next(window_seconds)
         if not job:
             return False
         grouped = queue.group(job,window_seconds)
@@ -322,7 +322,7 @@ class Service:
                     scheduler.start()
                 try:
                     while not stop.is_set() and self.registry.get(binding.id) == binding:
-                        if not self.process(binding, threads, feed, notices, window_seconds=8):
+                        if not self.process(binding, threads, feed, notices, window_seconds=COALESCE_SECONDS):
                             stop.wait(.2)
                 finally:
                     scheduled_stop.set()
