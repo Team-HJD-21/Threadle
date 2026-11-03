@@ -1,0 +1,13 @@
+# Merge conflict alerts (beta.10)
+
+GitHub GraphQL MergeableState.CONFLICTING is the only conflict verdict. MERGEABLE rearms a future conflict alert; UNKNOWN never alerts or clears a known conflict. Draft PRs are included. Review requirements, failing checks and behind-base states are not inferred to be merge conflicts. A completed paginated OPEN-PR snapshot is required before missing PRs are marked closed/resolved; partial/error/wrong-repository responses cannot clear state.
+
+Pull-request changes and merges schedule a shared repository scan within a few seconds, coalesced to at most one scan per ten seconds. Push webhooks also schedule scans when subscribed, but existing apps do not need new subscriptions or permissions: a five-minute safety scan covers direct base-branch commits and missed events. UNKNOWN gets bounded 30-second retries, then the normal five-minute interval; failures back off to fifteen minutes. This does not promise immediate detection or visibility into unpushed local Git conflicts.
+
+One background worker groups active bindings by auth/installation/repository ID and fetches each complete snapshot once for all Discord destinations. It scans at most three due repositories per tick. One destination's send failure does not prevent others from receiving the warning. Disconnected/paused bindings are skipped and checked again before sending. No GitHub writes, automatic merges, repository CI edits or channel migrations occur.
+
+Alerts go directly through AlertFeed to the stored alert channel, bypassing DND and batching with no silent flag. They include repository, PR link/title and head → base branches, localized by each binding. Persistent per-binding episode state and normal alert receipts suppress repeated warnings and recover lost send responses. Resolved/reopened/reconflicted PRs can alert again. First detection after upgrading may report existing conflicts. Existing user Discord notification settings still apply.
+
+Source semantics: https://docs.github.com/en/graphql/reference/pulls (MergeableState).
+
+The PR thread receives its own durable warning when it exists, silent during DND. No new thread is created by the monitor. A thread created later schedules a fresh shared check and receives the current conflict/resolved state. MERGEABLE edits both existing warning messages to Conflict resolved, preserving IDs, receipts, branch details and links. Edits do not add new notifications. Closed PRs mark existing warnings Closed rather than falsely claiming the conflict was resolved. Lost edit responses retry idempotently and UNKNOWN never produces a resolution. Stored receipt and bot ownership are checked before editing.

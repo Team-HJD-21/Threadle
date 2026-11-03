@@ -1,5 +1,6 @@
 """User-facing release highlights. Operational details live in repository documentation."""
-RELEASES = [('v1.0.0-beta.9', '방해금지 시간의 새 스레드 알림 개선', 'Quieter new topics during Do Not Disturb', [('방해금지 시간에는 새 항목의 시작 메시지만 무음으로 보내고, 스레드와 상세 소식은 시간이 끝난 뒤 순차적으로 전달합니다.', 'During Do Not Disturb, new topics show a silent starter card; threads and details follow gradually after it ends.')]),
+RELEASES = [('v1.0.0-beta.10', 'PR 충돌 긴급 알림', 'Merge conflict alerts', [('PR 스레드와 github-alert에 Merge conflict를 알립니다. 방해금지 시간에도 긴급 경고를 전달합니다.', 'Merge conflicts appear in the PR thread and github-alert, with urgent alerts even during Do Not Disturb.'), ('충돌이 해결되면 기존 경고를 Conflict resolved로 갱신합니다.', 'When conflicts are resolved, the existing warning changes to Conflict resolved.')]),
+ ('v1.0.0-beta.9', '방해금지 시간의 새 스레드 알림 개선', 'Quieter new topics during Do Not Disturb', [('방해금지 시간에는 새 항목의 시작 메시지만 무음으로 보내고, 스레드와 상세 소식은 시간이 끝난 뒤 순차적으로 전달합니다.', 'During Do Not Disturb, new topics show a silent starter card; threads and details follow gradually after it ends.')]),
  ('v1.0.0-beta.8',
   '긴 설명과 모바일 예시 개선',
   'Long descriptions and mobile previews',

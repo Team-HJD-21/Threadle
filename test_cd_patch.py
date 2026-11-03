@@ -79,3 +79,17 @@ class DeploymentTests(unittest.TestCase):
         apply(self.root,self.job)
         restore(self.root,self.job)
         self.assertEqual((self.root/'service.py').read_bytes(),previous)
+
+
+    def test_beta8_delivery_upgrades_and_restores_exact_previous_content(self):
+        # Actual deployed beta.8 source from main 92252017, not fabricated from the current manifest.
+        previous=(self.source/'deploy/fixtures/beta8-delivery.py').read_bytes()
+        from deploy.patch_runtime import digest
+        self.assertEqual(digest(previous),'a25bc5076e93ad49abc4a0d552f8d000f94c8a48b5041d151e463a28d880cb8f')
+        (self.root/'delivery.py').write_bytes(previous)
+        with patch('deploy.patch_runtime.subprocess.run'):
+            prepare(self.root,self.source,self.job)
+        apply(self.root,self.job)
+        self.assertEqual((self.root/'delivery.py').read_bytes(),(self.source/'delivery.py').read_bytes())
+        restore(self.root,self.job)
+        self.assertEqual((self.root/'delivery.py').read_bytes(),previous)
