@@ -251,7 +251,7 @@ EN.update({
     '즉시 전달': 'Send right away',
     '1분마다': 'Every minute',
     '5분마다': 'Every 5 minutes',
-    '종료·병합·CI 실패·변경 요청은 묶지 않습니다. 방해금지 시간에는 일반 활동을 silent로 기록하고 종료 후 항목별로 요약합니다. CI/CD 상태와 실패 경고는 즉시 전달합니다.': 'Closures, merges, failed CI runs and requests for changes are not batched. During Do Not Disturb, ordinary activity is silent and summarized by topic afterwards. CI/CD status and failure alerts arrive immediately.',
+    '종료·병합·CI 실패·변경 요청은 묶지 않습니다. 방해금지 시간에는 새 항목의 시작 메시지만 무음으로 보내고, 스레드와 상세 알림은 종료 후 순차적으로 전달합니다. 기존 스레드는 무음으로 기록하며 CI/CD 상태와 실패 경고는 즉시 전달합니다.': 'Closures, merges, failed CI runs and requests for changes are not batched. During Do Not Disturb, new topics show only a silent starter card; threads and details follow gradually afterwards. Existing threads update silently. CI/CD status and failure alerts arrive immediately.',
     '열린 PR 현황 요약': 'Open PR digest',
     '매일': 'Daily',
     '매주': 'Weekly',

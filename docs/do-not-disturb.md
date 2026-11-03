@@ -10,6 +10,10 @@ CI/CD requested/in-progress/completed state messages stay immediately event-driv
 
 All data remains per binding queue; no cross-server settings, category, permissions or channels are changed. There is no live Discord sending in tests.
 
-## beta.7 experimental thread creation flag
+## beta.9 deferred new threads
 
-At the user's request, normal public thread creation during DND also includes flags=4096. This field is undocumented for the start-from-message endpoint and may be ignored; a successful HTTP response does not prove notification sound suppression. Existing immediate creation, source IDs, names, archive duration, channels and visibility are preserved. Invalid-form HTTP 400 (50035 or an omitted code) falls back once without the experimental field. Already-created 160004 recovery remains unchanged, including after fallback; permission, network and unrelated errors retain normal retry handling. Safe logs record the attempt/rejection without message contents or credentials. Existing root/detail silent flags and CI failure exceptions remain unchanged. No thread-creation deferral or forum migration is added.
+New topics send only a silent parent starter during DND. The existing durable webhook jobs remain unfinished and are scheduled for the configured DND end. Current GitHub state updates the parent card while waiting. Thread creation is checked again immediately before its request to cover the time boundary. Existing threads continue silently; workflow_run bypasses this gate, including PR CI failure details.
+
+After DND, deferred groups drain at at most one group per second per binding; queue selection skips paced work so fresh events and workflows remain eligible. API rate-limit/retry handling is unchanged. Worker restart preserves jobs; changed DND settings wake pending work for re-evaluation. Topic deletions remove the waiting parent without creating a thread, including missing topics detected at release. Comment deletion tombstones are applied immediately so queued creates cannot resurrect them. The roundup waits for deferred jobs to finish before linking to their threads. Original per-delivery silent flags remain active during replay.
+
+This replaces the unsuccessful beta.7 experimental immediate thread flag as the ordinary DND policy. Existing config values and channel types are preserved; no forum migration. Per-binding pacing limits bursts but large queues or Discord throttling can still take time to drain. No production Discord sending is included in local tests.

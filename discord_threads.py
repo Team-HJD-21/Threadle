@@ -306,6 +306,10 @@ class Threads:
         return None
 
     def start(self, channel, root_id, topic):
+        before=getattr(self,'before_thread_start',None)
+        if callable(before) and before(channel,root_id):
+            from deferred_threads import DeferredThread
+            raise DeferredThread()
         data={"name":topic.name,"auto_archive_duration":1440}
         if self.notifications_suppressed():
             # Experimental for ordinary text threads; Discord may ignore this undocumented field.

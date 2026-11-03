@@ -69,6 +69,8 @@ class DndRoundup:
         from team_notifications import allowed_time
         if allowed_time(n.clock(),n.options)>n.clock():return
         with self.queue.connect() as db:
+            if db.execute('SELECT 1 FROM deferred_thread_jobs d JOIN jobs j ON j.id=d.delivery WHERE j.done=0 LIMIT 1').fetchone():return
+        with self.queue.connect() as db:
             db.execute('BEGIN IMMEDIATE')
             saved=db.execute('SELECT id,payload FROM dnd_roundups ORDER BY rowid LIMIT 1').fetchone()
             if saved:
