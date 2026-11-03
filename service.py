@@ -20,7 +20,7 @@ from auth import InstallationTokens, RepositoryApi
 from delivery import Queue, CachedThreads, COALESCE_SECONDS
 from deferred_threads import DeferredThread
 from alert_feed import AlertFeed
-from discord_threads import Api, route, make_embed, current_closed, Topic, silent_review, topic_from
+from discord_threads import Api, ApiError, route, make_embed, current_closed, Topic, silent_review, topic_from
 from pr_routing import FileIndex, PrRouter
 from team_notifications import TeamNotifications
 
@@ -286,7 +286,8 @@ class Service:
             LOG.info('Thread deferred until DND ends binding=%s delivery=%s',binding.id,delivery)
         except Exception as error:
             log_exception(LOG,'Retry binding=%s event=%s error=%s', binding.id, event, type(error).__name__)
-            queue.retry(delivery, attempts)
+            if isinstance(error,ApiError) and error.retry_after is not None:queue.retry(delivery,attempts,retry_after=error.retry_after)
+            else:queue.retry(delivery, attempts)
         finally:
             end(timing_token)
         return True
