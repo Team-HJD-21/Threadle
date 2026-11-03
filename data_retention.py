@@ -55,6 +55,7 @@ class Retention:
                 archived = db.execute('SELECT data FROM retired_bindings WHERE id=?',(identity,)).fetchone()
                 if archived:
                     expired_installations.add(json.loads(archived[0])['installation'])
+                db.execute('INSERT OR IGNORE INTO backup_expiry VALUES(?)',(identity,))
                 db.execute('DELETE FROM bindings WHERE id=? AND enabled=0',(identity,))
                 db.execute('DELETE FROM retired_bindings WHERE id=?',(identity,))
                 db.execute('DELETE FROM connection_audit WHERE binding=?',(identity,))
@@ -92,6 +93,8 @@ class Retention:
                     db.execute('DELETE FROM installations WHERE id=?',(installation,))
         for identity,_,_ in expired:
             self.service.queues.pop(identity,None)
+        from state_backups import purge_expired
+        purge_expired(self.service.root)
         layout_path = self.service.root/'channel-layouts.sqlite3'
         if layout_path.is_file():
             from contextlib import closing

@@ -34,6 +34,7 @@ class Registry:
                 CREATE UNIQUE INDEX IF NOT EXISTS one_legacy ON bindings(auth) WHERE auth='legacy';
                 CREATE TABLE IF NOT EXISTS inbox(id TEXT PRIMARY KEY, delivery TEXT NOT NULL,
                     event TEXT NOT NULL, payload TEXT, recipients TEXT NOT NULL, done INTEGER DEFAULT 0);
+                CREATE TABLE IF NOT EXISTS backup_expiry(binding TEXT PRIMARY KEY);
                 CREATE TABLE IF NOT EXISTS intake_timing(id TEXT PRIMARY KEY,received REAL NOT NULL);
                 CREATE INDEX IF NOT EXISTS intake_timing_received ON intake_timing(received);
                 CREATE TABLE IF NOT EXISTS connection_audit(id INTEGER PRIMARY KEY, binding TEXT NOT NULL,
