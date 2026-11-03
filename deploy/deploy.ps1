@@ -11,6 +11,8 @@ $scheduler.Connect()
 $folder = $scheduler.GetFolder('\')
 $taskName = 'TeamHJD-GitHubDiscord-Receiver'
 . (Join-Path $PSScriptRoot 'recovery_settings.ps1')
+. (Join-Path $PSScriptRoot 'receiver_process.ps1')
+$receiverWasEnabled = $null
 $recoveryChanged = $false
 $taskBackup = Join-Path $job 'receiver-task-before.xml'
 function Invoke-Patch([string]$Action) {
@@ -19,18 +21,29 @@ function Invoke-Patch([string]$Action) {
 }
 function Stop-Receiver {
     $task = $folder.GetTask($taskName)
+    if ($null -eq $script:receiverWasEnabled) { $script:receiverWasEnabled = $task.Enabled }
+    $task.Enabled = $false
     if ($task.State -in @(2,4)) { $task.Stop(0) }
+    $forceAfter = [DateTime]::UtcNow.AddSeconds(5)
+    $forced = $false
     $deadline = [DateTime]::UtcNow.AddSeconds(40)
     do {
         $task = $folder.GetTask($taskName)
         $listening = ([Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpListeners()).Port -contains 8787
-        if ($task.State -notin @(2,4) -and -not $listening) { return }
+        $remaining = @(Get-ReceiverProcesses -Root $Root -Python $runtime.python)
+        if ($task.State -notin @(2,4) -and -not $listening -and $remaining.Count -eq 0) { return }
+        if (-not $forced -and [DateTime]::UtcNow -ge $forceAfter) {
+            Stop-RemainingReceiverProcesses -Root $Root -Python $runtime.python
+            $forced = $true
+        }
         Start-Sleep -Milliseconds 400
     } while ([DateTime]::UtcNow -lt $deadline)
+    Write-Host ('Receiver stop timeout: taskState='+$task.State+' listening8787='+$listening+' ownedProcesses='+$remaining.Count)
     throw 'Receiver did not stop; no files were replaced.'
 }
 function Start-Receiver {
     $task = $folder.GetTask($taskName)
+    if ($null -ne $script:receiverWasEnabled) { $task.Enabled = $script:receiverWasEnabled }
     if ($task.State -notin @(2,4)) { $task.Run($null) | Out-Null }
     $settings = Get-Content -LiteralPath (Join-Path $Root 'public-settings.json') -Raw | ConvertFrom-Json
     $hostName = ([Uri]$settings.PUBLIC_BASE_URL).Authority
@@ -90,4 +103,6 @@ try {
         try { Start-Receiver } catch { Write-Error $_ -ErrorAction Continue }
     }
     throw $failure
-} finally { $lock.Dispose() }
+} finally {
+    try { if ($null -ne $script:receiverWasEnabled) { $folder.GetTask($taskName).Enabled = $script:receiverWasEnabled } } finally { $lock.Dispose() }
+}

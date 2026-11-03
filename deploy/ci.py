@@ -26,4 +26,5 @@ if not result.wasSuccessful():
 if sys.platform == 'win32':
     with tempfile.TemporaryDirectory(prefix='recovery-settings-',dir=ROOT) as folder:
         subprocess.run(['powershell.exe','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',str(ROOT/'deploy/test_recovery_settings.ps1'),'-TemporaryRoot',folder],check=True)
+        subprocess.run(['powershell.exe','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',str(ROOT/'deploy/test_receiver_process.ps1'),'-TemporaryRoot',folder],check=True)
 raise SystemExit(0)
