@@ -57,8 +57,7 @@ def media_embeds(original):
         if url and (re.search(r'\.(gif|png|jpe?g|webp)(?:[?#]|$)',url,re.I) or urlsplit(url).hostname=='github.com' and '/user-attachments/assets/' in urlsplit(url).path):
             urls.append(url)
     urls=list(dict.fromkeys(urls))
-    from discord_threads import clip
-    embed['description']=clip(restore(body).strip(),3500)
+    embed['description']=restore(body).strip()
     if not urls:return [embed]
     embed['image']={'url':urls[0]}
     result=[embed]

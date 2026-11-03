@@ -14,7 +14,7 @@ def identity(event,payload):
     action=payload.get('action')
     if event in CREATION and action in ('opened','created','edited'):
         return 'body',payload.get('pull_request') or payload.get('issue') or payload.get('discussion') or {}
-    obj=payload.get('comment') if event in COMMENTS and action in ('created','edited') else payload.get('review') if event=='pull_request_review' and action in ('submitted','edited') else None
+    obj=payload.get('comment') if event in COMMENTS and action in ('created','edited','deleted') else payload.get('review') if event=='pull_request_review' and action in ('submitted','edited') else None
     if obj is not None:
         value=obj.get('id') or obj.get('node_id')
         if value is not None and re.fullmatch(r'[A-Za-z0-9_=-]{1,200}',str(value)):
@@ -33,6 +33,8 @@ class MutableMessages:
         self.threads=threads;self.queue=threads.queue
         with self.queue.connect() as db:
             db.execute('CREATE TABLE IF NOT EXISTS message_sources(source TEXT PRIMARY KEY,thread TEXT NOT NULL,revision REAL NOT NULL,event TEXT NOT NULL)')
+            db.execute('CREATE TABLE IF NOT EXISTS deleted_sources(source TEXT PRIMARY KEY,done INTEGER NOT NULL DEFAULT 0,thread TEXT)')
+            db.execute('CREATE TABLE IF NOT EXISTS source_delete_pages(source TEXT NOT NULL,message TEXT NOT NULL,PRIMARY KEY(source,message))')
             db.execute('CREATE TABLE IF NOT EXISTS source_revisions(source TEXT NOT NULL,event TEXT NOT NULL,PRIMARY KEY(source,event))')
             db.execute('CREATE TABLE IF NOT EXISTS source_pages(source TEXT NOT NULL,page INTEGER NOT NULL,message TEXT NOT NULL,media TEXT,PRIMARY KEY(source,page))')
 
@@ -66,7 +68,81 @@ class MutableMessages:
             with self.queue.connect() as db:db.execute('INSERT OR IGNORE INTO source_pages VALUES(?,0,?,NULL)',(source,original['id']))
         return latest_version
 
+    def is_deleted(self,topic,kind):
+        source='github-source:'+nonce(topic.key+':'+kind)
+        with self.queue.connect() as db:return db.execute('SELECT 1 FROM deleted_sources WHERE source=?',(source,)).fetchone() is not None
+
+    def recover_delete(self,topic,source,thread,obj):
+        from root_status import editable_embed
+        url=obj.get('html_url')
+        for message in self.threads.messages(thread):
+            if message.get('author',{}).get('id')!=self.threads.bot['id']:continue
+            embeds=message.get('embeds',[])
+            tags=[line for embed in embeds for line in embed.get('footer',{}).get('text','').splitlines() if line.startswith('github-source:')]
+            own=any(line.startswith(source+':page:') for line in tags)
+            if own:
+                with self.queue.connect() as db:db.execute('INSERT OR IGNORE INTO source_delete_pages VALUES(?,?)',(source,message['id']))
+                continue
+            if tags or not url:continue
+            removed=[];active=False
+            for index,embed in enumerate(embeds):
+                if embed.get('url')==url:active=True;removed.append(index)
+                elif active and embed.get('image') and not any(embed.get(key) for key in ('url','title','description','fields','author')):removed.append(index)
+                else:active=False
+            if not removed:continue
+            kept=[editable_embed(embed) for index,embed in enumerate(embeds) if index not in removed]
+            if not kept:
+                with self.queue.connect() as db:db.execute('INSERT OR IGNORE INTO source_delete_pages VALUES(?,?)',(source,message['id']))
+                continue
+            # Old mixed-comment messages are edited surgically rather than deleting other comments.
+            footer=embeds[-1].get('footer')
+            if footer and not kept[-1].get('footer'):kept[-1]['footer']={key:value for key,value in footer.items() if key!='proxy_icon_url'}
+            def image_urls(items):
+                return {value for embed in items for key in ('image','thumbnail') for name,value in embed.get(key,{}).items() if name in ('url','proxy_url')}
+            deleted_urls=image_urls([embed for index,embed in enumerate(embeds) if index in removed])
+            kept_urls=image_urls([embed for index,embed in enumerate(embeds) if index not in removed])
+            attachments=[]
+            for attachment in message.get('attachments',[]):
+                urls={attachment.get('url'),attachment.get('proxy_url'),'attachment://'+attachment.get('filename','')}
+                if not (urls&deleted_urls) or urls&kept_urls:attachments.append({'id':attachment['id']})
+            self.threads.api.call('PATCH',f"/channels/{thread}/messages/{message['id']}",{'embeds':kept,'attachments':attachments,'allowed_mentions':{'parse':[]}})
+
+    def delete(self,topic,kind,obj):
+        source='github-source:'+nonce(topic.key+':'+kind)
+        with self.queue.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            db.execute('INSERT OR IGNORE INTO deleted_sources(source) VALUES(?)',(source,))
+            done,saved_thread=db.execute('SELECT done,thread FROM deleted_sources WHERE source=?',(source,)).fetchone()
+            if done:return
+            current=db.execute('SELECT thread FROM message_sources WHERE source=?',(source,)).fetchone()
+            linked=db.execute('SELECT thread FROM links WHERE topic=?',(topic.key,)).fetchone()
+            thread=str(current[0] if current else linked[0] if linked else saved_thread) if current or linked or saved_thread else None
+            db.execute('INSERT OR IGNORE INTO source_delete_pages SELECT source,message FROM source_pages WHERE source=?',(source,))
+        if not thread:
+            from root_status import TopicRoots
+            location=TopicRoots(self.threads,None).location(topic)
+            thread=str(location[1]) if location else None
+        if thread:
+            with self.queue.connect() as db:db.execute('UPDATE deleted_sources SET thread=? WHERE source=?',(thread,source))
+            try:self.recover_delete(topic,source,thread,obj)
+            except ApiError as error:
+                if error.status!=404:raise
+        with self.queue.connect() as db:pages=db.execute('SELECT message FROM source_delete_pages WHERE source=?',(source,)).fetchall()
+        for (identity,) in pages if thread else []:
+            try:
+                message=self.threads.api.call('GET',f'/channels/{thread}/messages/{identity}')
+                if message.get('author',{}).get('id')!=self.threads.bot['id']:raise ValueError('Refusing to delete another author comment message')
+                tags=[line for embed in message.get('embeds',[]) for line in embed.get('footer',{}).get('text','').splitlines() if line.startswith('github-source:')]
+                if tags and not any(line.startswith(source+':page:') for line in tags):raise ValueError('Comment message source mismatch')
+                self.threads.api.call('DELETE',f'/channels/{thread}/messages/{identity}')
+            except ApiError as error:
+                if error.status!=404:raise
+        with self.queue.connect() as db:
+            for table in ('source_delete_pages','source_pages','source_revisions','message_sources'):db.execute('DELETE FROM '+table+' WHERE source=?',(source,))
+            db.execute('UPDATE deleted_sources SET done=1 WHERE source=?',(source,))
+
     def update(self,topic,kind,obj,event,payload,event_key,embed,closed):
+        if self.is_deleted(topic,kind):return None
         threads=self.threads;thread=threads.ensure(topic);thread_id=str(thread['id'])
         if thread.get('thread_metadata',{}).get('locked'):raise RuntimeError('The topic thread is moderator-locked')
         source='github-source:'+nonce(topic.key+':'+kind)
@@ -140,18 +216,32 @@ def deliver_events(threads,topic,event,payload,event_key,closed,language):
     if not isinstance(threads,CachedThreads):return threads.deliver(topic,make_embed(topic,event,payload,language),event_key,closed)
     entries=[(row['event'],row['payload']) for row in payload['_events']] if event=='threadle_bundle' else [(event,payload)]
     sources={};remaining=[]
+    mutable=None
+    # Deletions win over late creates/edits, including entries bundled out of order.
+    for kind,value in entries:
+        if kind in COMMENTS and value.get('action')=='deleted':
+            key,obj=identity(kind,value)
+            if key is None:raise ValueError('Deleted comment identity missing')
+            if mutable is None:mutable=MutableMessages(threads)
+            mutable.delete(topic,key,obj)
     created=any(e in CREATION and value.get('action') in ('opened','created') for e,value in entries)
     for index,(kind,value) in enumerate(entries):
         key,obj=identity(kind,value)
         if key:
+            if mutable is None:mutable=MutableMessages(threads)
+            if mutable.is_deleted(topic,key):continue
             previous=sources.get(key)
             if previous and (revision(obj)<revision(previous[2]) or value.get('action') in ('opened','created','submitted') and previous[1].get('action')=='edited'):continue
             sources[key]=(kind,value,obj)
         elif created and kind in CREATION and value.get('action') in FOLDED:
             continue
         else:remaining.append({'event':kind,'payload':value})
-    if not sources:return threads.deliver(topic,make_embed(topic,event,payload,language),event_key,closed)
-    mutable=MutableMessages(threads);thread=None
+    if not sources:
+        if not remaining:return None
+        if mutable is None:return threads.deliver(topic,make_embed(topic,event,payload,language),event_key,closed)
+        rest=dict(payload,_events=remaining,_created=False)
+        return threads.deliver(topic,make_embed(topic,'threadle_bundle',rest,language),event_key,closed)
+    thread=None
     for source,(kind,value,obj) in sources.items():
         if source=='body':
             merged=merge_snapshot(topic,entries)
