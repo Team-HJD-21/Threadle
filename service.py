@@ -91,6 +91,8 @@ class Service:
         self.tokens = token_provider
         if self.tokens is None and self.env.get('GITHUB_APP_ID'):
             self.tokens = InstallationTokens(self.env['GITHUB_APP_ID'], self.env['GITHUB_APP_PRIVATE_KEY_FILE'])
+        from api_usage import ApiUsage
+        self.api_usage = ApiUsage(self.root)
         self.queues = {}
         self.file_index = FileIndex(self.root / 'repository-files.sqlite3')
         from connect_web import Onboarding
@@ -115,7 +117,9 @@ class Service:
         return RepositoryApi(binding, self.tokens, self.env.get('GITHUB_TOKEN'), self.api_factory)
 
     def discord(self):
-        return self.api_factory('Discord', 'https://discord.com/api/v10', self.env['DISCORD_BOT_TOKEN'], 'Bot')
+        client = self.api_factory('Discord', 'https://discord.com/api/v10', self.env['DISCORD_BOT_TOKEN'], 'Bot')
+        client.usage_observer = self.api_usage.observe
+        return client
 
     def receive(self, path, signature, event, delivery, body):
         mode = {'/github/webhook': 'legacy', '/github/app-webhook': 'app'}.get(path)

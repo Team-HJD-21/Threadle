@@ -134,6 +134,8 @@ class OperatorWeb:
         enabled = [r for r in rows if r['enabled'] and r['installation_enabled']]
         body = '<div class="admin-heading"><p>Threadle 운영 관리</p><p class="muted">' + esc(claims['email']) + '</p></div>'
         body += '<div class="admin-stats">' + ''.join('<div class="card"><strong>' + str(value) + '</strong><span>' + label + '</span></div>' for value, label in [(len({r['guild'] for r in enabled}), '연결된 서버'), (len({r['repo_id'] for r in enabled}), '연결된 저장소'), (len(enabled), '서버별 연결'), (sum(r['paused'] for r in enabled), '일시중지')]) + '</div>'
+        from api_usage import panel
+        body += panel(self.service.api_usage, session)
         body += '<form method="get" action="/connect/admin" class="admin-search"><label for="admin-query">저장소 또는 서버 ID 검색</label><input id="admin-query" name="q" maxlength="100" value="' + esc(query) + '"><button>검색</button><a class="button secondary" href="/connect/admin">전체 보기</a></form>'
         body += '<p class="muted">일시중지 중에도 새 웹후크는 대기열에 보관합니다. 재개하면 순서대로 처리합니다. 이미 전송 중인 요청 하나는 완료될 수 있습니다.</p>'
         for heading, group in [('현재 연결', [r for r in selected if r['enabled']]), ('연결 해제 기록', [r for r in selected if not r['enabled']])]:
@@ -231,7 +233,7 @@ class OperatorWeb:
             request.end_headers()
             request.wfile.write(data)
             return
-        if request.command != 'POST' or path not in ('/connect/admin/confirm', '/connect/admin/action'):
+        if request.command != 'POST' or path not in ('/connect/admin/confirm', '/connect/admin/action', '/connect/admin/api-usage/refresh'):
             raise ConnectError('요청을 찾을 수 없습니다.', 404)
         if request.headers.get('Origin') != web.settings.base or request.headers.get('Transfer-Encoding'):
             raise ConnectError('요청을 확인할 수 없습니다.', 403)
@@ -244,6 +246,10 @@ class OperatorWeb:
         fields = {k: v[0] for k, v in fields.items()}
         if not session or not hmac.compare_digest(session.data['csrf'], fields.get('csrf', '')):
             raise ConnectError('관리자 화면을 새로고침 후 다시 시도해 주세요.', 403)
+        if path == '/connect/admin/api-usage/refresh':
+            if not self.service.api_usage.refresh(self.service):
+                raise ConnectError('이미 조회 중입니다. 잠시 후 다시 시도해 주세요.', 409)
+            return web.send(request, 303, location='/connect/admin#api-usage')
         row = next((r for r in self.rows() if r['id'] == fields.get('binding')), None)
         action = fields.get('action')
         if row is None or action not in ('pause', 'resume', 'disconnect') or not hmac.compare_digest(revision(row), fields.get('revision', '')):

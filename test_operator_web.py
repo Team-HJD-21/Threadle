@@ -218,3 +218,23 @@ class OperatorTests(WebFixture):
         with self.service.registry.db() as db:db.execute("UPDATE guild_subscriptions SET expires_at=1")
         self.assertEqual(subscription(self.service.registry,'1000')['plan'],'free')
         self.assertEqual(subscription(self.service.registry,'1000')['status'],'expired')
+
+    def test_manual_refresh_requires_auth_origin_csrf_and_get_never_queries(self):
+        from unittest.mock import patch
+        self.enable()
+        usage=self.service.api_usage
+        with patch.object(usage,'refresh',return_value=True) as refresh:
+            self.assertEqual(self.request()[0],200)
+            self.assertEqual(self.request()[0],200)
+            refresh.assert_not_called()
+            path='/connect/admin/api-usage/refresh'
+            fields={'csrf':self.web.sessions.get(self.cookie).data['csrf']}
+            self.assertEqual(self.request('POST',path,fields,signed=False)[0],403)
+            self.assertEqual(self.request('POST',path,{'csrf':'bad'})[0],403)
+            self.assertEqual(self.request('POST',path,fields,headers={'Origin':'https://bad.example'})[0],403)
+            self.assertEqual(self.request('GET',path)[0],404)
+            refresh.assert_not_called()
+            result=self.request('POST',path,fields)
+            self.assertEqual(result[0],303)
+            self.assertEqual(result[1]['Location'],'/connect/admin#api-usage')
+            refresh.assert_called_once_with(self.service)

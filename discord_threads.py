@@ -27,6 +27,12 @@ class Api:
         self.service, self.base, self.token = service, base, token
         self.scheme, self.sleep = scheme, sleep
 
+    def observe_usage(self, method, path, headers, status=200, detail=None):
+        observer = getattr(self, 'usage_observer', None)
+        if observer:
+            try: observer(method, path, headers, status, detail)
+            except Exception: pass  # Telemetry must never interrupt notification delivery.
+
     def call(self, method, path, data=None):
         if isinstance(data, dict) and data.get('_files'):
             if self.service != 'Discord' or not ((method == 'POST' and re.fullmatch(r'/channels/\d+/messages', path)) or (method == 'PATCH' and re.fullmatch(r'/channels/\d+/messages/\d+', path))):
@@ -51,6 +57,7 @@ class Api:
                               headers=headers, method=method)
             try:
                 with urlopen(request, timeout=30) as response:
+                    self.observe_usage(method, path, response.headers)
                     raw = response.read()
                     self.last_link = response.headers.get("Link", "")
                     result=json.loads(raw) if raw else None
@@ -64,6 +71,7 @@ class Api:
                 except (ValueError, UnicodeError):
                     detail = {}
                 if not isinstance(detail,dict):detail={}
+                self.observe_usage(method, path, error.headers, error.code, detail)
                 explicit,wait=retry_delay(error.headers,detail,attempt)
                 limited=error.code==429 or error.code==403 and (explicit is not None or error.headers.get('X-RateLimit-Remaining')=='0')
                 if limited:
@@ -97,6 +105,7 @@ class Api:
                               'User-Agent': 'TeamHJD-Discord-Threads/1.0', 'Content-Type': 'application/json'})
         try:
             with urlopen(request, timeout=30) as response:
+                self.observe_usage('POST', '/guilds/' + guild + '/channels', response.headers)
                 return json.loads(response.read())
         except HTTPError as error:
             try:
@@ -105,6 +114,7 @@ class Api:
                     detail = {}
             except (ValueError, UnicodeError):
                 detail = {}
+            self.observe_usage('POST', '/guilds/' + guild + '/channels', error.headers, error.code, detail)
             retry_after = error.headers.get('Retry-After', detail.get('retry_after'))
             error.close()
             raise ApiError(self.service, error.code, detail.get('code'), retry_after) from None
