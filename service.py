@@ -235,6 +235,7 @@ class Service:
                 from message_edits import deliver_events
                 thread = deliver_events(routed,topic,event,payload,'webhook:'+delivery,
                                         lambda topic=topic: roots.closed(topic),binding.config.get('language','ko'))
+                if thread is None:continue
                 if notices:
                     if event == 'threadle_bundle':
                         for index,item in enumerate(payload['_events']):
