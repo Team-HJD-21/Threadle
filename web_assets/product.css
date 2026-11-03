@@ -185,13 +185,13 @@ button.preview-channel{width:100%;border:0;background:transparent;text-align:lef
 .changelog-page .card h2{word-break:keep-all;line-height:1.4}
 
 /* Owned starter cards change in place, using the production state palette. */
-.preview-state-card{border-left-color:#2da44e!important;transition:border-left-color .25s}
+.preview-state-card,.preview-description-card{border-left-color:#2da44e!important;transition:border-left-color .25s}
 .preview-state-after,.preview-state-middle{display:none!important}
 .is-state-updated .preview-state-before{display:none!important}
 .is-state-updated .preview-state-after{display:block!important}
-.preview-pr.is-state-updated .preview-state-card{border-left-color:#8957e5!important}
-.preview-issue.is-state-updated .preview-state-card{border-left-color:#d1242f!important}
-.preview-discussion.is-state-updated .preview-state-card{border-left-color:#0969da!important}
+.preview-pr.is-state-updated .preview-state-card,.preview-pr.is-state-updated .preview-description-card{border-left-color:#8957e5!important}
+.preview-issue.is-state-updated .preview-state-card,.preview-issue.is-state-updated .preview-description-card{border-left-color:#8957e5!important}
+.preview-discussion.is-state-updated .preview-state-card,.preview-discussion.is-state-updated .preview-description-card{border-left-color:#0969da!important}
 .preview-discussion.is-state-answered .preview-state-before{display:none!important}
 .preview-discussion.is-state-answered .preview-state-middle{display:block!important}
 @media(prefers-reduced-motion:reduce){.preview-state-card{transition:none}}
@@ -209,3 +209,5 @@ button.preview-channel{width:100%;border:0;background:transparent;text-align:lef
 .faq-support h2{font-size:22px}.faq-support .button{margin-top:12px}
 
 .threadle-preview .preview-ci .preview-arrival{animation-delay:1.3s}
+
+.preview-state-card code{font:inherit;font-family:ui-monospace,monospace;background:#292b2f;border-radius:3px;padding:1px 3px}

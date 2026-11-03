@@ -193,6 +193,7 @@ def iso_timestamp(value):
 
 
 def silent_review(event, payload):
+    if event=='discussion' and payload.get('action') in ('pinned','unpinned'):return True
     review = payload.get('review', {})
     return (event == 'pull_request_review' and payload.get('action') == 'submitted'
             and str(review.get('state', '')).lower() == 'commented' and not str(review.get('body') or '').strip())
@@ -446,11 +447,12 @@ def make_embed(topic, event, payload, language='ko'):
     else:
         from alert_feed import activity
         label = activity(event, payload)
+    from topic_state import event_color
     return {"title": clip(f"{topic.kind.upper()} #{topic.number} · {label}", 230),
             "url": obj.get("html_url") or topic.url,
             "description": body,
             "author": {"name": clip(actor,100)},
-            "color": 0x8B949E if event in ("issue_comment","discussion_comment","pull_request_review_comment") else {"issue": 0x2DA44E, "pr": 0x8957E5, "discussion": 0x0969DA}[topic.kind],
+            "color": event_color(topic.kind,event,payload),
             **({"timestamp": posted} if posted else {})}
 
 

@@ -34,10 +34,10 @@ class ReadableNotificationsTests(unittest.TestCase):
             self.assertNotIn('<t:',embed['description'])
             self.assertEqual(embed['timestamp'],'2026-11-01T01:00:00+00:00')
             self.assertEqual(embed['author']['name'],'author')
-            if kind=='pr':self.assertEqual(names[:2],['Branches','Details'])
+            if kind=='pr':self.assertEqual(names[:3],['Branches','Current Status','Details'])
             if kind=='issue':self.assertIn('Issue fields',names)
             if kind=='discussion':
-                self.assertIn('Category',embed['fields'][0]['value']);self.assertIn('Labels',names)
+                self.assertIn('Category',next(f['value'] for f in embed['fields'] if f['name']=='Details'));self.assertIn('Labels',names)
                 self.assertNotIn('Assignees',names);self.assertNotIn('Milestone',names)
 
     def test_issue_type_and_custom_fields_keep_values_without_repeating_description(self):

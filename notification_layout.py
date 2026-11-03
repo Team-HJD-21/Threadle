@@ -126,11 +126,13 @@ def creation_embed(topic, payload, language='ko'):
         fields = [entry for entry in fields if entry not in compact]
         position = 1 if topic.kind == 'pr' else 0
         fields.insert(position, {'name':'Details', 'value':clip('\n'.join(lines),1000),'inline':False})
+    from topic_state import status_field,card_color
+    fields.insert(1 if topic.kind=='pr' else 0,status_field(topic.kind,obj))
     body = str(obj.get('body') or '').strip()
     result = {'title': clip(f'{topic.kind.upper()} #{topic.number} · {topic.title}',230), 'url':topic.url,
               'description':body or ('No description provided.' if en else '설명 없음'),
               'author':{'name':clip(actor,100)},
-              'fields':fields,'color':(0x8B949E if topic.kind=='pr' and obj.get('draft') else {'issue':0x2DA44E,'pr':0x8957E5,'discussion':0x0969DA}[topic.kind])}
+              'fields':fields,'color':card_color(topic.kind,obj)}
     posted=iso_timestamp(obj.get('created_at'))
     if posted:
         result['timestamp']=posted
@@ -187,6 +189,8 @@ def bundle_embed(topic, payload, language):
             if topic.kind=='pr' and action=='closed' and state.get('pull_request',{}).get('merged'):
                 action='merged'
             heading={'closed':'Closed','deleted':'Deleted','reopened':'Reopened','merged':'Merged','answered':'Answered','unanswered':'Unanswered'}.get(action,heading)
+        from topic_state import event_color
+        last_event,last_payload=next((event,value) for event,value in reversed(entries) if event in CREATION)
         text='\n\n'.join(changes)
         change_embeds=[]
         while text:
@@ -195,7 +199,7 @@ def bundle_embed(topic, payload, language):
             change_embeds.append({'title':clip(f'{topic.kind.upper()} #{topic.number} · '+heading,230),
                              'description':part,'url':topic.url,
                              **({'author':{'name':clip(next(iter(actors)),100)}} if len(actors)==1 else {}),
-                             'color':{'issue':0x2DA44E,'pr':0x8957E5,'discussion':0x0969DA}[topic.kind]})
+                             'color':event_color(topic.kind,last_event,last_payload)})
         embeds=([embeds[0]]+change_embeds+embeds[1:]) if creations else change_embeds+embeds
     if not embeds:
         embeds=[creation_embed(topic,payload,language)]

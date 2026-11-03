@@ -35,9 +35,9 @@ class CardTests(unittest.TestCase):
         card=make_embed(topic_from('one/repo','issue',p['issue']),'issues',p,'en')
         self.assertEqual(card['author']['name'],'author')
         self.assertTrue(all(not entry['inline'] for entry in card['fields']))
-        self.assertIn('Assignees',card['fields'][0]['value'])
-        self.assertEqual(card['fields'][1]['name'],'Labels')
-        self.assertIn('Priority: P0',card['fields'][2]['value'])
+        self.assertIn('Assignees',next(f['value'] for f in card['fields'] if f['name']=='Details'))
+        self.assertIn('Labels',[f['name'] for f in card['fields']])
+        self.assertIn('Priority: P0',next(f['value'] for f in card['fields'] if f['name']=='Issue fields'))
 
 
 class ReminderRoundupTests(unittest.TestCase):

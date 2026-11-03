@@ -3,13 +3,14 @@ from discord_threads import Topic
 from root_status import decorate
 
 
-def starter_states(kind,number,title):
+def starter_states(kind,number,title,detail=''):
     topic=Topic('TeamHJD/threadle',kind,int(number),title,'',{})
     final={'pr':{'merged':True},'issue':{'state':'closed'},'discussion':{'isAnswered':True}}[kind]
     initial=decorate(topic,{}, {'title':title})
     changed=decorate(topic,{}, {'title':title,**final})
     middle=''
-    return middle+'<strong class="preview-state-before">'+escape(initial['title'])+'</strong><strong class="preview-state-after">'+escape(changed['title'])+'</strong>'
+    def markup(embed):return '<strong>'+escape(embed['title'])+'</strong>'+('<p>'+escape(detail.replace('`',''))+'</p>' if detail else '')+'<p><b>Current Status</b> <code>'+escape(embed['fields'][-1]['value'].strip('`'))+'</code></p>'
+    return '<div class="preview-state-before">'+markup(initial)+'</div><div class="preview-state-after">'+markup(changed)+'</div>'
 
 
 ICONS = {
@@ -117,14 +118,14 @@ def demonstration(t):
         if key == 'alert':
             out += alert_panes(t, avatar)
             continue
-        out += '<div class="preview-main"><header>' + icon('hash') + '<span class="preview-header-name">' + channel + '</span>' + tools('thread','bell','pin','members','search') + '</header><div class="preview-feed"><div class="preview-welcome"><div class="preview-hash">' + icon('hash') + '</div><h2>' + t('환영합니다!', 'Welcome to #') + ' ' + channel + '!</h2><p>' + t('이 채널의 시작이에요.', 'This is the start of this channel.') + '</p></div><div class="preview-date">' + t('오늘', 'Today') + '</div><div class="preview-post preview-arrival">' + avatar + '<div><b>Threadle <em>' + icon('check') + ' APP</em></b><article class="preview-state-card">' + starter_states(key,number,title) + '<p>' + detail.replace('`', '') + '</p></article><div class="preview-thread-card"><b>[' + topic + '] ' + title + '</b><span>' + t('메시지 2개', '2 messages') + ' ' + icon('right') + '</span></div></div></div></div>' + compose(t, channel) + '</div>'
+        out += '<div class="preview-main"><header>' + icon('hash') + '<span class="preview-header-name">' + channel + '</span>' + tools('thread','bell','pin','members','search') + '</header><div class="preview-feed"><div class="preview-welcome"><div class="preview-hash">' + icon('hash') + '</div><h2>' + t('환영합니다!', 'Welcome to #') + ' ' + channel + '!</h2><p>' + t('이 채널의 시작이에요.', 'This is the start of this channel.') + '</p></div><div class="preview-date">' + t('오늘', 'Today') + '</div><div class="preview-post preview-arrival">' + avatar + '<div><b>Threadle <em>' + icon('check') + ' APP</em></b><article class="preview-state-card">' + starter_states(key,number,title,detail) + '</article><div class="preview-thread-card"><b>[' + topic + '] ' + title + '</b><span>' + t('메시지 2개', '2 messages') + ' ' + icon('right') + '</span></div></div></div></div>' + compose(t, channel) + '</div>'
         out += '<div class="preview-detail"><header>' + icon('thread') + '<span class="preview-header-name">[' + topic + '] ' + title + '</span>' + tools('muted','more','close') + '</header><div class="preview-detail-scroll"><h2>' + title + '</h2><p class="preview-started">' + t('Threadle이 시작함', 'Started by Threadle') + '</p><div class="preview-date">' + t('오늘', 'Today') + '</div>'
         for i, (author, heading, text) in enumerate([
             ('Threadle', topic + ' · ' + title, detail.replace('`', '')),
             ('Jae', topic + ' · ' + title, description),
             ('Min', topic + ' · ' + 'New comment', reply),
         ]):
-            out += '<div class="preview-post preview-message message-' + str(i) + '">' + avatar + '<div><b>Threadle <em>' + icon('check') + ' APP</em></b><article' + (' class="preview-state-card"' if i==0 else '') + '><b>' + author + '</b>' + (starter_states(key,number,title) if i==0 else '<strong>'+heading+'</strong>') + '<p>' + text + '</p></article></div></div>'
+            out += '<div class="preview-post preview-message message-' + str(i) + '">' + avatar + '<div><b>Threadle <em>' + icon('check') + ' APP</em></b><article' + (' class="preview-state-card"' if i==0 else ' class="preview-description-card"' if i==1 else '') + '><b>' + author + '</b>' + (starter_states(key,number,title,text) if i==0 else '<strong>'+heading+'</strong><p>'+text+'</p>') + '</article></div></div>'
         out += '</div>' + compose(t) + '</div></div>'
     out += '</div><p class="preview-disclaimer">' + t('작동 예시입니다. 실제 GitHub 소식은 연결한 저장소에서 전달됩니다.', 'Illustrative preview. Live updates come from your connected repositories.') + '</p></section>'
     return out

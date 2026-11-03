@@ -44,7 +44,8 @@ class RootStatusTests(unittest.TestCase):
         for obj,state,closed in [({'state':'open','draft':True},'Draft',False),({'state':'open','draft':False},'Open',False),({'state':'closed'},'Closed',True),({'state':'open'},'Open',False),({'state':'closed','merged':True},'Merged',True)]:
             self.assertEqual(self.refresh(obj),closed)
             embed=self.api.roots[identity]['embeds'][0]
-            self.assertIn('PR '+state,embed['title'])
+            self.assertEqual(embed['title'],'PR #1 · Title')
+            self.assertEqual(embed['fields'][-1]['value'],'`'+state+'`')
             for key in ('author','timestamp','footer','description'):self.assertEqual(embed[key],old[key])
         self.assertEqual(len(self.api.roots),1);self.assertEqual(self.api.starts,1)
     def test_discord_read_only_fields_are_not_reposted_and_do_not_cause_repeated_patches(self):
@@ -64,14 +65,14 @@ class RootStatusTests(unittest.TestCase):
     def test_discussion_answered_unanswered_closed_and_reopened(self):
         topic=Topic('owner/repo','discussion',2,'Discuss','https://github.com/owner/repo/discussions/2')
         identity=self.root(topic)
-        for value,state in [({'closed':False,'isAnswered':True},'Answered'),({'closed':False,'isAnswered':False},'Open'),({'closed':True,'isAnswered':True},'Closed'),({'closed':False,'isAnswered':False},'Open')]:
+        for value,state in [({'closed':False,'isAnswered':True},'Answered'),({'closed':False,'isAnswered':False},'Open'),({'closed':True,'isAnswered':True},'Answered'),({'closed':True,'isAnswered':False},'Closed'),({'closed':False,'isAnswered':False},'Open')]:
             self.github.call.return_value={'data':{'repository':{'discussion':value}}}
             TopicRoots(self.threads,self.github).closed(topic)
-            self.assertIn('DISCUSSION '+state,self.api.roots[identity]['embeds'][0]['title'])
+            self.assertEqual(self.api.roots[identity]['embeds'][0]['fields'][-1]['value'],'`'+state+'`')
     def test_existing_legacy_starter_with_renamed_thread_is_updated(self):
         identity=self.root();self.api.roots[identity]['embeds'][0]['title']='PR #1 · Old title';self.api.threads[identity]['name']='Custom thread name'
         self.refresh({'state':'closed','merged':True,'title':'Latest title'})
-        self.assertIn('PR Merged',self.api.roots[identity]['embeds'][0]['title'])
+        self.assertEqual(self.api.roots[identity]['embeds'][0]['fields'][-1]['value'],'`Merged`')
         self.assertEqual(self.api.threads[identity]['name'],'Custom thread name')
         self.assertEqual(marker(self.api.roots[identity]),[self.topic.key])
     def deleted(self,topic,event):
@@ -124,7 +125,7 @@ class RootStatusTests(unittest.TestCase):
         topic=Topic('owner/repo','issue',3,'Issue','https://github.com/owner/repo/issues/3');identity=self.root(topic)
         self.github.call.return_value={'state':'open','title':'Restored'}
         self.assertTrue(TopicRoots(self.threads,self.github).handle_deleted(topic,'issues',{'action':'deleted'}))
-        self.assertIn(identity,self.api.threads);self.assertIn('ISSUE Open',self.api.roots[identity]['embeds'][0]['title'])
+        self.assertIn(identity,self.api.threads);self.assertEqual(self.api.roots[identity]['embeds'][0]['fields'][-1]['value'],'`Open`')
     def test_foreign_starter_is_not_edited_or_deleted(self):
         identity=self.root();self.api.roots[identity]['author']['id']='someone-else'
         with self.assertRaises(ValueError):self.refresh({'state':'closed'})
@@ -154,7 +155,7 @@ class RootStatusTests(unittest.TestCase):
     def test_initial_draft_and_answered_are_visible(self):
         for kind,obj,state in [('pr',{'draft':True},'Draft'),('discussion',{'isAnswered':True},'Answered')]:
             topic=Topic('owner/repo',kind,1,'Title','https://github.com',obj)
-            self.assertIn(state,starter_embed(topic)['title'])
+            self.assertEqual(starter_embed(topic)['fields'][-1]['value'],'`'+state+'`')
 
     def test_answered_is_blue_and_regular_comments_are_gray(self):
         from discord_threads import make_embed
