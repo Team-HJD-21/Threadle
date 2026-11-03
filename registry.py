@@ -34,6 +34,8 @@ class Registry:
                 CREATE UNIQUE INDEX IF NOT EXISTS one_legacy ON bindings(auth) WHERE auth='legacy';
                 CREATE TABLE IF NOT EXISTS inbox(id TEXT PRIMARY KEY, delivery TEXT NOT NULL,
                     event TEXT NOT NULL, payload TEXT, recipients TEXT NOT NULL, done INTEGER DEFAULT 0);
+                CREATE TABLE IF NOT EXISTS intake_timing(id TEXT PRIMARY KEY,received REAL NOT NULL);
+                CREATE INDEX IF NOT EXISTS intake_timing_received ON intake_timing(received);
                 CREATE TABLE IF NOT EXISTS connection_audit(id INTEGER PRIMARY KEY, binding TEXT NOT NULL,
                     action TEXT NOT NULL, discord_user TEXT NOT NULL, github_user TEXT NOT NULL,
                     happened TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
@@ -229,6 +231,7 @@ class Registry:
             db.execute('UPDATE bindings SET repo=? WHERE id=?', (name, identity))
 
     def receive(self, mode, delivery, event, payload):
+        received=time.time()
         installation = int(payload.get('installation', {}).get('id', 0))
         if mode == 'app' and installation <= 0:
             return 403
@@ -279,6 +282,8 @@ class Registry:
                 raise RuntimeError('Ingress capacity reached')
             db.execute('INSERT OR IGNORE INTO inbox VALUES(?,?,?,?,?,0)',
                        (mode + ':' + delivery, delivery, event, json.dumps(payload), json.dumps(recipients)))
+            db.execute('INSERT OR IGNORE INTO intake_timing VALUES(?,?)',(mode+':'+delivery,received))
+            db.execute('DELETE FROM intake_timing WHERE received<? AND EXISTS(SELECT 1 FROM inbox WHERE inbox.id=intake_timing.id AND done=1)',(received-30*86400,))
         return 202
 
     def pending(self):

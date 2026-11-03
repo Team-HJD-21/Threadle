@@ -17,6 +17,8 @@ class Queue:
             db.execute('CREATE TABLE IF NOT EXISTS coalescing_jobs(id TEXT PRIMARY KEY,topic TEXT NOT NULL,received REAL NOT NULL,group_id TEXT)')
             db.execute('CREATE INDEX IF NOT EXISTS coalescing_topic ON coalescing_jobs(topic,received)')
             db.execute('CREATE TABLE IF NOT EXISTS delivery_groups(id TEXT PRIMARY KEY,leader TEXT NOT NULL,job_ids TEXT NOT NULL,payload TEXT)')
+            db.execute('CREATE TABLE IF NOT EXISTS delivery_latency(delivery TEXT PRIMARY KEY,event TEXT NOT NULL,received REAL NOT NULL,started REAL,first_discord REAL,completed REAL,deferred INTEGER NOT NULL DEFAULT 0,webhook INTEGER NOT NULL DEFAULT 0)')
+            db.execute('CREATE INDEX IF NOT EXISTS delivery_latency_completed ON delivery_latency(completed)')
             db.execute('CREATE TABLE IF NOT EXISTS links (topic TEXT PRIMARY KEY, channel TEXT NOT NULL, thread TEXT NOT NULL)')
             db.execute('CREATE TABLE IF NOT EXISTS deferred_threads(topic TEXT PRIMARY KEY,channel TEXT NOT NULL,message TEXT NOT NULL)')
             db.execute('CREATE TABLE IF NOT EXISTS deferred_thread_jobs(delivery TEXT PRIMARY KEY,topic TEXT NOT NULL)')
@@ -32,7 +34,7 @@ class Queue:
         finally:
             db.close()
 
-    def put(self, delivery, event, payload):
+    def put(self, delivery, event, payload, received=None):
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
             if db.execute('SELECT 1 FROM jobs WHERE id=?', (delivery,)).fetchone():
@@ -41,6 +43,7 @@ class Queue:
                 raise sqlite3.OperationalError('Queue capacity reached')
             db.execute('INSERT OR IGNORE INTO jobs(id,event,payload) VALUES(?,?,?)',
                        (delivery, event, json.dumps(payload)))
+            db.execute('INSERT OR IGNORE INTO delivery_latency(delivery,event,received,webhook) VALUES(?,?,?,?)',(delivery,event,time.time() if received is None else received,int(received is not None)))
             from notification_layout import topic_identity
             topic = topic_identity(event,payload)
             if topic:

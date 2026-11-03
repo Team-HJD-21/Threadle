@@ -145,12 +145,13 @@ class Service:
     def dispatch(self):
         for identity, delivery, event, raw, recipients in self.registry.pending():
             payload = json.loads(raw)
+            with self.registry.db() as db:timing=db.execute('SELECT received FROM intake_timing WHERE id=?',(identity,)).fetchone()
             complete = True
             for binding_id in json.loads(recipients):
                 binding = self.registry.get(binding_id, include_paused=True)
                 if binding:
                     try:
-                        self.queue(binding).put(delivery, event, payload)
+                        self.queue(binding).put(delivery, event, payload,received=timing[0] if timing else None)
                         self.conflicts.signal(binding,delivery,event,payload)
                     except sqlite3.OperationalError:
                         complete = False
@@ -168,6 +169,8 @@ class Service:
             return False
         job, group_ids = grouped
         delivery, event, raw, attempts = job
+        from delivery_metrics import begin,end,deferred as mark_deferred
+        timing_token=begin(queue,group_ids)
         try:
             current = self.registry.get(binding.id)
             if current is None or current != binding:
@@ -240,6 +243,7 @@ class Service:
                 deferred=defer(routed,roots,topic,event,payload,delivery,binding.config.get('team_notifications',{}),time.time())
                 if deferred=='gone':continue
                 if deferred:
+                    mark_deferred()
                     if notices:
                         location=roots.location(topic)
                         notices.topic(topic,event,payload,'webhook:'+delivery,location[1],[binding.config['alert_channel']],dnd_until=dnd_until)
@@ -278,10 +282,13 @@ class Service:
             finish(queue,delivery)
             LOG.info('Delivered binding=%s event=%s delivery=%s', binding.id, event, delivery)
         except DeferredThread:
+            mark_deferred()
             LOG.info('Thread deferred until DND ends binding=%s delivery=%s',binding.id,delivery)
         except Exception as error:
             log_exception(LOG,'Retry binding=%s event=%s error=%s', binding.id, event, type(error).__name__)
             queue.retry(delivery, attempts)
+        finally:
+            end(timing_token)
         return True
 
     def run_binding(self, binding, stop):
