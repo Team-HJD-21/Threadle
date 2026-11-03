@@ -134,7 +134,8 @@ class Topic:
 
     @property
     def name(self):
-        return clip(self.prefix + self.repo.split("/")[1] + " · " + self.title, 100)
+        from topic_state import thread_title
+        return thread_title(self)
 
 
 def clip(value, limit):
@@ -291,7 +292,9 @@ class Threads:
             before = cursor
 
     def matches(self, channel, thread, topic):
-        if thread.get("parent_id") != channel or not thread.get("name", "").startswith(topic.prefix):
+        name=thread.get("name", "")
+        status_prefix=f"[{topic.kind.upper()} #{topic.number} · "
+        if thread.get("parent_id") != channel or not (name.startswith(topic.prefix) or name.startswith(status_prefix)):
             return False
         root = self.api.call("GET", f"/channels/{channel}/messages/{thread['id']}")
         return root.get("author", {}).get("id") == self.bot["id"] and topic.key in marker(root)

@@ -46,6 +46,7 @@ class TopicRoots:
         if queue is not None:
             with queue.connect() as db:
                 db.execute('CREATE TABLE IF NOT EXISTS deleted_topics(topic TEXT PRIMARY KEY,cleaned INTEGER NOT NULL DEFAULT 0)')
+                db.execute('CREATE TABLE IF NOT EXISTS topic_thread_names(topic TEXT PRIMARY KEY,name TEXT NOT NULL)')
                 db.execute('CREATE TABLE IF NOT EXISTS topic_visuals(topic TEXT PRIMARY KEY,state TEXT NOT NULL,event TEXT NOT NULL)')
 
     def read(self,topic):
@@ -96,6 +97,26 @@ class TopicRoots:
             try:self.threads.api.call('PATCH',f'/channels/{channel}/messages/{identity}',{'embeds':embeds,'allowed_mentions':{'parse':[]}})
             except ApiError as error:
                 if error.status!=404:raise
+
+        self.update_thread_name(topic,obj,channel,identity)
+
+    def update_thread_name(self,topic,obj,channel,identity):
+        from topic_state import thread_title
+        desired=thread_title(topic,obj)
+        if self.queue is not None:
+            with self.queue.connect() as db:
+                previous=db.execute('SELECT name FROM topic_thread_names WHERE topic=?',(topic.key,)).fetchone()
+                if previous and previous[0]==desired:return
+        try:thread=self.threads.api.call('GET','/channels/'+identity)
+        except ApiError as error:
+            if error.status!=404:raise
+            return
+        if thread.get('parent_id')!=channel or thread.get('owner_id')!=self.threads.bot['id']:return
+        if thread.get('name')!=desired:
+            if thread.get('thread_metadata',{}).get('locked'):return
+            self.threads.api.call('PATCH','/channels/'+identity,{'name':desired})
+        if self.queue is not None:
+            with self.queue.connect() as db:db.execute('INSERT OR REPLACE INTO topic_thread_names VALUES(?,?)',(topic.key,desired))
 
     def update_descriptions(self,topic,obj):
         if self.queue is None:return

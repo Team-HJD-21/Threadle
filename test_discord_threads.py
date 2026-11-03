@@ -44,7 +44,7 @@ class FakeDiscord:
             if root in self.threads:
                 raise m.ApiError("Discord", 400, 160004)
             self.starts += 1
-            self.threads[root] = {"id": root, "name": data["name"], "parent_id": "c",
+            self.threads[root] = {"id": root, "name": data["name"], "parent_id": "c", "owner_id":"bot",
                                   "thread_metadata": {"archived": False, "locked": False}}
             return copy.deepcopy(self.threads[root])
         if method == "GET" and path.startswith("/channels/"):
@@ -64,7 +64,8 @@ class FakeDiscord:
             return copy.deepcopy(obj)
         if method == "PATCH":
             obj = self.threads[path.split("/")[-1]]
-            obj["thread_metadata"].update(data)
+            if "name" in data:obj["name"]=data["name"]
+            obj["thread_metadata"].update({k:v for k,v in data.items() if k!="name"})
             return copy.deepcopy(obj)
         raise AssertionError((method, path, data))
 

@@ -6,6 +6,8 @@ from discord_threads import Api,ApiError,Topic,make_embed,nonce
 from notification_layout import CREATION,creation_embed,merge_snapshot,message_pages
 from notification_media import attach_public_images
 
+STATE_CHANGES={'closed','reopened','merged','converted_to_draft','ready_for_review','answered','unanswered'}
+
 COMMENTS={'issue_comment','discussion_comment','pull_request_review_comment'}
 FOLDED={'assigned','unassigned','labeled','unlabeled','milestoned','demilestoned','review_requested','review_request_removed','typed','untyped','field_added','field_removed'}
 
@@ -221,6 +223,33 @@ class MutableMessages:
         return thread_id
 
 
+
+def refresh_state_only(threads,topic,closed):
+    """Update owned cards/title and archive state without a new thread message."""
+    with threads.queue.connect() as db:row=db.execute('SELECT channel,thread FROM links WHERE topic=?',(topic.key,)).fetchone()
+    if not row:
+        closed()
+        return None
+    channel,thread_id=row
+    try:thread=threads.api.call('GET','/channels/'+thread_id)
+    except ApiError as error:
+        if error.status!=404:raise
+        closed()
+        return None
+    if thread.get('parent_id')!=channel:raise ValueError('State refresh thread parent mismatch')
+    archived=bool(thread.get('thread_metadata',{}).get('archived'))
+    locked=bool(thread.get('thread_metadata',{}).get('locked'))
+    owned=thread.get('owner_id')==threads.bot['id']
+    if archived and not locked and owned:threads.api.call('PATCH','/channels/'+thread_id,{'archived':False})
+    try:finished=closed()
+    except Exception:
+        if archived and not locked and owned:
+            try:threads.api.call('PATCH','/channels/'+thread_id,{'archived':True})
+            except Exception:pass
+        raise
+    if not locked and owned and finished:threads.api.call('PATCH','/channels/'+thread_id,{'archived':True})
+    return thread_id
+
 def deliver_events(threads,topic,event,payload,event_key,closed,language):
     from delivery import CachedThreads
     if not isinstance(threads,CachedThreads):return threads.deliver(topic,make_embed(topic,event,payload,language),event_key,closed)
@@ -234,8 +263,10 @@ def deliver_events(threads,topic,event,payload,event_key,closed,language):
             if key is None:raise ValueError('Deleted comment identity missing')
             if mutable is None:mutable=MutableMessages(threads)
             mutable.delete(topic,key,obj)
+    transitions=any(e in CREATION and value.get('action') in STATE_CHANGES for e,value in entries)
     created=any(e in CREATION and value.get('action') in ('opened','created') for e,value in entries)
     for index,(kind,value) in enumerate(entries):
+        if kind in CREATION and value.get('action') in STATE_CHANGES:continue
         if created and kind in CREATION and value.get('action') in FOLDED:continue
         key,obj=identity(kind,value)
         if key and key.startswith('metadata:'):
@@ -251,7 +282,7 @@ def deliver_events(threads,topic,event,payload,event_key,closed,language):
             continue
         else:remaining.append({'event':kind,'payload':value})
     if not sources:
-        if not remaining:return None
+        if not remaining:return refresh_state_only(threads,topic,closed) if transitions else None
         if mutable is None:return threads.deliver(topic,make_embed(topic,event,payload,language),event_key,closed)
         rest=dict(payload,_events=remaining,_created=False)
         return threads.deliver(topic,make_embed(topic,'threadle_bundle',rest,language),event_key,closed)

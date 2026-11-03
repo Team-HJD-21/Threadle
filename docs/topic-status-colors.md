@@ -9,3 +9,10 @@ All mapped original-description pages keep their contents, author, timestamp, me
 Historical colors: ordinary comments/review comments gray; PR approval green; changes requested orange; Discussion Answer accepted blue, Answer unmarked red and Closed purple; Issue Closed red and Reopened green. Generic non-merge PR activity uses blue. Discussion pin/unpin events are consumed without thread or alert messages.
 
 Connection authorization is unchanged: Threadle lists enabled repositories where the signed-in GitHub user has repository admin permission. Organization app-install policies may additionally require organization-owner approval.
+
+
+## beta.22: thread titles and quiet state transitions
+
+Thread titles use `[PR #123 · Merged] repo · title` (also ISSUE and DISCUSSION), with the state before truncation. New threads start with the current state; existing bot-owned threads rename on their next processed state/title change. Legacy names remain recoverable through immutable root markers. Same-state name checks are cached per topic, so ordinary comments do not trigger repeated rename reads. Moderator-locked or other-owned threads are not renamed.
+
+Closed, Reopened, Merged, Draft/ready-for-review and Answered/unmarked transitions no longer post separate thread messages. They refresh existing cards, description colors/Current Status, thread title and archive state. State-only events do not create a new thread for a previously unseen topic. Comments and review approval/change-request notifications remain independent; existing github-alert routing is unchanged. Archived owned threads temporarily unarchive for refresh and follow the latest GitHub closed state afterward. A failed refresh restores their previous archive flag where possible and retries.

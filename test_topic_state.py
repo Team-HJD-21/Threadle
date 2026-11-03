@@ -30,6 +30,46 @@ class CurrentTopicTests(unittest.TestCase):
                 for message in self.api.posts[thread]:
                     for embed in message['embeds']:self.assertEqual(embed['color'],color)
 
+    def test_thread_titles_transition_and_reuse_existing_thread_after_cache_loss(self):
+        from discord_threads import Threads
+        from topic_state import thread_title
+        for kind,obj in [('pr',{'merged':True}),('issue',{'state':'closed'}),('discussion',{'closed':True,'isAnswered':True})]:
+            with self.subTest(kind=kind):
+                topic=Topic('owner/repo',kind,20+len(self.api.roots),'Title','https://github.com/owner/repo/1',{})
+                thread=self.threads.ensure(topic)
+                self.github.call.return_value={'data':{'repository':{'discussion':dict(title='Title',**obj)}}} if kind=='discussion' else dict(title='Title',**obj)
+                TopicRoots(self.threads,self.github).closed(topic)
+                desired=thread_title(topic,dict(title='Title',**obj))
+                self.assertEqual(self.api.threads[thread['id']]['name'],desired)
+                finder=Threads(self.api,'g',self.threads.channels);finder.bot={'id':'bot'}
+                self.assertEqual(finder.ensure(topic)['id'],thread['id'])
+        self.assertEqual(self.api.starts,3)
+
+    def test_status_stays_visible_when_title_is_long_and_utf16_limited(self):
+        from topic_state import thread_title
+        topic=Topic('owner/repo','pr',123,'😀'*200,'',{'draft':True})
+        title=thread_title(topic)
+        self.assertTrue(title.startswith('[PR #123 · Draft]'))
+        self.assertLessEqual(len(title.encode('utf-16-le'))//2,100)
+
+    def test_lifecycle_updates_reuse_cards_and_title_without_new_thread_messages(self):
+        for kind,event,key,changes in [
+            ('pr','pull_request','pull_request',[('converted_to_draft',{'draft':True,'state':'open'},'Draft'),('ready_for_review',{'draft':False,'state':'open'},'Open'),('closed',{'merged':True,'state':'closed'},'Merged')]),
+            ('issue','issues','issue',[('closed',{'state':'closed'},'Closed'),('reopened',{'state':'open'},'Open')]),
+            ('discussion','discussion','discussion',[('answered',{'closed':True,'isAnswered':True},'Answered'),('unanswered',{'closed':True,'isAnswered':False},'Closed'),('reopened',{'closed':False,'isAnswered':False},'Open')])]:
+            with self.subTest(kind=kind):
+                topic=Topic('owner/repo',kind,30+len(self.api.roots),'Title','https://github.com/owner/repo/1',{'body':'Original body','title':'Title'})
+                thread=deliver_events(self.threads,topic,event,{'action':'opened',key:topic.metadata},'opened-'+kind,lambda:False,'ko')
+                original=[m['id'] for m in self.api.posts[thread]]
+                for action,obj,label in changes:
+                    live=dict(title='Title',**obj)
+                    self.github.call.return_value={'data':{'repository':{'discussion':live}}} if kind=='discussion' else live
+                    roots_now=TopicRoots(self.threads,self.github)
+                    deliver_events(self.threads,topic,event,{'action':action,key:dict(topic.metadata,**obj)},action+'-'+kind,lambda:roots_now.closed(topic),'ko')
+                    self.assertEqual([m['id'] for m in self.api.posts[thread]],original)
+                    self.assertIn(' · '+label+']',self.api.threads[thread]['name'])
+                    self.assertEqual(self.api.roots[thread]['embeds'][0]['fields'][-1]['value'],'`'+label+'`')
+
     def test_unchanged_state_does_not_reread_description_messages(self):
         obj={'title':'Title','body':'Description','state':'open'}
         topic=Topic('owner/repo','issue',1,'Title','https://github.com/owner/repo/issues/1',obj)
