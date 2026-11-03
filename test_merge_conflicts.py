@@ -33,10 +33,15 @@ class ConflictTests(unittest.TestCase):
         self.rows=[{'number':7,'title':'Fix mobile','mergeable':'CONFLICTING','headRefName':'feature/mobile','baseRefName':'main'}]
         self.github=Mock();self.github.call.side_effect=lambda *args:self.response(self.rows)
         self.service.github=lambda _:self.github
+        self.monitor.signal(self.binding,'initial','pull_request',{'action':'opened'})
+        self.now+=5
     def tearDown(self):self.temp.cleanup()
     def response(self,rows,more=False,cursor=None):
         return {'data':{'repository':{'databaseId':11,'pullRequests':{'nodes':copy.deepcopy(rows),'pageInfo':{'hasNextPage':more,'endCursor':cursor}}}}}
-    def again(self):self.now+=301;self.monitor.tick()
+    def again(self):
+        self.now+=301
+        self.monitor.signal(self.binding,'event:'+str(self.now),'pull_request',{'action':'synchronize'})
+        self.now+=5;self.monitor.tick()
     def test_conflict_is_urgent_once_even_during_dnd_and_batching(self):
         self.monitor.tick();self.again()
         self.assertEqual(len(self.api.messages),1)
@@ -86,12 +91,12 @@ class ConflictTests(unittest.TestCase):
         self.monitor.signal(self.binding,'merge9','pull_request',value)
         self.rows=[{'number':7,'title':'Older PR','mergeable':'CONFLICTING','headRefName':'older','baseRefName':'main'}]
         self.now+=5;self.monitor.tick();self.assertEqual(len(self.api.messages),1)
-        with self.service.registry.db() as db:self.assertEqual(db.execute('SELECT count(*) FROM conflict_signals').fetchone()[0],1)
+        with self.service.registry.db() as db:self.assertEqual(db.execute("SELECT count(*) FROM conflict_signals WHERE delivery<>'initial'").fetchone()[0],1)
     def test_push_dispatch_schedules_check_without_new_channel_or_thread(self):
         payload={'installation':{'id':1},'repository':{'id':11,'full_name':'owner/repo'},'ref':'refs/heads/main'}
         self.assertEqual(self.service.registry.receive('app','push1','push',payload),202)
         self.service.dispatch()
-        with self.service.registry.db() as db:self.assertEqual(db.execute('SELECT count(*) FROM conflict_signals').fetchone()[0],1)
+        with self.service.registry.db() as db:self.assertEqual(db.execute("SELECT count(*) FROM conflict_signals WHERE delivery<>'initial'").fetchone()[0],1)
         self.assertFalse(self.api.messages)
     def test_closed_pr_reopens_as_new_conflict_episode(self):
         self.monitor.tick();previous=self.rows;self.rows=[];self.again()
@@ -133,3 +138,29 @@ class ConflictTests(unittest.TestCase):
     def test_unknown_does_not_mark_warnings_resolved(self):
         self.link_thread();self.monitor.tick();self.rows[0]['mergeable']='UNKNOWN';self.again()
         self.assertTrue(all('Merge conflict' in msg['embeds'][0]['title'] for _,msg in self.api.messages))
+
+    def test_idle_and_restart_do_not_query_github_again(self):
+        self.monitor.tick();self.assertEqual(self.github.call.call_count,1)
+        self.now+=86400;self.monitor.tick()
+        self.monitor=ConflictMonitor(self.service,clock=lambda:self.now);self.monitor.tick()
+        self.assertEqual(self.github.call.call_count,1)
+    def test_no_event_means_no_initial_scan(self):
+        with self.service.registry.db() as db:
+            db.execute('DELETE FROM conflict_scans');db.execute('DELETE FROM conflict_signals')
+        self.monitor.tick();self.assertEqual(self.github.call.call_count,0)
+    def test_unknown_retries_are_bounded_then_wait_for_next_event(self):
+        self.rows[0]['mergeable']='UNKNOWN'
+        for _ in range(10):self.monitor.tick();self.now+=31
+        self.assertEqual(self.github.call.call_count,6)
+        self.now+=86400;self.monitor.tick();self.assertEqual(self.github.call.call_count,6)
+        self.again();self.assertEqual(self.github.call.call_count,7)
+    def test_old_periodic_schedule_is_retired_but_pending_event_is_preserved(self):
+        self.monitor.tick()
+        with self.service.registry.db() as db:
+            db.execute('DELETE FROM conflict_policy');db.execute('UPDATE conflict_scans SET due=0,retries=0')
+        self.monitor=ConflictMonitor(self.service,clock=lambda:self.now)
+        self.now+=86400;self.monitor.tick();self.assertEqual(self.github.call.call_count,1)
+        self.monitor.signal(self.binding,'pending','pull_request',{'action':'synchronize'})
+        with self.service.registry.db() as db:db.execute('DELETE FROM conflict_policy')
+        self.monitor=ConflictMonitor(self.service,clock=lambda:self.now);self.now+=5;self.monitor.tick()
+        self.assertEqual(self.github.call.call_count,2)
