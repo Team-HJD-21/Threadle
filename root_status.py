@@ -3,19 +3,15 @@ import copy
 from discord_threads import ApiError,Topic,clip,iso_timestamp,marker,root_description
 
 
-def state_label(kind,obj):
-    if kind=='pr' and (obj.get('merged') or obj.get('merged_at')):return 'Merged'
-    if obj.get('state')=='closed' or obj.get('closed'):return 'Closed'
-    if kind=='pr' and obj.get('draft'):return 'Draft'
-    if kind=='discussion' and (obj.get('isAnswered') or obj.get('answer_chosen_at') or obj.get('answer')):return 'Answered'
-    return 'Open'
+from topic_state import state_label,card_color,status_field
 
 
 def decorate(topic,embed,obj):
     result=copy.deepcopy(embed)
     state=state_label(topic.kind,obj)
-    result['title']=clip(f'{topic.kind.upper()} {state} #{topic.number} · '+str(obj.get('title',topic.title)),230)
-    result['color']={'Open':0x2DA44E,'Draft':0x8B949E,'Closed':0xD1242F,'Merged':0x8957E5,'Answered':0x0969DA}[state]
+    result['title']=clip(f'{topic.kind.upper()} #{topic.number} · '+str(obj.get('title',topic.title)),230)
+    result['color']=card_color(topic.kind,obj)
+    result['fields']=[field for field in result.get('fields',[]) if field.get('name')!='Current Status']+[status_field(topic.kind,obj)]
     if topic.kind=='pr' and obj.get('head') and obj.get('base'):
         value=Topic(topic.repo,topic.kind,topic.number,topic.title,topic.url,obj)
         result['description']=root_description(value)
@@ -48,7 +44,9 @@ class TopicRoots:
         self.queue=queue if isinstance(queue,Queue) else None
         queue=self.queue
         if queue is not None:
-            with queue.connect() as db:db.execute('CREATE TABLE IF NOT EXISTS deleted_topics(topic TEXT PRIMARY KEY,cleaned INTEGER NOT NULL DEFAULT 0)')
+            with queue.connect() as db:
+                db.execute('CREATE TABLE IF NOT EXISTS deleted_topics(topic TEXT PRIMARY KEY,cleaned INTEGER NOT NULL DEFAULT 0)')
+                db.execute('CREATE TABLE IF NOT EXISTS topic_visuals(topic TEXT PRIMARY KEY,state TEXT NOT NULL,event TEXT NOT NULL)')
 
     def read(self,topic):
         if self.loaded:return self.snapshot
@@ -99,11 +97,48 @@ class TopicRoots:
             except ApiError as error:
                 if error.status!=404:raise
 
+    def update_descriptions(self,topic,obj):
+        if self.queue is None:return
+        from discord_threads import nonce
+        import json
+        source='github-source:'+nonce(topic.key+':body')
+        with self.queue.connect() as db:
+            if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='message_sources'").fetchone():return
+            current=db.execute('SELECT event FROM message_sources WHERE source=?',(source,)).fetchone()
+            if not current:return
+            visual=state_label(topic.kind,obj)+':'+str(card_color(topic.kind,obj))
+            saved=db.execute('SELECT state,event FROM topic_visuals WHERE topic=?',(topic.key,)).fetchone()
+            if saved==(visual,current[0]):return
+            pages=db.execute('SELECT m.thread,p.message FROM message_sources m JOIN source_pages p ON p.source=m.source WHERE m.source=? ORDER BY p.page',(source,)).fetchall()
+            if not pages:return
+            if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='creation_snapshots'").fetchone():
+                row=db.execute('SELECT value FROM creation_snapshots WHERE topic=?',(topic.key,)).fetchone()
+                if row:
+                    value=json.loads(row[0])
+                    value.update({key:obj[key] for key in ('state','closed','draft','merged','merged_at','isAnswered','answer_chosen_at','answer') if key in obj})
+                    db.execute('UPDATE creation_snapshots SET value=? WHERE topic=?',(json.dumps(value),topic.key))
+        for thread,message_id in pages:
+            try:message=self.threads.api.call('GET',f'/channels/{thread}/messages/{message_id}')
+            except ApiError as error:
+                if error.status!=404:raise
+                continue
+            if message.get('author',{}).get('id')!=self.threads.bot['id']:raise ValueError('Description message ownership mismatch')
+            embeds=[editable_embed(e) for e in message.get('embeds',[])];changed=False
+            for embed in embeds:
+                # Mutable creation pages include image-only embeds; leave their content intact.
+                if embed.get('color')!=card_color(topic.kind,obj):embed['color']=card_color(topic.kind,obj);changed=True
+                for field in embed.get('fields',[]):
+                    if field.get('name')=='Current Status' and field!=status_field(topic.kind,obj):field.update(status_field(topic.kind,obj));changed=True
+            if changed:self.threads.api.call('PATCH',f'/channels/{thread}/messages/{message_id}',{'embeds':embeds,'allowed_mentions':{'parse':[]}})
+
+        with self.queue.connect() as db:db.execute('INSERT OR REPLACE INTO topic_visuals VALUES(?,?,?)',(topic.key,visual,current[0]))
+
     def closed(self,topic):
         obj=self.read(topic)
         if obj is None:return True
         self.update(topic,obj)
-        return state_label(topic.kind,obj) in ('Closed','Merged')
+        self.update_descriptions(topic,obj)
+        return bool(obj.get('closed') or obj.get('state')=='closed' or (topic.kind=='pr' and (obj.get('merged') or obj.get('merged_at'))))
 
     def handle_deleted(self,topic,event,payload):
         if topic.kind not in ('issue','discussion') or self.queue is None:return False

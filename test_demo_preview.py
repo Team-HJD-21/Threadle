@@ -75,5 +75,5 @@ class PreviewTests(unittest.TestCase):
         for kind,state in [('pr',{'merged':True}),('issue',{'state':'closed'}),('discussion',{'isAnswered':True})]:
             topic=Topic('TeamHJD/threadle',kind,1,'Example','',{})
             self.assertIn(decorate(topic,{},dict(title='Example',**state))['title'],starter_states(kind,'1','Example'))
-        self.assertIn('DISCUSSION Answered #1',starter_states('discussion','1','Example'))
+        self.assertIn('<code>Answered</code>',starter_states('discussion','1','Example'))
         self.assertIn('New comment',demonstration())
