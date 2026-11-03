@@ -1,5 +1,5 @@
 {
-  "version": "v1.0.0-beta.22",
+  "version": "v1.0.0-beta.23",
   "baseline": "2026.11.02.8",
   "files": {
     "demo_web.py": {
@@ -75,7 +75,7 @@
     },
     "changelog.py": {
       "before": "261336f2f039d63348697c8fb4f9f7ec8f25c959ad6f0e2ccd74230f8c208e28",
-      "after": "ba3c12fa0fc3ce006074ee173b032fef1f02e72920ba236c8dc6ef7e728b4722",
+      "after": "0282210fdaaafbbf6fe5dfb881cbbf1c5fe4d94ead02e62c9463921f729d3390",
       "previous": [
         "ce59507c70872a51ef2bbd42a7ee232a5bd4e2692a6b0c8903887594a1e59b90",
         "70c46b09eeacc09189050699f22f47224d0f1b157c741d0f25f9f51bd23af677",
@@ -113,7 +113,8 @@
         "e42215b0256b82e7af9b841277dd8d6f6edd4cf272d795a7c19922d74789d047",
         "bf04754373d0e96c4c42135b52ac93f28b2ecd5bd8edfb729d96eb5b7e8f5b86",
         "291be3547db63efcc7fc1e832e81ca2ec8832069f08e76c72e75e1e1a6b4bf83",
-        "713d1f1ec1dfbb0b01a0a34b8c2457be597b4cfa4771226058c8c8782e77d79b"
+        "713d1f1ec1dfbb0b01a0a34b8c2457be597b4cfa4771226058c8c8782e77d79b",
+        "ba3c12fa0fc3ce006074ee173b032fef1f02e72920ba236c8dc6ef7e728b4722"
       ]
     },
     "web_assets/preview.js": {
@@ -141,7 +142,7 @@
     },
     "service.py": {
       "before": "8ef021eb91f276ae424209884b25cd423995d41e1455bbb6bfd63a0ab0206d1e",
-      "after": "25dbf302c263bb73d397488a2f4ade93000cdce4e04057d0249554dbb4b953fc",
+      "after": "8848c34cf54679c299021731a139543c7c9cc31a672eba39f7e5637377d3fbae",
       "previous": [
         "2b39caa084daa3eaa290f3bf3573d907c4d36513a97abf24be24bc9458e3f397",
         "a687e18707282836bb64ec6159556183889032368eacccaaacf86ba8116a1588",
@@ -158,7 +159,8 @@
         "d56fa862652c0bb218fbd6d5d430c31459f4503ba2c8573f81afbb57f7f4a35f",
         "f2904fb4fb0921331276ff8230639d77054ab8752d583bc4d73c8dfc3e606966",
         "3b8fa8e71b19378f783d5145abcffa65bddc14d1fdc69d9d694aeec192917cbc",
-        "83791458a04b59c8bcd7805f94eb7c8d02b8cd5863b0317685f835efceaf759c"
+        "83791458a04b59c8bcd7805f94eb7c8d02b8cd5863b0317685f835efceaf759c",
+        "25dbf302c263bb73d397488a2f4ade93000cdce4e04057d0249554dbb4b953fc"
       ]
     },
     "auth.py": {
@@ -167,7 +169,7 @@
     },
     "discord_threads.py": {
       "before": "0b353710016c6563fda1178e599cacca7ab802854803040f0866ef940dcbec94",
-      "after": "29a0b0ee3dd65680d19be779308f0b3b38d3d9db447b7a18eb1f749f02e502e6",
+      "after": "44f56e169b1b8da756dcb979808f9f88943e9865563ed02ab14bae572abe82db",
       "previous": [
         "7db8a83427bc41833c8673eb12f23da21cad41888357873706070557c0d50cd5",
         "11914c2dee5b538656765b97ba424055a2ed686dd6e543be11390b0c20dcd7a5",
@@ -181,7 +183,8 @@
         "f3348cae3eb4004a915de3f252975fae83c54767242fc9ac6283ca15ea140113",
         "5b17d6df5ea65d31d28880a56c3387a030a5681b8677911179dd398d200176c0",
         "769d580a7b8f10d3c5f7043bd145e1f1996ecec8978b6c9d5efed70b52cc80b5",
-        "f4022434c690295affb8fe6feeff867f1e6bb612ec0d6a74d9563f79ceea9063"
+        "f4022434c690295affb8fe6feeff867f1e6bb612ec0d6a74d9563f79ceea9063",
+        "29a0b0ee3dd65680d19be779308f0b3b38d3d9db447b7a18eb1f749f02e502e6"
       ]
     },
     "notification_media.py": {
@@ -360,13 +363,14 @@
     },
     "operator_web.py": {
       "before": "4d8f1a2dbd4ab2386ee998aeb749d57102e20079fd6a98639e075b673f2a7521",
-      "after": "a3d74da7ca485545b676b63c6a6e226a53da77fc4f68ee5af132b35cd12b1560",
+      "after": "f5012d3691b2b6adad56d3d2f1f55127b7b88296ed3b9becb95685499b0dab20",
       "previous": [
         "f130b24216884b60f6d39b486eea7eedd5a99852b0906464904cb7614bbe566f",
         "2a3c11704933ec6f16553e828cb91d6e4859e3caa34722e93f6acaddb734a4d7",
         "376e4d4dd40615a653e245d7318520e063e16c5edb7a8ef2bc9c5c90aebd8a2d",
         "67e562327e6303841e7c3fe2b08574f03308c677e0e502f5b591ab47b73c31c7",
-        "d1fd8a7e8ea3dbd16a169d242cc66105ab4d6c34bce9f23d0d6ebf04834fa607"
+        "d1fd8a7e8ea3dbd16a169d242cc66105ab4d6c34bce9f23d0d6ebf04834fa607",
+        "a3d74da7ca485545b676b63c6a6e226a53da77fc4f68ee5af132b35cd12b1560"
       ]
     },
     "repository_summary.py": {
@@ -493,6 +497,10 @@
       "previous": [
         "f3c873b9a8c8d73569d72e458d3a7dd458b02bb02250ad3ae4e7f3370b25a1ee"
       ]
+    },
+    "api_usage.py": {
+      "before": null,
+      "after": "0f006ed8fa66d5b0938cbd22793765ff7068b2fbf05d108acb0d4c493ba5e4b1"
     }
   }
 }
