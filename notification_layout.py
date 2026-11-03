@@ -67,6 +67,14 @@ def snapshot_fields(obj):
     return values
 
 
+def code_value(value):
+    return '`'+str(value).replace('`','ˋ').replace('\n',' ')+'`'
+
+
+def code_items(value):
+    return ', '.join(code_value(display(item)) for item in (value or []) if display(item))
+
+
 def creation_embed(topic, payload, language='ko'):
     en = language == 'en'
     obj = topic.metadata
@@ -82,18 +90,18 @@ def creation_embed(topic, payload, language='ko'):
     actor = display(obj.get('user')) or display(payload.get('sender')) or 'GitHub'
     if topic.kind == 'discussion':
         add('카테고리','Category',display(obj.get('category')) or unknown)
-        add('라벨','Labels',display(obj.get('labels')) if 'labels' in obj else unknown,False)
+        add('라벨','Labels',code_items(obj.get('labels')) if 'labels' in obj else unknown,False)
         answer = obj.get('answer_html_url') or (obj.get('answer') or {}).get('html_url')
         add('채택된 답변','Accepted answer',('[View answer](' if en else '[답변 보기](')+answer+')' if answer else none,False)
     else:
         if topic.kind == 'issue' or 'type' in obj:
             add('유형','Type',display(obj.get('type')) if 'type' in obj else unknown)
-        add('담당자','Assignees',display(obj.get('assignees')) if 'assignees' in obj else unknown)
-        add('라벨','Labels',display(obj.get('labels')) if 'labels' in obj else unknown)
+        add('담당자','Assignees',code_items(obj.get('assignees')) if 'assignees' in obj else unknown)
+        add('라벨','Labels',code_items(obj.get('labels')) if 'labels' in obj else unknown)
         add('마일스톤','Milestone',display(obj.get('milestone')) if 'milestone' in obj else unknown)
         if topic.kind == 'pr':
-            people = display(obj.get('requested_reviewers'))
-            teams = display(obj.get('requested_teams'))
+            people = code_items(obj.get('requested_reviewers'))
+            teams = code_items(obj.get('requested_teams'))
             add('리뷰 요청','Reviewers',', '.join(filter(None,[people,teams])) if 'requested_reviewers' in obj else unknown)
             add('상태','Status',('Draft' if obj.get('draft') else 'Ready for review') if 'draft' in obj else unknown)
         else:
@@ -122,7 +130,7 @@ def creation_embed(topic, payload, language='ko'):
     result = {'title': clip(f'{topic.kind.upper()} #{topic.number} · {topic.title}',230), 'url':topic.url,
               'description':body or ('No description provided.' if en else '설명 없음'),
               'author':{'name':clip(actor,100)},
-              'fields':fields,'color':{'issue':0x2DA44E,'pr':0x8957E5,'discussion':0x0969DA}[topic.kind]}
+              'fields':fields,'color':(0x8B949E if topic.kind=='pr' and obj.get('draft') else {'issue':0x2DA44E,'pr':0x8957E5,'discussion':0x0969DA}[topic.kind])}
     posted=iso_timestamp(obj.get('created_at'))
     if posted:
         result['timestamp']=posted

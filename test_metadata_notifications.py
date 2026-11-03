@@ -20,7 +20,7 @@ class MetadataEditTests(unittest.TestCase):
         self.assertEqual(len(self.api.posts[thread]),1);identity=self.api.posts[thread][0]['id']
         self.meta_send(self.meta(second=1,labels=[{'name':'bug'},{'name':'ui'}]),'second',101)
         self.assertEqual(len(self.api.posts[thread]),1);self.assertEqual(self.api.posts[thread][0]['id'],identity)
-        self.assertIn('bug, ui',json.dumps(self.api.posts[thread][0]['embeds'][0],ensure_ascii=False))
+        self.assertIn('`bug`, `ui`',json.dumps(self.api.posts[thread][0]['embeds'][0],ensure_ascii=False))
     def test_later_metadata_still_edits_the_same_message(self):
         thread=self.meta_send(self.meta(),'one',100)
         self.meta_send(self.meta(second=20),'two',120)
@@ -97,3 +97,12 @@ class MetadataEditTests(unittest.TestCase):
                 del changed['labels'];changed['body']='Edited description';changed['updated_at']='2026-11-03T00:02:00Z'
                 self.send({'action':'edited',objkey:changed},'body-'+kind,event)
                 self.assertIn('new',str(self.api.posts[thread][0]['embeds']))
+
+    def test_draft_transition_updates_all_existing_description_pages_to_gray(self):
+        obj=dict(self.topic.metadata,body='Long body\n'*900,draft=False)
+        thread=self.send({'action':'opened','pull_request':obj},'opened','pull_request')
+        identities=[m['id'] for m in self.api.posts[thread]]
+        obj=dict(obj,draft=True,updated_at='2026-11-04T00:00:00Z')
+        self.send({'action':'converted_to_draft','pull_request':obj},'draft','pull_request')
+        self.assertEqual([m['id'] for m in self.api.posts[thread]],identities)
+        self.assertTrue(all(e['color']==0x8B949E for m in self.api.posts[thread] for e in m['embeds']))

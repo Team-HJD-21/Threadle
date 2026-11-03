@@ -20,3 +20,10 @@ Metadata events now use the same durable `body` source as the original PR/Issue/
 Existing original-message mappings and safe legacy creation-message recovery are reused. Previously sent standalone metadata cards are historical messages and are not bulk deleted by this migration. If the original description was never delivered or was deleted manually, reconstruct its current creation card rather than modifying a comment. Extra pages may still be necessary to respect Discord limits.
 
 Answered Discussion starter cards are blue; ordinary comments have a gray accent. The public preview uses the same status-title function and illustrates Open→Answered for discussions. New arrivals wait 1.3 seconds; PR/Issue/Discussion state changes occur at 8.5 seconds and remain visible until the 12.5-second rotation. Existing CI check timing is preserved.
+
+
+## beta.19: readable fields and immediate DND threads
+
+Only actual label/assignee/reviewer values use inline code. Description continuations keep the original accent; fields move to the last description part. Discord limits may still require multiple messages. Draft transitions refresh the original description pages with a gray accent.
+
+DND no longer defers new threads. Messages remain silent according to existing delivery rules, while Discord thread creation sounds may occur. Worker startup wakes legacy deferred jobs and clears their old pacing deadline. Existing starter/channel ownership is reused, and deleted pending Issue/Discussion topics are checked before recreation. Paused connections remain paused. Normal Discord throttling and error retries still apply to the backlog.

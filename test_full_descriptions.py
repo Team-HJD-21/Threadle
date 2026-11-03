@@ -79,3 +79,12 @@ class LongEditTests(unittest.TestCase):
         self.send(self.payload('Short','edited',time='2026-11-03T00:01:00Z'),'short')
         self.assertEqual(len(self.api.posts[thread]),1);self.assertEqual(self.api.posts[thread][0]['id'],first)
         self.assertEqual(self.api.posts[thread][0]['embeds'][0]['description'],'Short')
+
+    def test_description_fields_are_last_and_all_continuations_keep_color(self):
+        from notification_text import description_embeds
+        original={'title':'Title','description':'Paragraph\n'*800,'color':0x8B949E,'fields':[{'name':'Details','value':'Value'}]}
+        parts=description_embeds(original)
+        self.assertGreater(len(parts),1)
+        self.assertTrue(all(not part.get('fields') for part in parts[:-1]))
+        self.assertEqual(parts[-1]['fields'],original['fields'])
+        self.assertTrue(all(part['color']==original['color'] for part in parts))

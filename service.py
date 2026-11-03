@@ -248,16 +248,6 @@ class Service:
                         location=roots.location(topic)
                         notices.topic(topic,event,payload,'webhook:'+delivery,location[1],[binding.config['alert_channel']],dnd_until=dnd_until)
                     return True
-                def before_start(channel,root):
-                    from team_notifications import allowed_time
-                    if event=='workflow_run' or allowed_time(time.time(),binding.config.get('team_notifications',{}))<=time.time():return False
-                    with queue.connect() as db:db.execute('INSERT OR REPLACE INTO root_index VALUES(?,?,?)',(topic.key,channel,root))
-                    held=defer(routed,roots,topic,event,payload,delivery,binding.config.get('team_notifications',{}),time.time())
-                    if held and held!='gone' and notices:
-                        until=delivery_mode(queue,delivery,event,binding.config.get('team_notifications',{}),time.time())
-                        notices.topic(topic,event,payload,'webhook:'+delivery,root,[binding.config['alert_channel']],dnd_until=until)
-                    return bool(held)
-                routed.before_thread_start=before_start
                 with queue.connect() as db:had_thread=db.execute('SELECT 1 FROM links WHERE topic=?',(topic.key,)).fetchone()
                 from message_edits import deliver_events
                 thread = deliver_events(routed,topic,event,payload,'webhook:'+delivery,
