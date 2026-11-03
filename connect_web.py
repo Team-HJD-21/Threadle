@@ -76,6 +76,9 @@ def esc(value):
 CSS += '\n.admin-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.admin-stats .card{padding:18px;margin:14px 0 22px}.admin-stats strong{display:block;font-size:28px;color:#d9eea6}.admin-stats span{font-size:12px;color:#a2afab}.admin-heading{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.admin-search button{margin-right:10px}.admin-binding-title{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.admin-binding-title h2{margin:0;overflow-wrap:anywhere}.admin-status{font-size:12px;padding:5px 10px;border:1px solid #33413e;border-radius:20px;white-space:nowrap}.admin-actions{display:flex;gap:10px;flex-wrap:wrap}.admin-actions form{margin:0}.admin-actions button{margin:0}.admin-audit{padding-left:18px;font-size:12px;overflow-wrap:anywhere}.admin-audit li{margin:12px 0}.admin-binding code{overflow-wrap:anywhere;font-size:11px}@media(max-width:500px){.admin-stats{gap:7px}.admin-stats .card{padding:12px}.admin-stats span{font-size:11px}}\n'
 
 
+CSS += '\n.admin-current-settings{margin:18px 0;border:1px solid #394944;border-radius:12px;overflow:hidden}.admin-current-settings>summary{padding:14px 16px;cursor:pointer;font-weight:600;background:#24332f}.admin-setting-group{padding:0 16px 12px}.admin-setting-group h3{font-size:13px;color:#d9eea6;margin:18px 0 8px}.admin-setting-group dl{margin:0}.admin-setting-row{display:grid;grid-template-columns:minmax(110px,1fr) minmax(0,1.4fr);gap:12px;padding:10px 0;border-bottom:1px solid #30413a;font-size:13px}.admin-setting-row:last-child{border-bottom:0}.admin-setting-row dt{color:#aabbb3}.admin-setting-row dd{margin:0;text-align:right;overflow-wrap:anywhere;color:#f1f3ed}@media(max-width:450px){.admin-setting-row{grid-template-columns:minmax(90px,1fr) minmax(0,1.25fr);font-size:12px;gap:8px}}\n'
+
+
 def footer():
     return '''<footer class="site-footer"><div class="footer-inner">
 <div class="footer-brand"><a href="https://teamhjd.com/" target="_blank" rel="noopener noreferrer"><img src="/connect/assets/teamhjd-wordmark.png?v=1" width="486" height="98" alt="Team HJD"></a><p class="footer-tagline">Happy Journey of Developers.</p></div>
@@ -85,7 +88,7 @@ def footer():
 <div><dt>사업자등록번호</dt><dd>622-10-17519 <a class="business-info-link" href="https://www.ftc.go.kr/bizCommPop.do?wrkr_no=6221017519" target="_blank" rel="noopener noreferrer">(사업자정보확인)</a></dd></div>
 <div><dt>통신판매업 신고번호</dt><dd translate="no" lang="ko">2026-수원영통-1221호</dd></div><div><dt>사업장 주소</dt><dd translate="no" lang="ko">경기도 수원시 영통구 태장로 71번길 19</dd></div>
 </dl><div class="footer-policy"><a href="https://teamhjd.com/press/index.html" target="_blank" rel="noopener noreferrer">프레스킷</a><a href="https://teamhjd.com/content-policy/index.html" target="_blank" rel="noopener noreferrer">콘텐츠 이용 · AI 학습 정책</a><p>AI 검색·정보 조회는 허용하며, 콘텐츠의 AI 학습 이용은 금지합니다.</p></div>
-<small class="footer-copyright">© 2026 TeamHJD. All rights reserved. · v1.0.0-beta.18</small>
+<small class="footer-copyright">© 2026 TeamHJD. All rights reserved. · v1.0.0-beta.19</small>
 <details class="related-sites"><summary>관련 사이트<svg class="footer-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m6 15 6-6 6 6"></path></svg></summary><ul><li><a href="https://teamhjd.com/" target="_blank" rel="noopener noreferrer">TeamHJD 메인</a></li><li><a href="https://docs.teamhjd.com/" target="_blank" rel="noopener noreferrer">TeamHJD Docs</a></li></ul></details>
 </div></footer>'''
 
@@ -101,7 +104,7 @@ def page(title, body, landing=False):
     extra = '<link rel="icon" type="image/png" href="/connect/assets/threadle-avatar.png"><meta name="description" content="' + esc(description) + '">'
     extra += '<meta name="robots" content="' + ('index,follow' if public else 'noindex,nofollow') + '">'
     if landing:
-        extra += '<link rel="stylesheet" href="/connect/assets/landing.css?v=20261102-2"><link rel="stylesheet" href="/connect/assets/product.css?v=20261103-18"><script src="/connect/assets/preview.js?v=20261103-18" defer></script>'
+        extra += '<link rel="stylesheet" href="/connect/assets/landing.css?v=20261102-2"><link rel="stylesheet" href="/connect/assets/product.css?v=20261104-19"><script src="/connect/assets/preview.js?v=20261104-19" defer></script>'
     extra += '<link rel="stylesheet" href="/connect/assets/controls.css?v=20261102-6"><script src="/connect/assets/controls.js?v=1" defer></script>'
     if public:
         preview_image = esc(base + '/connect/assets/threadle-banner.png?v=20261102-9')

@@ -13,7 +13,7 @@ FOLDED={'assigned','unassigned','labeled','unlabeled','milestoned','demilestoned
 def identity(event,payload):
     action=payload.get('action')
     from metadata_notifications import FAMILIES
-    if event in CREATION and action in set(FAMILIES)|{'field_added','field_removed'}:
+    if event in CREATION and action in set(FAMILIES)|{'field_added','field_removed','converted_to_draft','ready_for_review'}:
         return 'body',payload.get('pull_request') or payload.get('issue') or payload.get('discussion') or {}
     if event in CREATION and action in ('opened','created','edited'):
         return 'body',payload.get('pull_request') or payload.get('issue') or payload.get('discussion') or {}

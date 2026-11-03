@@ -16,7 +16,7 @@ def details(config):
             (t('방해금지 시간','Do Not Disturb'),[(t('사용 여부','Enabled'),switch(options.get('quiet',False))),(t('시간','Hours'),f"{options.get('quiet_start',22):02}:00–{options.get('quiet_end',8):02}:00")])]
     body='<details class="admin-current-settings"><summary>'+t('현재 /settings 설정','Current /settings values')+'</summary>'
     for heading,rows in groups:
-        body+='<h3>'+escape(heading)+'</h3><dl>'
-        for name,value in rows:body+='<dt>'+escape(name)+'</dt><dd>'+escape(str(value))+'</dd>'
-        body+='</dl>'
+        body+='<section class="admin-setting-group"><h3>'+escape(heading)+'</h3><dl>'
+        for name,value in rows:body+='<div class="admin-setting-row"><dt>'+escape(name)+'</dt><dd>'+escape(str(value))+'</dd></div>'
+        body+='</dl></section>'
     return body+'</details>'

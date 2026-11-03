@@ -54,10 +54,11 @@ def description_embeds(original):
         else:
             embed={key:copy.deepcopy(value) for key,value in original.items() if key in ('title','url','author','color')}
             if embed.get('title'):embed['title']=clip(embed['title'],210)+f' ({index+1}/{len(parts)})'
+        embed.pop('fields',None)
         embed['description']=part
         embed.pop('image',None);embed.pop('timestamp',None)
         if index==len(parts)-1:
-            for key in ('image','timestamp'):
+            for key in ('image','timestamp','fields'):
                 if key in original:embed[key]=copy.deepcopy(original[key])
         result.append(embed)
     return result
