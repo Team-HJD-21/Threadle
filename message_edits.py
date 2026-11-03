@@ -13,8 +13,8 @@ FOLDED={'assigned','unassigned','labeled','unlabeled','milestoned','demilestoned
 def identity(event,payload):
     action=payload.get('action')
     from metadata_notifications import FAMILIES
-    if event in CREATION and action in FAMILIES:
-        return 'metadata:'+event+':'+FAMILIES[action],payload.get('pull_request') or payload.get('issue') or payload.get('discussion') or {}
+    if event in CREATION and action in set(FAMILIES)|{'field_added','field_removed'}:
+        return 'body',payload.get('pull_request') or payload.get('issue') or payload.get('discussion') or {}
     if event in CREATION and action in ('opened','created','edited'):
         return 'body',payload.get('pull_request') or payload.get('issue') or payload.get('discussion') or {}
     obj=payload.get('comment') if event in COMMENTS and action in ('created','edited','deleted') else payload.get('review') if event=='pull_request_review' and action in ('submitted','edited') else None
@@ -166,6 +166,9 @@ class MutableMessages:
                 with self.queue.connect() as db:db.execute('UPDATE message_sources SET revision=? WHERE source=?',(recovered_version,source))
                 return thread_id
         if thread.get('thread_metadata',{}).get('archived'):threads.api.call('PATCH','/channels/'+thread_id,{'archived':False})
+        if kind=='body':
+            from metadata_notifications import creation_snapshot
+            embed=creation_snapshot(self.queue,topic,obj,event,payload,language,version)
         if kind.startswith('metadata:'):
             from metadata_notifications import render
             embed=render(embed,obj,language=='en',self.queue,topic,version)
@@ -260,6 +263,10 @@ def deliver_events(threads,topic,event,payload,event_key,closed,language):
                 if field in obj:merged.metadata[field]=obj[field]
             merged=Topic(merged.repo,merged.kind,merged.number,merged.metadata.get('title',merged.title),merged.url,merged.metadata)
             rendered=creation_embed(merged,value,language)
+            if created:
+                obj=merged.metadata
+                value=dict(value)
+                value[{'pr':'pull_request','issue':'issue','discussion':'discussion'}[topic.kind]]=obj
         else:
             rendered=make_embed(topic,kind,value,language)
         thread=mutable.update(topic,source,obj,kind,value,event_key+':'+source,rendered,closed,language=language)

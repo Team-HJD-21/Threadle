@@ -155,3 +155,12 @@ class RootStatusTests(unittest.TestCase):
         for kind,obj,state in [('pr',{'draft':True},'Draft'),('discussion',{'isAnswered':True},'Answered')]:
             topic=Topic('owner/repo',kind,1,'Title','https://github.com',obj)
             self.assertIn(state,starter_embed(topic)['title'])
+
+    def test_answered_is_blue_and_regular_comments_are_gray(self):
+        from discord_threads import make_embed
+        from root_status import decorate
+        topic=Topic('owner/repo','discussion',2,'Discuss','https://github.com/owner/repo/discussions/2')
+        self.assertEqual(decorate(topic,{}, {'isAnswered':True})['color'],0x0969DA)
+        for event in ('issue_comment','discussion_comment','pull_request_review_comment'):
+            embed=make_embed(topic,event,{'action':'created','comment':{'id':1,'body':'Comment'},'sender':{'login':'dev'}})
+            self.assertEqual(embed['color'],0x8B949E)

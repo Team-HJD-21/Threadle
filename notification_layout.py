@@ -86,7 +86,7 @@ def creation_embed(topic, payload, language='ko'):
         answer = obj.get('answer_html_url') or (obj.get('answer') or {}).get('html_url')
         add('채택된 답변','Accepted answer',('[View answer](' if en else '[답변 보기](')+answer+')' if answer else none,False)
     else:
-        if topic.kind == 'issue':
+        if topic.kind == 'issue' or 'type' in obj:
             add('유형','Type',display(obj.get('type')) if 'type' in obj else unknown)
         add('담당자','Assignees',display(obj.get('assignees')) if 'assignees' in obj else unknown)
         add('라벨','Labels',display(obj.get('labels')) if 'labels' in obj else unknown)

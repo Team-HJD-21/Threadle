@@ -191,7 +191,21 @@ button.preview-channel{width:100%;border:0;background:transparent;text-align:lef
 .is-state-updated .preview-state-after{display:block!important}
 .preview-pr.is-state-updated .preview-state-card{border-left-color:#8957e5!important}
 .preview-issue.is-state-updated .preview-state-card{border-left-color:#d1242f!important}
-.preview-discussion.is-state-updated .preview-state-card{border-left-color:#d1242f!important}
+.preview-discussion.is-state-updated .preview-state-card{border-left-color:#0969da!important}
 .preview-discussion.is-state-answered .preview-state-before{display:none!important}
 .preview-discussion.is-state-answered .preview-state-middle{display:block!important}
 @media(prefers-reduced-motion:reduce){.preview-state-card{transition:none}}
+
+/* Readable arrivals and a four-second settled state before the next example. */
+.threadle-preview .preview-case:not(.preview-ci) .preview-arrival,.threadle-preview .preview-case:not(.preview-ci) .preview-message{animation-delay:1.3s}
+.threadle-preview .preview-case:not(.preview-ci) .preview-message.message-1{animation-delay:3.5s}
+.threadle-preview .preview-case:not(.preview-ci) .preview-message.message-2{animation-delay:5.7s}
+.preview-message.message-2 article{border-left-color:#8b949e}
+.plan-actions{width:100%;margin-top:auto;padding-top:16px;display:flex;flex-direction:column;gap:12px}
+.plan-actions form,.plan-actions button{width:100%;margin:0!important}
+.plan-actions .plan-action-note{margin:0;min-height:2.8em;font-size:13px}
+@media(min-width:701px){.plan-card .plan-actions{min-height:112px}.plan-card .plan-actions>form,.plan-card .plan-actions>button{min-height:44px}}
+.faq-support{margin-top:32px;padding:24px;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.faq-support h2{font-size:22px}.faq-support .button{margin-top:12px}
+
+.threadle-preview .preview-ci .preview-arrival{animation-delay:1.3s}

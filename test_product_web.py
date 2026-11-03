@@ -97,3 +97,14 @@ class ProductPageTests(WebFixture):
         self.assertEqual(before.config['language'], 'en')
         self.browser.request('GET', '/connect?lang=ko')
         self.assertEqual(self.service.registry.get(before.id), before)
+
+    def test_faq_support_and_updated_plan_comparison(self):
+        from product_web import content,pricing
+        from types import SimpleNamespace
+        session=SimpleNamespace(data={'csrf':'test'})
+        _,faq=content('/connect/faq',session)
+        self.assertIn('https://discord.gg/6faZbNBdv',faq)
+        self.assertIn('Threadle Support',faq)
+        plans=pricing(session)
+        self.assertEqual(plans.count('class="plan-actions"'),2)
+        self.assertIn('PR 충돌·해결 알림',plans)
