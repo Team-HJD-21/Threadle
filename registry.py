@@ -44,6 +44,7 @@ class Registry:
                 CREATE TABLE IF NOT EXISTS admin_paused(id TEXT PRIMARY KEY);
                 CREATE TABLE IF NOT EXISTS admin_audit(id INTEGER PRIMARY KEY, actor TEXT NOT NULL,
                     action TEXT NOT NULL, binding TEXT NOT NULL, happened TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+                CREATE TABLE IF NOT EXISTS guild_subscriptions(guild TEXT PRIMARY KEY, plan TEXT NOT NULL CHECK(plan IN ('free','pro')), status TEXT NOT NULL CHECK(status IN ('active','trialing','past_due','canceled')), expires_at REAL, updated_at REAL NOT NULL);
                 CREATE TABLE IF NOT EXISTS guild_profiles(guild TEXT PRIMARY KEY, name TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS github_profiles(user TEXT PRIMARY KEY, login TEXT NOT NULL,
                     checked REAL NOT NULL DEFAULT 0);

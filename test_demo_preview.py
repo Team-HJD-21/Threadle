@@ -67,3 +67,13 @@ class PreviewTests(unittest.TestCase):
         self.assertIn('Discussion · 1개 열림', html)
         self.assertIn('7 remaining issues', html)
         self.assertNotIn('preview-thread-card', html)
+
+    def test_starter_states_use_actual_production_titles_for_both_languages(self):
+        from demo_web import starter_states
+        from root_status import decorate
+        from discord_threads import Topic
+        for kind,state in [('pr',{'merged':True}),('issue',{'state':'closed'}),('discussion',{'closed':True})]:
+            topic=Topic('TeamHJD/threadle',kind,1,'Example','',{})
+            self.assertIn(decorate(topic,{},dict(title='Example',**state))['title'],starter_states(kind,'1','Example'))
+        self.assertIn('DISCUSSION Answered #1',starter_states('discussion','1','Example'))
+        self.assertIn('New comment',demonstration())

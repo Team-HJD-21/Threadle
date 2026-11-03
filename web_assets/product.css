@@ -183,3 +183,15 @@ button.preview-channel{width:100%;border:0;background:transparent;text-align:lef
 
 .changelog-page .card li{word-break:keep-all;overflow-wrap:break-word;line-height:1.75;margin-block:.6em}
 .changelog-page .card h2{word-break:keep-all;line-height:1.4}
+
+/* Owned starter cards change in place, using the production state palette. */
+.preview-state-card{border-left-color:#2da44e!important;transition:border-left-color .25s}
+.preview-state-after,.preview-state-middle{display:none!important}
+.is-state-updated .preview-state-before{display:none!important}
+.is-state-updated .preview-state-after{display:block!important}
+.preview-pr.is-state-updated .preview-state-card{border-left-color:#8957e5!important}
+.preview-issue.is-state-updated .preview-state-card{border-left-color:#d1242f!important}
+.preview-discussion.is-state-updated .preview-state-card{border-left-color:#d1242f!important}
+.preview-discussion.is-state-answered .preview-state-before{display:none!important}
+.preview-discussion.is-state-answered .preview-state-middle{display:block!important}
+@media(prefers-reduced-motion:reduce){.preview-state-card{transition:none}}

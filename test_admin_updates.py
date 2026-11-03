@@ -136,42 +136,15 @@ class AdminUpdateTests(unittest.TestCase):
             verify_package(self.package({'service.py':b'def broken(\n'}),self.public)
         self.assertFalse((self.root/'admin-updates').exists())
 
-    def test_web_upload_requires_admin_origin_csrf_and_separate_confirmation(self):
-        service = Service(self.root,{'DISCORD_BOT_TOKEN':'test'})
-        sessions = Sessions(self.root/'connect.sqlite3',Fernet.generate_key().decode())
-        session = sessions.create({'admin_subject':'owner'})
-        web = SimpleNamespace(settings=SimpleNamespace(base='https://threadle.example'),sessions=sessions,
-                              client_key=lambda _: 'local-test',throttle=lambda _:None,
-                              send=lambda request,status,*args,**kwargs:status)
-        service.web = web
-        operator = service.operator
-        operator.authenticate = Mock(return_value={'sub':'owner','email':'owner@example.com'})
-        def request(path,body,kind='application/x-www-form-urlencoded',origin='https://threadle.example'):
-            return SimpleNamespace(command='POST',path=path,rfile=io.BytesIO(body),headers={
-                'Origin':origin,'Cookie':'__Host-threadle-admin='+session.key,'Content-Type':kind,'Content-Length':str(len(body))})
-        boundary='threadle-test'
-        def multipart(csrf):
-            return (f'--{boundary}\r\nContent-Disposition: form-data; name="csrf"\r\n\r\n{csrf}\r\n'
-                    f'--{boundary}\r\nContent-Disposition: form-data; name="package"; filename="update.zip"\r\nContent-Type: application/zip\r\n\r\n').encode()+self.package()+f'\r\n--{boundary}--\r\n'.encode()
-        for csrf,origin in [('wrong','https://threadle.example'),(session.data['csrf'],'https://evil.example')]:
-            with self.assertRaises(ConnectError) as error:
-                operator.handle(request('/connect/admin/update/upload',multipart(csrf),'multipart/form-data; boundary='+boundary,origin))
-            self.assertEqual(error.exception.status,403)
-        self.assertIsNone(operator.updates.latest())
-        with self.verified():
-            status=operator.handle(request('/connect/admin/update/upload',multipart(session.data['csrf']),'multipart/form-data; boundary='+boundary))
-        self.assertEqual(status,303)
-        identity=operator.updates.latest()['id']
-        operator.updates.launch=Mock()
-        from urllib.parse import urlencode
-        body=urlencode({'csrf':session.data['csrf'],'job':identity,'confirmation':'wrong'}).encode()
-        with self.assertRaises(ConnectError):
-            operator.handle(request('/connect/admin/update/apply',body))
-        operator.updates.launch.assert_not_called()
-        body=urlencode({'csrf':session.data['csrf'],'job':identity,'confirmation':'UPDATE'}).encode()
-        self.assertEqual(operator.handle(request('/connect/admin/update/apply',body)),303)
-        operator.updates.launch.assert_called_once_with(identity)
-        self.assertEqual(operator.authenticate.call_count,5)
+    def test_removed_web_update_routes_return_not_found(self):
+        service=Service(self.root,{})
+        service.web=SimpleNamespace(client_key=lambda _: 'local',throttle=lambda _:None,sessions=SimpleNamespace(get=lambda _:None))
+        service.operator.authenticate=Mock(return_value={'sub':'owner','email':'owner@example.com'})
+        for path in ('upload','apply','cancel','status'):
+            request=SimpleNamespace(command='POST',path='/connect/admin/update/'+path,headers={})
+            with self.assertRaises(ConnectError) as error:service.operator.handle(request)
+            self.assertEqual(error.exception.status,404)
+        self.assertFalse((self.root/'admin-updates').exists())
 
 
 class GuildLifecycleTests(unittest.TestCase):

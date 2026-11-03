@@ -5,6 +5,13 @@
     const motion = matchMedia('(prefers-reduced-motion: reduce)');
     let index = 0, paused = motion.matches, timer, ciTimer, ciElapsed = 0, ciLast = null;
     const ci = preview.querySelector('.preview-ci');
+    function renderState() {
+      preview.querySelectorAll('.preview-case').forEach(pane => {
+        const active = pane.classList.contains('preview-' + order[index]);
+        pane.classList.toggle('is-state-updated', motion.matches || (active && ciElapsed >= 4800));
+        pane.classList.toggle('is-state-answered', !motion.matches && active && ciElapsed >= 3800 && ciElapsed < 4800);
+      });
+    }
     preview.classList.add('has-ci-clock');
     function renderCi() {
       ci.querySelectorAll('.preview-check-step').forEach((step, n) => {
@@ -14,13 +21,13 @@
     }
     function ciClock() {
       clearTimeout(ciTimer);
-      if (order[index] !== 'ci' || paused || document.hidden || motion.matches) {
-        ciLast = null; renderCi(); return;
+      if (paused || document.hidden || motion.matches) {
+        ciLast = null; renderCi(); renderState(); return;
       }
       const now = performance.now();
       if (ciLast !== null) ciElapsed += now - ciLast;
       ciLast = now;
-      renderCi();
+      renderCi(); renderState();
       if (ciElapsed < 5000) ciTimer = setTimeout(ciClock, 100);
     }
     function schedule() {
