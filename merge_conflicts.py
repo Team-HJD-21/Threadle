@@ -19,7 +19,11 @@ class ConflictMonitor:
             db.executescript('''
             CREATE TABLE IF NOT EXISTS conflict_scans(id TEXT PRIMARY KEY,due REAL NOT NULL,generation INTEGER NOT NULL DEFAULT 0,last REAL NOT NULL DEFAULT 0,retries INTEGER NOT NULL DEFAULT 0);
             CREATE TABLE IF NOT EXISTS conflict_signals(id TEXT NOT NULL,delivery TEXT NOT NULL,received REAL NOT NULL,PRIMARY KEY(id,delivery));
+            CREATE TABLE IF NOT EXISTS conflict_policy(id TEXT PRIMARY KEY);
             ''')
+            db.execute('BEGIN IMMEDIATE')
+            if db.execute("INSERT OR IGNORE INTO conflict_policy VALUES('events-v1')").rowcount:
+                db.execute('UPDATE conflict_scans SET due=1e30 WHERE retries=0 AND NOT EXISTS(SELECT 1 FROM conflict_signals s WHERE s.id=conflict_scans.id AND s.received>conflict_scans.last)')
 
     def signal(self,binding,delivery,event,payload):
         entries=[(r['event'],r['payload']) for r in payload.get('_events',[])] if event=='threadle_bundle' else [(event,payload)]
@@ -135,13 +139,15 @@ class ConflictMonitor:
             with queue.connect() as db:db.execute('UPDATE merge_conflicts SET sent=1 WHERE number=? AND episode=?',(number,episode))
 
     def tick(self):
+        now=self.clock()
+        with self.service.registry.db() as db:
+            pending=db.execute('SELECT id,generation,retries FROM conflict_scans WHERE due<=? ORDER BY due',(now,)).fetchall()
+        if not pending:return
         groups={}
         for binding in self.service.registry.active():
             if binding.config.get('alert_channel'):groups.setdefault(key(binding),[]).append(binding)
-        now=self.clock()
         with self.service.registry.db() as db:
-            db.executemany('INSERT OR IGNORE INTO conflict_scans(id,due) VALUES(?,?)',[(identity,now) for identity in groups])
-            due=[row for row in db.execute('SELECT id,generation,retries FROM conflict_scans WHERE due<=? ORDER BY due',(now,)) if row[0] in groups][:3]
+            due=[row for row in pending if row[0] in groups][:3]
             db.execute('DELETE FROM conflict_signals WHERE received<?',(now-7*86400,))
         for identity,generation,retries in due:
             try:
@@ -152,13 +158,13 @@ class ConflictMonitor:
                     except Exception as error:
                         failed=True;log_exception(LOG,'Conflict alert will retry binding=%s error=%s',binding.id,type(error).__name__,level=logging.WARNING)
                 unknown=any(row['mergeable']=='UNKNOWN' for row in rows)
-                delay=30 if failed or unknown and retries<5 else 300
+                delay=min(900,30*2**min(retries,5)) if failed else 30 if unknown and retries<5 else None
                 attempts=retries+1 if failed or unknown else 0
             except Exception as error:
                 attempts=retries+1;delay=min(900,30*2**min(retries,5))
                 log_exception(LOG,'Conflict scan will retry scope=%s error=%s',identity,type(error).__name__,level=logging.WARNING)
             with self.service.registry.db() as db:
-                db.execute('UPDATE conflict_scans SET due=?,last=?,retries=? WHERE id=? AND generation=?',(self.clock()+delay,self.clock(),attempts,identity,generation))
+                db.execute('UPDATE conflict_scans SET due=?,last=?,retries=? WHERE id=? AND generation=?',(self.clock()+delay if delay is not None else 1e30,self.clock(),attempts,identity,generation))
                 db.execute('UPDATE conflict_scans SET last=?,due=max(due,?) WHERE id=? AND generation<>?',(self.clock(),self.clock()+10,identity,generation))
 
     def run(self,stop):
