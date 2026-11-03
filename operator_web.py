@@ -154,6 +154,14 @@ class OperatorWeb:
                     body += '<p>대기 이벤트 <b>' + str(pending) + '</b> · 재시도 중 <b>' + str(retries) + '</b> · 예약/묶음 알림 <b>' + str(notices) + '</b></p>'
                 except sqlite3.Error:
                     body += '<p class="error">대기열 상태를 읽지 못했습니다.</p>'
+                from delivery_metrics import summary
+                from web_locale import LANGUAGE
+                state=self.service.root if row['legacy_state'] else self.service.root/'connections'/row['id']
+                metrics=summary((state/'queue.sqlite3').resolve())
+                if metrics:
+                    text=(f"First Discord write: median {metrics['p50']:.2f}s · P95 {metrics['p95']:.2f}s · {metrics['count']} events; queue {metrics['queue_p50']:.2f}s / processing {metrics['processing_p50']:.2f}s" if LANGUAGE.get()=='en' else f"첫 전송·갱신: 중앙값 {metrics['p50']:.2f}초 · P95 {metrics['p95']:.2f}초 · {metrics['count']}건; 대기 {metrics['queue_p50']:.2f}초 / 처리 {metrics['processing_p50']:.2f}초")
+                    body+='<p class="muted">'+esc(text)+'</p>'
+                else:body+='<p class="muted">'+('Waiting for delivery timing samples' if LANGUAGE.get()=='en' else '전송 지연 측정 대기')+'</p>'
                 body += '<p>서버: <b>' + esc(row.get('guild_name') or '이름 확인 대기') + '</b> · GitHub: <b>' + esc(('@' + row['github_login']) if row.get('github_login') else ('ID ' + row['github_user']) if row.get('github_user') else '확인할 수 없음') + '</b></p>'
                 body += '<p class="muted">연결 ID <code>' + esc(row['id']) + '</code></p>'
                 if row['enabled']:

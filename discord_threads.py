@@ -48,7 +48,11 @@ class Api:
                 with urlopen(request, timeout=30) as response:
                     raw = response.read()
                     self.last_link = response.headers.get("Link", "")
-                    return json.loads(raw) if raw else None
+                    result=json.loads(raw) if raw else None
+                    if self.service=='Discord':
+                        from delivery_metrics import discord_write
+                        discord_write(method,path)
+                    return result
             except HTTPError as error:
                 try:
                     detail = json.loads(error.read())

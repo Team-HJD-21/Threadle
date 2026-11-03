@@ -167,3 +167,11 @@ class OperatorTests(WebFixture):
         for domain in ('http://localhost', 'example.com/path', 'example.com', 'example.cloudflareaccess.com.evil.test'):
             with self.assertRaises(ValueError):
                 AccessIdentity({'team_domain': domain, 'audience': 'a' * 64})
+
+    def test_delivery_metrics_display_is_readonly_and_bilingual(self):
+        self.enable();binding=self.service.registry.get(self.identity);queue=self.service.queue(binding)
+        queue.put('measured','issue_comment',{},received=100)
+        with queue.connect() as db:db.execute('UPDATE delivery_latency SET started=100.25,first_discord=101.25,completed=102')
+        result=self.request();self.assertEqual(result[0],200);self.assertIn('1.25초',result[2]);self.assertIn('P95',result[2])
+        result=self.request(path='/connect/admin?lang=en');self.assertIn('First Discord write: median 1.25s',result[2])
+        with queue.connect() as db:self.assertEqual(db.execute('SELECT done FROM jobs').fetchone()[0],0)
