@@ -8,7 +8,7 @@ from notification_text import split_description,units
 from team_notifications import TeamNotifications
 from test_team_features import binding,MessageApi
 import test_message_edits as edits
-from changelog import RELEASES,content
+from changelog import RELEASES,ADMIN_RELEASES,content
 
 class FullTextTests(unittest.TestCase):
     def test_every_description_kind_keeps_the_complete_text(self):
@@ -56,10 +56,10 @@ class FullTextTests(unittest.TestCase):
             self.assertIn('일일',api.messages[0][1]['embeds'][0]['title'])
             for _,m in api.messages:self.assertLess(sum(units(e.get('description',''))+units(e.get('title',''))+units(e.get('footer',{}).get('text','')) for e in m['embeds']),6000)
     def test_every_release_has_short_localized_highlights(self):
-        versions=[row[0] for row in RELEASES]
+        versions=[row[0] for row in RELEASES+ADMIN_RELEASES]
         for n in range(1,9):self.assertIn('v1.0.0-beta.'+str(n),versions)
-        self.assertEqual(versions.count('Beta'),2)
-        for _,ko,en,items in RELEASES:
+        self.assertEqual([r[0] for r in RELEASES].count('Beta'),2)
+        for _,ko,en,items in RELEASES+ADMIN_RELEASES:
             self.assertTrue(ko and en);self.assertTrue(1<=len(items)<=3)
             for ko,en in items:self.assertLessEqual(len(ko),150);self.assertLessEqual(len(en),260)
         for lang in (0,1):

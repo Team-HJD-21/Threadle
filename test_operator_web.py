@@ -184,3 +184,37 @@ class OperatorTests(WebFixture):
         result=self.request();self.assertEqual(result[0],200);self.assertIn('1.25초',result[2]);self.assertIn('P95',result[2])
         result=self.request(path='/connect/admin?lang=en');self.assertIn('First Discord write: median 1.25s',result[2])
         with queue.connect() as db:self.assertEqual(db.execute('SELECT done FROM jobs').fetchone()[0],0)
+
+    def test_site_changelog_requires_admin_identity_and_separates_history(self):
+        self.assertEqual(self.request(path='/connect/admin/changelog',signed=False)[0],403)
+        self.enable()
+        status,headers,body=self.request(path='/connect/admin/changelog')
+        self.assertEqual(status,200)
+        self.assertIn('사이트·관리자 패치노트',body)
+        self.assertIn('v1.0.0-beta.16',body)
+        self.assertEqual(headers.get('X-Robots-Tag'),'noindex, nofollow')
+        from changelog import content
+        public=content(lambda ko,en:ko)
+        self.assertNotIn('v1.0.0-beta.16',public)
+        self.assertNotIn('모바일 CI 예시',public)
+        self.assertIn('v1.0.0-beta.15',public)
+
+    def test_server_plan_and_effective_settings_without_manual_update_ui(self):
+        self.enable()
+        binding=self.service.registry.get(self.identity)
+        settings=dict(binding.config,language='en',team_notifications={'digest':'weekly','digest_hour':17,'quiet':True,'quiet_start':23,'quiet_end':7},secret='NEVER_RENDER')
+        self.service.registry.configure(self.identity,settings,'operator','test')
+        with self.service.registry.db() as db:
+            db.execute("INSERT INTO guild_subscriptions VALUES(?, 'pro','active',NULL,?)",('1000',time.time()))
+        status,_,body=self.request()
+        self.assertEqual(status,200)
+        for text in ('Pro','English (EN)','17:00','23:00–07:00','/settings'):self.assertIn(text,body)
+        for text in ('NEVER_RENDER','update-package','/update/upload','service-update'):self.assertNotIn(text,body)
+        from guild_plans import subscription,allows
+        self.assertEqual(subscription(self.service.registry,'1000')['plan'],'pro')
+        self.assertEqual(subscription(self.service.registry,'2000')['plan'],'free')
+        self.assertTrue(allows(self.service.registry,'1000','notifications'))
+        with self.assertRaises(ValueError):allows(self.service.registry,'1000','unregistered')
+        with self.service.registry.db() as db:db.execute("UPDATE guild_subscriptions SET expires_at=1")
+        self.assertEqual(subscription(self.service.registry,'1000')['plan'],'free')
+        self.assertEqual(subscription(self.service.registry,'1000')['status'],'expired')

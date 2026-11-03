@@ -1,3 +1,17 @@
+from html import escape
+from discord_threads import Topic
+from root_status import decorate
+
+
+def starter_states(kind,number,title):
+    topic=Topic('TeamHJD/threadle',kind,int(number),title,'',{})
+    final={'pr':{'merged':True},'issue':{'state':'closed'},'discussion':{'closed':True}}[kind]
+    initial=decorate(topic,{}, {'title':title})
+    changed=decorate(topic,{}, {'title':title,**final})
+    middle=('<strong class="preview-state-middle">'+escape(decorate(topic,{}, {'title':title,'isAnswered':True})['title'])+'</strong>') if kind=='discussion' else ''
+    return middle+'<strong class="preview-state-before">'+escape(initial['title'])+'</strong><strong class="preview-state-after">'+escape(changed['title'])+'</strong>'
+
+
 ICONS = {
     'hash': '<path d="m9 3-2 18M17 3l-2 18M4 9h17M3 15h17" stroke-width="2.6"/>',
     'chevron': '<path d="m6 9 6 6 6-6"/>',
@@ -45,8 +59,8 @@ def ci_panes(t, avatar):
     title = 'Threadle CI and deployment'
     badge = '<b>Threadle <em>' + icon('check') + ' APP</em></b>'
     out = '<div class="preview-main"><header>' + icon('hash') + '<span class="preview-header-name">github-ci-cd</span>' + tools('bell','pin','members','search') + '</header><div class="preview-feed"><div class="preview-welcome"><div class="preview-hash">' + icon('hash') + '</div><h2>' + t('실행부터 완료까지.', 'From run to result.') + '</h2><p>' + t('워크플로의 진행과 검사 결과를 한눈에.', 'Follow the workflow and its checks at a glance.') + '</p></div><div class="preview-date">' + t('오늘', 'Today') + '</div>'
-    out += '<div class="preview-post preview-arrival">' + avatar + '<div>' + badge + '<article><b>Run #128</b><strong>' + title + '</strong><span class="preview-ci-running">' + t('실행 중', 'In progress') + '</span><span class="preview-ci-success">' + icon('check') + ' ' + t('성공', 'Successful') + '</span><dl class="preview-ci-metadata">'
-    for ko,en,value in [('저장소','Repository','TeamHJD/threadle'),('브랜치','Branch','main'),('실행 유형','Trigger','push'),('실행자','Triggered by','Jae')]:
+    out += '<div class="preview-post preview-arrival">' + avatar + '<div>' + badge + '<article><b>Run #128</b><strong>' + title + '</strong><span class="preview-ci-running">' + '🔄 Running' + '</span><span class="preview-ci-success">' + '✅ Succeeded' + '</span><dl class="preview-ci-metadata">'
+    for ko,en,value in [('Repository','Repository','TeamHJD/threadle'),('Branch','Branch','main'),('Trigger','Trigger','push'),('Attempt','Attempt','1')]:
         out += '<div><dt>' + t(ko,en) + '</dt><dd>' + value + '</dd></div>'
     out += '</dl><p class="preview-link">' + t('GitHub 실행 결과', 'View run on GitHub') + '</p></article></div></div></div>' + '</div>'
     out += '<div class="preview-detail"><header>' + icon('check') + '<span class="preview-header-name">Run #128</span>' + tools('more','close') + '</header><div class="preview-detail-scroll"><p class="preview-started">GITHUB ACTIONS</p><h2>' + title + '</h2><p><code>main</code> · <code>a1b2c3d</code></p><div class="preview-checks">'
@@ -64,7 +78,7 @@ def alert_panes(t, avatar):
     discussion = t('다음 업데이트 아이디어', 'Ideas for the next update')
     def titles(items):
         return '<ul class="preview-summary-titles">' + ''.join('<li>' + text + '</li>' for text in items) + '</ul>'
-    out = '<div class="preview-main"><header>' + icon('hash') + '<span class="preview-header-name">github-alert</span>' + tools('bell','pin','members','search') + '</header><div class="preview-feed preview-summary-feed"><div class="preview-date">09:00</div><div class="preview-post preview-arrival">' + avatar + '<div>' + badge + '<p>' + t('오늘 확인할 개발 소식을 모아왔어요.', 'Here’s your team roundup.') + '</p><article><strong>' + t('일일 PR · Issue 현황', 'Daily PR & issue digest') + '</strong><p>TeamHJD/threadle</p><p>' + t('열린 PR 2개 · 리뷰 요청 대기 1개 · 초안 0개', '2 open PRs · 1 awaiting review · 0 drafts') + '</p>' + titles(prs) + '</article><article><strong>' + t('가장 오래된 미해결 Issue', 'Oldest open issues') + '</strong>' + titles(issues[:5]) + '<small>7 remaining issues…</small></article></div></div></div></div>'
+    out = '<div class="preview-main"><header>' + icon('hash') + '<span class="preview-header-name">github-alert</span>' + tools('bell','pin','members','search') + '</header><div class="preview-feed preview-summary-feed"><div class="preview-date">09:00</div><div class="preview-post preview-arrival">' + avatar + '<div>' + badge + '<p>' + t('🧵 오늘 확인할 개발 소식을 모아왔어요.', '🧵 Here’s your team roundup.') + '</p><article><strong>' + t('일일 PR · Issue 현황', 'Daily PR & issue digest') + '</strong><p>TeamHJD/threadle</p><p>' + t('현재 열린 PR 2개 · 리뷰 요청 대기 1개 · 초안 0개', '2 open PRs · 1 awaiting review · 0 drafts') + '</p>' + titles(prs) + '</article><article><strong>' + t('가장 오래된 미해결 Issue', 'Oldest open issues') + '</strong>' + titles(issues[:5]) + '<small>7 remaining issues…</small></article></div></div></div></div>'
     out += '<div class="preview-detail"><header>' + icon('hash') + '<span class="preview-header-name">github-alert</span>' + tools('more') + '</header><div class="preview-detail-scroll"><h2>' + t('필요할 때 바로 요약.', 'A roundup on demand.') + '</h2><p class="preview-started">' + t('명령어를 사용한 채널에서 저장소별로 확인해요.', 'Get a roundup per repository, right in this channel.') + '</p><div class="preview-post preview-message message-1">' + avatar + '<div><b>Jae</b><p><code>/summary</code></p></div></div><div class="preview-post preview-message message-2">' + avatar + '<div>' + badge + '<article class="preview-command-summary"><strong>TeamHJD/threadle</strong><b>' + t('PR · 2개 열림', 'PR · 2 open') + '</b>' + titles(prs) + '<b>' + t('Issue · 7개 열림', 'Issue · 7 open') + '</b>' + titles(issues) + '<small>' + t('미해결 Issue는 가장 오래된 순서로 최대 10개 표시', 'Up to 10 open issues, oldest first') + '</small><b>' + t('Discussion · 1개 열림', 'Discussion · 1 open') + '</b>' + titles([discussion]) + '</article></div></div></div>' + compose(t,'github-alert') + '</div></div>'
     return out
 
@@ -103,14 +117,14 @@ def demonstration(t):
         if key == 'alert':
             out += alert_panes(t, avatar)
             continue
-        out += '<div class="preview-main"><header>' + icon('hash') + '<span class="preview-header-name">' + channel + '</span>' + tools('thread','bell','pin','members','search') + '</header><div class="preview-feed"><div class="preview-welcome"><div class="preview-hash">' + icon('hash') + '</div><h2>' + t('환영합니다!', 'Welcome to #') + ' ' + channel + '!</h2><p>' + t('이 채널의 시작이에요.', 'This is the start of this channel.') + '</p></div><div class="preview-date">' + t('오늘', 'Today') + '</div><div class="preview-post preview-arrival">' + avatar + '<div><b>Threadle <em>' + icon('check') + ' APP</em></b><article><strong>' + topic + ' · ' + title + '</strong><p>' + detail.replace('`', '') + '</p></article><div class="preview-thread-card"><b>[' + topic + '] ' + title + '</b><span>' + t('메시지 2개', '2 messages') + ' ' + icon('right') + '</span></div></div></div></div>' + compose(t, channel) + '</div>'
+        out += '<div class="preview-main"><header>' + icon('hash') + '<span class="preview-header-name">' + channel + '</span>' + tools('thread','bell','pin','members','search') + '</header><div class="preview-feed"><div class="preview-welcome"><div class="preview-hash">' + icon('hash') + '</div><h2>' + t('환영합니다!', 'Welcome to #') + ' ' + channel + '!</h2><p>' + t('이 채널의 시작이에요.', 'This is the start of this channel.') + '</p></div><div class="preview-date">' + t('오늘', 'Today') + '</div><div class="preview-post preview-arrival">' + avatar + '<div><b>Threadle <em>' + icon('check') + ' APP</em></b><article class="preview-state-card">' + starter_states(key,number,title) + '<p>' + detail.replace('`', '') + '</p></article><div class="preview-thread-card"><b>[' + topic + '] ' + title + '</b><span>' + t('메시지 2개', '2 messages') + ' ' + icon('right') + '</span></div></div></div></div>' + compose(t, channel) + '</div>'
         out += '<div class="preview-detail"><header>' + icon('thread') + '<span class="preview-header-name">[' + topic + '] ' + title + '</span>' + tools('muted','more','close') + '</header><div class="preview-detail-scroll"><h2>' + title + '</h2><p class="preview-started">' + t('Threadle이 시작함', 'Started by Threadle') + '</p><div class="preview-date">' + t('오늘', 'Today') + '</div>'
         for i, (author, heading, text) in enumerate([
             ('Threadle', topic + ' · ' + title, detail.replace('`', '')),
-            ('Jae', topic + ' · ' + t('등록', 'Opened'), description),
-            ('Min', topic + ' · ' + t('새 댓글', 'New comment'), reply),
+            ('Jae', topic + ' · ' + title, description),
+            ('Min', topic + ' · ' + 'New comment', reply),
         ]):
-            out += '<div class="preview-post preview-message message-' + str(i) + '">' + avatar + '<div><b>Threadle <em>' + icon('check') + ' APP</em></b><article><b>' + author + '</b><strong>' + heading + '</strong><p>' + text + '</p></article></div></div>'
+            out += '<div class="preview-post preview-message message-' + str(i) + '">' + avatar + '<div><b>Threadle <em>' + icon('check') + ' APP</em></b><article' + (' class="preview-state-card"' if i==0 else '') + '><b>' + author + '</b>' + (starter_states(key,number,title) if i==0 else '<strong>'+heading+'</strong>') + '<p>' + text + '</p></article></div></div>'
         out += '</div>' + compose(t) + '</div></div>'
     out += '</div><p class="preview-disclaimer">' + t('작동 예시입니다. 실제 GitHub 소식은 연결한 저장소에서 전달됩니다.', 'Illustrative preview. Live updates come from your connected repositories.') + '</p></section>'
     return out

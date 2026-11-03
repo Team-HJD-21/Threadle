@@ -87,6 +87,8 @@ class Retention:
             for (guild,) in db.execute('SELECT guild FROM guild_profiles').fetchall():
                 if guild not in keep_guilds:
                     db.execute('DELETE FROM guild_profiles WHERE guild=?',(guild,))
+            for (guild,) in db.execute('SELECT guild FROM guild_subscriptions').fetchall():
+                if guild not in keep_guilds:db.execute('DELETE FROM guild_subscriptions WHERE guild=?',(guild,))
             db.execute("DELETE FROM github_profiles WHERE user NOT IN (SELECT github_user FROM connection_audit WHERE github_user<>'')")
             for (installation,) in db.execute('SELECT id FROM installations').fetchall():
                 if installation in expired_installations and installation not in keep_installations:

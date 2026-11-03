@@ -6,8 +6,6 @@ import shutil
 import sqlite3
 import time
 import threading
-from email.parser import BytesParser
-from email import policy
 from contextlib import closing
 from http.cookies import SimpleCookie
 from urllib.parse import parse_qs, urlsplit
@@ -47,8 +45,6 @@ class AccessIdentity:
 class OperatorWeb:
     def __init__(self, service):
         self.service = service
-        from admin_updates import Updates
-        self.updates = Updates(service.root)
         self.identity = None
         self.settings = {}
         path = service.root / 'admin-access.json'
@@ -163,6 +159,11 @@ class OperatorWeb:
                     body+='<p class="muted">'+esc(text)+'</p>'
                 else:body+='<p class="muted">'+('Waiting for delivery timing samples' if LANGUAGE.get()=='en' else '전송 지연 측정 대기')+'</p>'
                 body += '<p>서버: <b>' + esc(row.get('guild_name') or '이름 확인 대기') + '</b> · GitHub: <b>' + esc(('@' + row['github_login']) if row.get('github_login') else ('ID ' + row['github_user']) if row.get('github_user') else '확인할 수 없음') + '</b></p>'
+                from guild_plans import subscription
+                plan=subscription(self.service.registry,row['guild'])
+                body += '<p class="admin-plan">'+('Server plan' if LANGUAGE.get()=='en' else '서버 요금제')+': <b>'+esc(plan['plan'].title())+'</b> · '+esc(({'none':'구독 없음 · 베타 무료 이용','active':'구독 중','trialing':'체험 중','past_due':'결제 확인 필요','canceled':'구독 종료','expired':'기간 만료'} if LANGUAGE.get()!='en' else {'none':'No subscription · free beta access','active':'Active','trialing':'Trial','past_due':'Past due','canceled':'Canceled','expired':'Expired'}).get(plan['status'],plan['status']))+'</p>'
+                from operator_settings import details
+                body += details(json.loads(row['config']))
                 body += '<p class="muted">연결 ID <code>' + esc(row['id']) + '</code></p>'
                 if row['enabled']:
                     body += '<div class="admin-actions">'
@@ -181,85 +182,22 @@ class OperatorWeb:
             stamp=time.strftime('%Y-%m-%d %H:%M:%S UTC',time.gmtime(snapshot['created']))
             text=(f"Last DB backup / restore check: {stamp} · {snapshot['files']} databases" if LANGUAGE.get()=='en' else f"마지막 DB 백업·복원 검증: {stamp} · DB {snapshot['files']}개")
             body+='<p class="muted">'+esc(text)+'</p>'
-        body += self.update_panel(session)
+        body += '<p><a href="/connect/admin/changelog">'+('Website & administration changelog' if LANGUAGE.get()=='en' else '사이트·관리자 패치노트')+'</a></p>'
+        body += self.command_status()
         body += '<details class="card"><summary>최근 관리자 작업</summary><ul class="admin-audit">'
         for happened, actor, action, binding in self.audit():
             body += '<li>' + esc(happened) + ' UTC · ' + esc(actor) + ' · ' + esc(action) + ' · <code>' + esc(binding) + '</code></li>'
         return body + '</ul></details>'
 
-    def update_panel(self, session):
-        from connect_web import esc, form
-        job = self.updates.latest()
-        body = '<section id="service-update" class="card"><h2>Threadle 업데이트</h2><p>서명된 업데이트 ZIP을 올려 주세요. 인증 정보·연결·대기열을 보존하고, 적용 실패 시 이전 파일을 복구합니다. 적용 중 서비스가 잠깐 재시작됩니다.</p>'
+    def command_status(self):
+        from connect_web import esc
+        from web_locale import LANGUAGE
+        en=LANGUAGE.get()=='en'
         try:
-            sync = json.loads((self.service.root/'command-sync.json').read_text(encoding='utf-8'))
-            label = 'Discord 등록 확인됨' if sync.get('state') == 'registered' else 'Discord 명령어 등록 재시도 중'
-            body += '<p>명령어 동기화: <b>' + label + '</b></p>'
-        except (OSError,ValueError):
-            body += '<p class="muted">명령어 동기화 확인 대기</p>'
-        if job:
-            body += '<p data-update-status="' + esc(job['state']) + '">' + esc(job['state']) + ' · ' + esc(job['version']) + '</p><p data-update-detail>' + esc(job['detail']) + '</p>'
-            if job['state'] == 'staged':
-                hidden = '<input type="hidden" name="job" value="' + esc(job['id']) + '">'
-                body += form('/connect/admin/update/apply',session,hidden + '<label>적용하려면 UPDATE 입력<input name="confirmation" required pattern="UPDATE" autocomplete="off"></label><button>이 버전 적용</button>')
-                body += form('/connect/admin/update/cancel',session,hidden + '<button class="secondary">이 업데이트 취소</button>')
-        if not job or job['state'] not in ('staged','scheduled','applying','restarting'):
-            body += '<form method="post" action="/connect/admin/update/upload" enctype="multipart/form-data"><input type="hidden" name="csrf" value="' + esc(session.data['csrf']) + '"><label for="update-package">업데이트 ZIP</label><input id="update-package" type="file" name="package" accept=".zip,application/zip" required><button>업로드 및 검사</button></form>'
-        return body + '<p class="muted">업로드 후 버전을 확인하고 적용합니다. 재시작 중에는 이 화면에서 상태를 기다려 주세요.</p></section><script src="/connect/assets/admin-update.js"></script>'
-
-    def update_request(self, request, session, claims, path):
-        from admin_updates import MAX_UPLOAD
-        web = self.service.web
-        if request.command == 'GET' and path == '/connect/admin/update/status':
-            return web.send(request,200,json.dumps({'job': self.updates.latest()}),content_type='application/json; charset=utf-8')
-        if request.command != 'POST' or not session or request.headers.get('Origin') != web.settings.base or request.headers.get('Transfer-Encoding'):
-            raise ConnectError('요청을 확인할 수 없습니다.',403)
-        length = int(request.headers.get('Content-Length',0))
-        limit = MAX_UPLOAD + 65536 if path.endswith('/upload') else 4096
-        if not 0 < length <= limit:
-            raise ConnectError('업로드 크기를 확인해 주세요.',413)
-        raw = request.rfile.read(length)
-        if len(raw) != length:
-            raise ConnectError('업로드가 완료되지 않았습니다.',400)
-        try:
-            if path == '/connect/admin/update/upload':
-                content_type = request.headers.get('Content-Type','')
-                if not content_type.startswith('multipart/form-data;') or '\r' in content_type or '\n' in content_type:
-                    raise ValueError('Use the update ZIP upload form.')
-                message = BytesParser(policy=policy.default).parsebytes(('Content-Type: '+content_type+'\r\nMIME-Version: 1.0\r\n\r\n').encode()+raw)
-                if not message.is_multipart():
-                    raise ValueError('Invalid upload format.')
-                parts = list(message.iter_parts())
-                fields = {}
-                for part in parts:
-                    name = part.get_param('name',header='content-disposition')
-                    if part.get_content_disposition() != 'form-data' or name not in ('csrf','package') or name in fields or part.is_multipart():
-                        raise ValueError('Invalid or duplicate upload fields.')
-                    fields[name] = part.get_payload(decode=True)
-                if set(fields) != {'csrf','package'} or not hmac.compare_digest(session.data['csrf'].encode(),fields['csrf']):
-                    raise ConnectError('관리자 화면을 새로고침 후 다시 시도해 주세요.',403)
-                self.updates.stage(fields['package'],claims['email'])
-            else:
-                if not request.headers.get('Content-Type','').startswith('application/x-www-form-urlencoded'):
-                    raise ValueError('Invalid update request.')
-                fields = parse_qs(raw.decode(),max_num_fields=5,keep_blank_values=True)
-                if any(len(value)!=1 for value in fields.values()):
-                    raise ValueError('Duplicate update fields.')
-                fields = {key:value[0] for key,value in fields.items()}
-                if not hmac.compare_digest(session.data['csrf'],fields.get('csrf','')):
-                    raise ConnectError('관리자 화면을 새로고침 후 다시 시도해 주세요.',403)
-                latest = self.updates.latest()
-                if not latest or latest['id'] != fields.get('job') or latest['state'] != 'staged':
-                    raise ValueError('This update is no longer waiting for confirmation.')
-                if path == '/connect/admin/update/cancel':
-                    self.updates.cancel(latest['id'])
-                elif path == '/connect/admin/update/apply' and fields.get('confirmation') == 'UPDATE':
-                    self.updates.launch(latest['id'])
-                else:
-                    raise ValueError('Type UPDATE to confirm this release.')
-        except ValueError as error:
-            raise ConnectError(str(error),400) from None
-        return web.send(request,303,location='/connect/admin#service-update')
+            sync=json.loads((self.service.root/'command-sync.json').read_text('utf-8'))
+            text=('Discord registration verified' if en else 'Discord 등록 확인됨') if sync.get('state')=='registered' else ('Retrying Discord command registration' if en else 'Discord 명령어 등록 재시도 중')
+        except (OSError,ValueError):text='Waiting for command sync' if en else '명령어 동기화 확인 대기'
+        return '<p>'+esc(text)+'</p>'
 
     def handle(self, request):
         from connect_web import esc, form, page
@@ -273,11 +211,16 @@ class OperatorWeb:
             session = None
         path = urlsplit(request.path).path
         if path.startswith('/connect/admin/update/'):
-            return self.update_request(request,session,claims,path)
-        if request.command == 'GET' and path == '/connect/admin':
+            raise ConnectError('요청을 찾을 수 없습니다.',404)
+        if request.command == 'GET' and path in ('/connect/admin','/connect/admin/changelog'):
             session = session or web.sessions.create({'admin_subject': claims['sub']})
             query = parse_qs(urlsplit(request.path).query, max_num_fields=2).get('q', [''])[0][:100]
-            body = page('운영 관리자', self.dashboard(session, claims, query))
+            if path.endswith('/changelog'):
+                from changelog import content
+                from product_web import t
+                body=page('사이트·관리자 패치노트',content(t,admin=True),landing=True)
+            else:
+                body = page('운영 관리자', self.dashboard(session, claims, query))
             data = body.encode()
             request.send_response(200)
             for name, value in {'Content-Type': 'text/html; charset=utf-8', 'Content-Length': str(len(data)), 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'same-origin', 'Content-Security-Policy': "default-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self'; script-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'", 'Set-Cookie': COOKIE + '=' + session.key + '; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=1800'}.items():
