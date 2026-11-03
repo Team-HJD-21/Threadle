@@ -16,6 +16,9 @@ class Queue:
             db.execute('CREATE INDEX IF NOT EXISTS coalescing_topic ON coalescing_jobs(topic,received)')
             db.execute('CREATE TABLE IF NOT EXISTS delivery_groups(id TEXT PRIMARY KEY,leader TEXT NOT NULL,job_ids TEXT NOT NULL,payload TEXT)')
             db.execute('CREATE TABLE IF NOT EXISTS links (topic TEXT PRIMARY KEY, channel TEXT NOT NULL, thread TEXT NOT NULL)')
+            db.execute('CREATE TABLE IF NOT EXISTS deferred_threads(topic TEXT PRIMARY KEY,channel TEXT NOT NULL,message TEXT NOT NULL)')
+            db.execute('CREATE TABLE IF NOT EXISTS deferred_thread_jobs(delivery TEXT PRIMARY KEY,topic TEXT NOT NULL)')
+            db.execute('CREATE TABLE IF NOT EXISTS deferred_thread_pace(id INTEGER PRIMARY KEY,next REAL NOT NULL)')
 
     @contextmanager
     def connect(self):
@@ -44,7 +47,7 @@ class Queue:
     def next(self):
         with self.connect() as db:
             return db.execute('SELECT id,event,payload,attempts FROM jobs '
-                              'WHERE done=0 AND next<=? AND NOT EXISTS (SELECT 1 FROM coalescing_jobs c JOIN delivery_groups g ON g.id=c.group_id WHERE c.id=jobs.id AND g.leader<>jobs.id) ORDER BY rowid LIMIT 1', (time.time(),)).fetchone()
+                              'WHERE done=0 AND next<=? AND NOT EXISTS (SELECT 1 FROM deferred_thread_jobs d JOIN deferred_thread_pace p ON p.id=1 WHERE d.delivery=jobs.id AND p.next>?) AND NOT EXISTS (SELECT 1 FROM coalescing_jobs c JOIN delivery_groups g ON g.id=c.group_id WHERE c.id=jobs.id AND g.leader<>jobs.id) ORDER BY rowid LIMIT 1', (time.time(),time.time())).fetchone()
 
     def group(self, job, seconds=8):
         delivery,event,raw,attempts=job
@@ -159,6 +162,7 @@ class CachedThreads(Threads):
     def ensure(self, topic):
         with self.queue.connect() as db:
             saved = db.execute('SELECT channel FROM links WHERE topic=?', (topic.key,)).fetchone()
+            if not saved:saved=db.execute('SELECT channel FROM deferred_threads WHERE topic=?',(topic.key,)).fetchone()
         previous = self.channels
         self.channels = dict(previous, **{topic.kind: saved[0]}) if saved else previous
         try:

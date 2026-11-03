@@ -18,6 +18,7 @@ from runtime_logging import log_exception
 from registry import Registry
 from auth import InstallationTokens, RepositoryApi
 from delivery import Queue, CachedThreads
+from deferred_threads import DeferredThread
 from alert_feed import AlertFeed
 from discord_threads import Api, route, make_embed, current_closed, Topic, silent_review, topic_from
 from pr_routing import FileIndex, PrRouter
@@ -232,6 +233,24 @@ class Service:
                     routed.media_fetcher = getattr(github, "fetch_media", None)
                 routed.silent_notifications=lambda:bool(delivery_mode(queue,delivery,event,binding.config.get('team_notifications',{}),time.time()))
                 roots.threads=routed
+                from deferred_threads import defer
+                deferred=defer(routed,roots,topic,event,payload,delivery,binding.config.get('team_notifications',{}),time.time())
+                if deferred=='gone':continue
+                if deferred:
+                    if notices:
+                        location=roots.location(topic)
+                        notices.topic(topic,event,payload,'webhook:'+delivery,location[1],[binding.config['alert_channel']],dnd_until=dnd_until)
+                    return True
+                def before_start(channel,root):
+                    from team_notifications import allowed_time
+                    if event=='workflow_run' or allowed_time(time.time(),binding.config.get('team_notifications',{}))<=time.time():return False
+                    with queue.connect() as db:db.execute('INSERT OR REPLACE INTO root_index VALUES(?,?,?)',(topic.key,channel,root))
+                    held=defer(routed,roots,topic,event,payload,delivery,binding.config.get('team_notifications',{}),time.time())
+                    if held and held!='gone' and notices:
+                        until=delivery_mode(queue,delivery,event,binding.config.get('team_notifications',{}),time.time())
+                        notices.topic(topic,event,payload,'webhook:'+delivery,root,[binding.config['alert_channel']],dnd_until=until)
+                    return bool(held)
+                routed.before_thread_start=before_start
                 from message_edits import deliver_events
                 thread = deliver_events(routed,topic,event,payload,'webhook:'+delivery,
                                         lambda topic=topic: roots.closed(topic),binding.config.get('language','ko'))
@@ -250,7 +269,11 @@ class Service:
                 elif feed:
                     feed.topic(topic, event, payload, 'webhook:' + delivery, thread)
             queue.finish_group(group_ids)
+            from deferred_threads import finish
+            finish(queue,delivery)
             LOG.info('Delivered binding=%s event=%s delivery=%s', binding.id, event, delivery)
+        except DeferredThread:
+            LOG.info('Thread deferred until DND ends binding=%s delivery=%s',binding.id,delivery)
         except Exception as error:
             log_exception(LOG,'Retry binding=%s event=%s error=%s', binding.id, event, type(error).__name__)
             queue.retry(delivery, attempts)
@@ -262,6 +285,8 @@ class Service:
                 api = self.discord()
                 threads = CachedThreads(api, binding.config['guild_id'], binding.config['channels'], self.queue(binding), binding.config.get('language', 'ko'))
                 threads.check()
+                from deferred_threads import wake
+                wake(self.queue(binding))
                 feed = AlertFeed(api, binding.config, self.queue(binding)) if binding.config.get('alert_channel') else None
                 if feed:
                     feed.check()

@@ -153,6 +153,7 @@ class TopicRoots:
                         for table in ('source_pages','source_revisions','message_sources'):db.execute('DELETE FROM '+table+' WHERE source=?',(source,))
                 db.execute('DELETE FROM links WHERE topic=?',(topic.key,))
                 db.execute('DELETE FROM root_index WHERE topic=?',(topic.key,))
+                db.execute('DELETE FROM deferred_threads WHERE topic=?',(topic.key,))
                 # Do not send queued heads-ups or DND links for a thread that was deleted.
                 for table in ('notice_events','dnd_activity'):
                     if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",(table,)).fetchone():db.execute('DELETE FROM '+table+' WHERE topic=?',(topic.key,))
