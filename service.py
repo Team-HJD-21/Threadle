@@ -25,7 +25,7 @@ from pr_routing import FileIndex, PrRouter
 from team_notifications import TeamNotifications
 
 EVENTS = {'issues', 'issue_comment', 'pull_request', 'pull_request_review',
-          'pull_request_review_comment', 'discussion', 'discussion_comment', 'workflow_run'}
+          'pull_request_review_comment', 'discussion', 'discussion_comment', 'workflow_run', 'push'}
 LOG = logging.getLogger('service')
 
 
@@ -85,6 +85,8 @@ class Service:
             sys.path.insert(0,str(media))
         self.env = os.environ if env is None else env
         self.registry = Registry(self.root / 'connections.sqlite3')
+        from merge_conflicts import ConflictMonitor
+        self.conflicts=ConflictMonitor(self)
         self.api_factory = api_factory
         self.tokens = token_provider
         if self.tokens is None and self.env.get('GITHUB_APP_ID'):
@@ -149,6 +151,7 @@ class Service:
                 if binding:
                     try:
                         self.queue(binding).put(delivery, event, payload)
+                        self.conflicts.signal(binding,delivery,event,payload)
                     except sqlite3.OperationalError:
                         complete = False
                         log_exception(LOG,'Fan-out will retry binding=%s delivery=%s', binding.id, delivery, level=logging.WARNING)
@@ -251,10 +254,12 @@ class Service:
                         notices.topic(topic,event,payload,'webhook:'+delivery,root,[binding.config['alert_channel']],dnd_until=until)
                     return bool(held)
                 routed.before_thread_start=before_start
+                with queue.connect() as db:had_thread=db.execute('SELECT 1 FROM links WHERE topic=?',(topic.key,)).fetchone()
                 from message_edits import deliver_events
                 thread = deliver_events(routed,topic,event,payload,'webhook:'+delivery,
                                         lambda topic=topic: roots.closed(topic),binding.config.get('language','ko'))
                 if thread is None:continue
+                if topic.kind=='pr' and not had_thread:self.conflicts.signal(binding,delivery+':thread-ready','pull_request',{'action':'opened'})
                 if notices:
                     if event == 'threadle_bundle':
                         for index,item in enumerate(payload['_events']):
@@ -333,6 +338,7 @@ class Service:
         from presence import Presence
         presence_worker = Presence(self).start(stop)
         self.guilds.start(stop)
+        self.conflicts.start(stop)
         from channel_topics import ChannelTopics
         ChannelTopics(self).start(stop)
         from ci_channel_migration import CiChannelMigration

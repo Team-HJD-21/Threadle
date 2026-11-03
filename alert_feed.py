@@ -74,7 +74,7 @@ class AlertFeed:
                 raise RuntimeError('Alert history cursor did not advance')
             before = cursor
 
-    def send(self, key, event_key, content, title, description, url, color, extra_embeds=None):
+    def send(self, key, event_key, content, title, description, url, color, extra_embeds=None, silent=False):
         if self.config.get('alert_scope'):
             key += ':channel:' + self.config['alert_scope']
         receipt = 'github-alert:' + nonce(key + ':' + event_key)
@@ -91,7 +91,7 @@ class AlertFeed:
                     self.remember(receipt, message['id'])
                     return
         message = self.api.call('POST', '/channels/' + self.channel + '/messages', {
-            'content': clip(content, 500), 'allowed_mentions': {'parse': []},
+            'content': clip(content, 500), 'allowed_mentions': {'parse': []}, **({'flags':4096} if silent else {}),
             'nonce': nonce(self.channel+':'+receipt), 'enforce_nonce': True,
             'embeds': [{'title': clip(title, 230), 'description': description, 'url': url,
                         'color': color, 'footer': {'text': receipt}}] + (extra_embeds or [])})
