@@ -43,3 +43,7 @@ The tool verifies the passphrase and the restored registry before writing a new 
 Normal CD handles errors automatically. After machine/process loss during conversion, keep the receiver stopped and run the matching release's `state_encryption.py rollback --root <runtime> --job <original CD job> --offline` before restoring old application files. The job is recorded in `state-conversion-active.json`. Do not delete the guard, journal, key or protected conversion directory to bypass an error. A completed deployment's originals have been removed; normal data restore remains a separate operator decision.
 
 Reference: [SQLCipher design](https://www.zetetic.net/sqlcipher/design/) and [export/migration API](https://www.zetetic.net/sqlcipher/sqlcipher-api/).
+
+## Finalization during online startup
+
+The receiver may open encrypted state while CD finalizes a completed conversion. A conversion guard removed during that read is treated as absent; a present offline, malformed, unreadable or linked guard still blocks access. Key and database validation are unchanged. Production health stays unavailable until the coordinator completes its first dispatch, and readiness is withdrawn on coordinator failure. CD checks sustained readiness again after finalization before reporting success.

@@ -84,7 +84,7 @@ def checks():
         ast.parse(path.read_bytes(), filename=path.name)
     if sys.platform == 'win32':
         with tempfile.TemporaryDirectory(prefix='recovery-settings-', dir=ROOT) as folder:
-            for name in ('test_recovery_settings.ps1', 'test_receiver_process.ps1'):
+            for name in ('test_recovery_settings.ps1', 'test_receiver_process.ps1', 'test_receiver_health.ps1'):
                 subprocess.run(['powershell.exe', '-NoProfile', '-NonInteractive',
                                 '-ExecutionPolicy', 'Bypass', '-File', str(ROOT/'deploy'/name),
                                 '-TemporaryRoot', folder], check=True)
