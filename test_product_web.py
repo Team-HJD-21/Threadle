@@ -23,6 +23,20 @@ class Structure(HTMLParser):
 
 
 class ProductPageTests(WebFixture):
+    def test_feature_examples_have_one_default_panel_and_clear_security_scope(self):
+        for lang in ('ko','en'):
+            body=self.browser.request('GET','/connect/features?lang='+lang)[2]
+            markup=Structure(body)
+            self.assertEqual(len(markup.ids),len(set(markup.ids)))
+            self.assertEqual(body.count('role="tab"'),4)
+            self.assertEqual(body.count('role="tabpanel"'),4)
+            self.assertIn('aria-controls="feature-panel-thread" aria-selected="true"',body)
+            self.assertIn('data-feature-preview',body)
+            self.assertIn('frontend-pr',body)
+            self.assertIn('/summary',body)
+            self.assertIn('종단간 암호화' if lang=='ko' else 'not end-to-end encryption',body)
+            self.assertNotIn('new threads are created after Do Not Disturb',body)
+
     def test_public_page_has_working_sections_and_existing_oauth_entry(self):
         status, headers, body = self.browser.request('GET', '/connect')
         self.assertEqual(status, 200)
@@ -65,7 +79,7 @@ class ProductPageTests(WebFixture):
             self.assertEqual(body.count('class="site-footer"'), 1)
         pricing = self.browser.request('GET', '/connect/pricing?lang=en')[2]
         self.assertIn('1 repository per Discord server', pricing)
-        self.assertIn('5 repositories per Discord server', pricing)
+        self.assertIn('10 repositories per Discord server', pricing)
         self.assertIn('planned launch offering', pricing)
         self.assertIn('button disabled', pricing)
         self.assertNotIn('lemonsqueezy.com/checkout', pricing)
