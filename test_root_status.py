@@ -1,8 +1,9 @@
 import copy
+import json
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock,patch
 from delivery import Queue,CachedThreads
 from discord_threads import ApiError,Topic,marker
 from root_status import TopicRoots,starter_embed
@@ -89,6 +90,98 @@ class RootStatusTests(unittest.TestCase):
         with self.assertRaises(ApiError):self.deleted(topic,'issues')
         self.assertTrue(self.deleted(topic,'issues'));self.assertIn(other,self.api.roots);self.assertIn(other,self.api.threads)
         self.assertNotIn(identity,self.api.roots)
+    def test_deleted_topic_purges_private_caches_without_touching_another_topic(self):
+        from metadata_notifications import creation_snapshot,render
+        from message_edits import MutableMessages
+        from message_tracking import MessageTracking
+        from dnd_notifications import schema
+        topic=Topic('owner/repo','issue',3,'Private title','https://github.com/owner/repo/issues/3',
+                    {'title':'Private title','body':'Private body','labels':[{'name':'private-label'}]})
+        other=Topic('owner/repo','discussion',4,'Keep title','https://github.com/owner/repo/discussions/4',
+                    {'title':'Keep title','body':'Keep body','labels':[{'name':'keep-label'}]})
+        identity=self.root(topic);other_identity=self.root(other)
+        MutableMessages(self.threads);MessageTracking(self.queue);schema(self.queue);TopicRoots(self.threads,self.github)
+        for value,event in ((topic,'issues'),(other,'discussion')):
+            creation_snapshot(self.queue,value,value.metadata,event,{'action':'opened',value.kind:value.metadata},'en',1)
+            render({},value.metadata,True,self.queue,value,1)
+        with self.queue.connect() as db:
+            db.execute('CREATE TABLE notice_events(topic TEXT,title TEXT,description TEXT)')
+            for value,thread,source in ((topic,identity,'deleted-source'),(other,other_identity,'keep-source')):
+                db.execute('INSERT INTO message_sources VALUES(?,?,?,?)',(source,thread,1,'event'))
+                db.execute('INSERT INTO source_pages VALUES(?,?,?,?)',(source,0,'detail','https://private.example/media'))
+                db.execute('INSERT INTO source_delete_pages VALUES(?,?)',(source,'detail'))
+                db.execute('INSERT INTO source_revisions VALUES(?,?)',(source,'event'))
+                db.execute('INSERT INTO topic_thread_names VALUES(?,?)',(value.key,value.title))
+                db.execute('INSERT INTO notice_events VALUES(?,?,?)',(value.key,value.title,'cached notice'))
+                db.execute('INSERT INTO dnd_activity VALUES(?,?,?,?,?,?,?,?,0)',(1,'event',value.key,value.kind,value.number,value.title,thread,value.url))
+            rows=[['event',value.key,value.kind,value.number,value.title,thread,value.url] for value,thread in ((topic,identity),(other,other_identity))]
+            db.execute('INSERT INTO dnd_roundups VALUES(?,?)',('mixed',json.dumps({'period':1,'rows':rows})))
+            db.execute('INSERT INTO dnd_roundups VALUES(?,?)',('deleted-only',json.dumps({'period':1,'rows':rows[:1]})))
+            # Same parent channel and same message ID in another channel must remain intact.
+            for channel,message in (('c',identity),(identity,'detail'),('c',other_identity),('elsewhere',identity)):
+                db.execute('INSERT INTO hidden_message_markers VALUES(?,?,?)',(channel,message,'[]'))
+                db.execute('INSERT INTO pending_message_markers(identity,channel,message,fingerprint,markers,created) VALUES(?,?,?,?,?,?)',(channel+':'+message,channel,message,'hash','[]',1))
+            db.execute('INSERT INTO pending_message_markers(identity,channel,message,fingerprint,markers,created) VALUES(?,?,?,?,?,?)',('unresolved-thread',identity,None,'hash','[]',1))
+            db.execute('INSERT INTO pending_message_markers(identity,channel,message,fingerprint,markers,created) VALUES(?,?,?,?,?,?)',('unresolved-parent','c',None,'hash','[]',1))
+        self.assertTrue(self.deleted(topic,'issues'))
+        with self.queue.connect() as db:
+            for table in ('creation_snapshots','metadata_snapshot','topic_thread_names','notice_events','dnd_activity'):
+                self.assertEqual([other.key],[row[0] for row in db.execute('SELECT topic FROM '+table)],table)
+            for table in ('message_sources','source_pages','source_revisions','source_delete_pages'):
+                self.assertEqual(['keep-source'],[row[0] for row in db.execute('SELECT source FROM '+table)],table)
+            remaining=json.loads(db.execute('SELECT payload FROM dnd_roundups WHERE id=?',('mixed',)).fetchone()[0])
+            self.assertEqual([other.key],[row[1] for row in remaining['rows']])
+            self.assertEqual(1,db.execute('SELECT count(*) FROM dnd_roundups').fetchone()[0])
+            for table in ('hidden_message_markers','pending_message_markers'):
+                pairs=set(db.execute('SELECT channel,message FROM '+table))
+                expected={('c',other_identity),('elsewhere',identity)}
+                if table=='pending_message_markers':expected.add(('c',None))
+                self.assertEqual(expected,pairs,table)
+            self.assertEqual((1,),db.execute('SELECT cleaned FROM deleted_topics WHERE topic=?',(topic.key,)).fetchone())
+
+    def test_deleted_topic_without_discord_location_still_purges_snapshot(self):
+        topic=Topic('owner/repo','issue',3,'Private','https://github.com/owner/repo/issues/3')
+        TopicRoots(self.threads,self.github)
+        with self.queue.connect() as db:
+            db.execute('CREATE TABLE creation_snapshots(topic TEXT PRIMARY KEY,value TEXT NOT NULL)')
+            db.execute('INSERT INTO creation_snapshots VALUES(?,?)',(topic.key,json.dumps({'body':'Private body'})))
+        self.assertTrue(self.deleted(topic,'issues'))
+        with self.queue.connect() as db:self.assertEqual(0,db.execute('SELECT count(*) FROM creation_snapshots').fetchone()[0])
+
+    def test_cleaned_deletion_tombstone_also_clears_legacy_snapshot(self):
+        topic=Topic('owner/repo','issue',3,'Private','https://github.com/owner/repo/issues/3')
+        TopicRoots(self.threads,self.github)
+        with self.queue.connect() as db:
+            db.execute('CREATE TABLE creation_snapshots(topic TEXT PRIMARY KEY,value TEXT NOT NULL)')
+            db.execute('INSERT INTO creation_snapshots VALUES(?,?)',(topic.key,json.dumps({'body':'Private body'})))
+            db.execute('INSERT INTO deleted_topics VALUES(?,1)',(topic.key,))
+        self.github.call.side_effect=ApiError('GitHub',404)
+        self.assertTrue(TopicRoots(self.threads,self.github).handle_deleted(topic,'issue_comment',{'action':'created'}))
+        with self.queue.connect() as db:
+            self.assertEqual(0,db.execute('SELECT count(*) FROM creation_snapshots').fetchone()[0])
+            self.assertEqual((1,),db.execute('SELECT cleaned FROM deleted_topics WHERE topic=?',(topic.key,)).fetchone())
+
+    def test_discord_delete_forbidden_preserves_cache_and_retry_state(self):
+        from metadata_notifications import creation_snapshot
+        topic=Topic('owner/repo','issue',3,'Private','https://github.com/owner/repo/issues/3',{'body':'Private body'})
+        identity=self.root(topic)
+        creation_snapshot(self.queue,topic,topic.metadata,'issues',{'action':'opened','issue':topic.metadata},'en',1)
+        call=self.api.call
+        def forbidden(method,path,data=None):
+            if method=='DELETE' and path=='/channels/'+identity:raise ApiError('Discord',403)
+            return call(method,path,data)
+        with patch.object(self.api,'call',side_effect=forbidden):
+            with self.assertRaises(ApiError):self.deleted(topic,'issues')
+        with self.queue.connect() as db:
+            self.assertEqual('Private body',json.loads(db.execute('SELECT value FROM creation_snapshots WHERE topic=?',(topic.key,)).fetchone()[0])['body'])
+            self.assertEqual(('c',identity),db.execute('SELECT channel,thread FROM links WHERE topic=?',(topic.key,)).fetchone())
+            self.assertEqual((0,),db.execute('SELECT cleaned FROM deleted_topics WHERE topic=?',(topic.key,)).fetchone())
+        self.assertIn(identity,self.api.roots);self.assertIn(identity,self.api.threads)
+        self.assertTrue(self.deleted(topic,'issues'))
+        with self.queue.connect() as db:
+            self.assertEqual(0,db.execute('SELECT count(*) FROM creation_snapshots').fetchone()[0])
+            self.assertIsNone(db.execute('SELECT thread FROM links WHERE topic=?',(topic.key,)).fetchone())
+            self.assertEqual((1,),db.execute('SELECT cleaned FROM deleted_topics WHERE topic=?',(topic.key,)).fetchone())
     def test_discussion_deletion_and_duplicate_event_are_idempotent(self):
         topic=Topic('owner/repo','discussion',4,'Discussion','https://github.com/owner/repo/discussions/4');identity=self.root(topic)
         self.github.call.return_value={'data':{'repository':{'discussion':None}}}
