@@ -250,6 +250,41 @@ def refresh_state_only(threads,topic,closed):
     if not locked and owned and finished:threads.api.call('PATCH','/channels/'+thread_id,{'archived':True})
     return thread_id
 
+
+def description_edits(topic,entries):
+    if topic.kind!='pr':return []
+    edits=[]
+    for event,payload in entries:
+        if event not in ('pull_request','pull_request_target') or payload.get('action')!='edited':continue
+        change=(payload.get('changes') or {}).get('body')
+        obj=payload.get('pull_request') or {}
+        if not isinstance(change,dict) or 'from' not in change or 'body' not in obj:continue
+        if (change['from'] or '')==(obj['body'] or ''):continue
+        edits.append((revision(obj),payload))
+    return edits
+
+
+def description_notice(threads,topic,entries,event_key,closed,language):
+    """A body edit deserves an unread notice, while the full description stays in place."""
+    edits=description_edits(topic,entries)
+    if not edits:return
+    payload=max(edits,key=lambda item:item[0])[1]
+    source='github-source:'+nonce(topic.key+':body')
+    with threads.queue.connect() as db:
+        accepted=db.execute('SELECT event,thread FROM message_sources WHERE source=?',(source,)).fetchone()
+        page=db.execute('SELECT message FROM source_pages WHERE source=? AND page=0',(source,)).fetchone()
+        ready=db.execute('SELECT 1 FROM source_revisions WHERE source=? AND event=?',(source,event_key+':description-notice-ready')).fetchone()
+    # Stale deliveries must not announce a change that was rejected by the body updater.
+    if not ready or not accepted or accepted[0]!=event_key+':body':return
+    url=f'https://discord.com/channels/{threads.guild}/{accepted[1]}/{page[0]}' if page else topic.url
+    english=language=='en'
+    embed={'title':f'PR #{topic.number} · Description updated','url':url,
+           'description':('The PR description was updated. [Read the updated description]('+url+').' if english
+                          else 'PR 설명이 수정됐어요. [수정된 설명 다시 읽기]('+url+').'),
+           'author':{'name':str(payload.get('sender',{}).get('login') or 'GitHub')[:100]},
+           'color':0x8B949E}
+    threads.deliver(topic,embed,event_key+':description-notice',closed)
+
 def deliver_events(threads,topic,event,payload,event_key,closed,language,github=None):
     from delivery import CachedThreads
     if not isinstance(threads,CachedThreads):return threads.deliver(topic,make_embed(topic,event,payload,language),event_key,closed)
@@ -295,7 +330,15 @@ def deliver_events(threads,topic,event,payload,event_key,closed,language,github=
         return threads.deliver(topic,make_embed(topic,'threadle_bundle',rest,language),event_key,closed)
     thread=None
     for source,(kind,value,obj) in sources.items():
+        previous=None
         if source=='body':
+            with threads.queue.connect() as db:
+                body_source='github-source:'+nonce(topic.key+':body')
+                saved=db.execute('SELECT revision FROM message_sources WHERE source=?',(body_source,)).fetchone()
+                previous=saved[0] if saved else None
+                attempted=db.execute('SELECT 1 FROM source_revisions WHERE source=? AND event=?',(body_source,event_key+':body')).fetchone()
+                if not created and not attempted and any(previous is None or version>=previous for version,_ in description_edits(topic,entries)):
+                    db.execute('INSERT OR IGNORE INTO source_revisions VALUES(?,?)',(body_source,event_key+':description-notice-ready'))
             merged=merge_snapshot(topic,entries)
             for field in ('body','title','created_at','updated_at'):
                 if field in obj:merged.metadata[field]=obj[field]
@@ -308,6 +351,7 @@ def deliver_events(threads,topic,event,payload,event_key,closed,language,github=
         else:
             rendered=make_embed(topic,kind,value,language)
         thread=mutable.update(topic,source,obj,kind,value,event_key+':'+source,rendered,closed,language=language)
+        if source=='body' and not created:description_notice(threads,topic,entries,event_key,closed,language)
     if remaining:
         rest=dict(payload,_events=remaining,_created=False)
         thread=threads.deliver(topic,make_embed(topic,'threadle_bundle',rest,language),event_key+':state',closed)

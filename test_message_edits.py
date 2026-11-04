@@ -119,6 +119,57 @@ class EditTests(unittest.TestCase):
         self.assertIn('Newest',self.api.posts[thread][0]['embeds'][0]['description'])
         self.assertNotIn('Older',self.api.posts[thread][0]['embeds'][0]['description'])
 
+    def test_pr_body_edit_updates_original_and_adds_only_a_short_notice(self):
+        self.send({'action':'opened','pull_request':self.topic.metadata},'opened','pull_request')
+        original=self.api.posts[next(iter(self.api.posts))][0]['id']
+        changed=dict(self.topic.metadata,body='CHANGED BODY',updated_at='2026-11-03T00:01:00Z')
+        payload={'action':'edited','pull_request':changed,'changes':{'body':{'from':'Original PR body'}},'sender':{'login':'editor'}}
+        thread=self.send(payload,'edit-body','pull_request')
+        messages=self.api.posts[thread]
+        self.assertEqual(len(messages),2);self.assertEqual(messages[0]['id'],original)
+        self.assertIn('CHANGED BODY',messages[0]['embeds'][0]['description'])
+        notice=messages[1]['embeds'][0]
+        self.assertNotIn('CHANGED BODY',notice['description'])
+        self.assertIn('Description updated',notice['title'])
+        self.assertEqual(notice['author']['name'],'editor')
+        self.assertEqual(notice['url'],f'https://discord.com/channels/g/{thread}/{original}')
+        self.send(payload,'edit-body','pull_request')
+        self.assertEqual(len(self.api.posts[thread]),2)
+
+    def test_title_only_noop_and_old_edits_do_not_add_body_notices(self):
+        self.send({'action':'opened','pull_request':self.topic.metadata},'opened','pull_request')
+        for changes,body in (({'title':{'from':'Old'}},'Original PR body'),({'body':{'from':'same'}},'same')):
+            obj=dict(self.topic.metadata,body=body,updated_at='2026-11-03T00:02:00Z')
+            self.send({'action':'edited','pull_request':obj,'changes':changes},str(changes),'pull_request')
+        old=dict(self.topic.metadata,body='Old edit',updated_at='2026-11-03T00:01:00Z')
+        thread=self.send({'action':'edited','pull_request':old,'changes':{'body':{'from':'older'}}},'stale','pull_request')
+        self.assertEqual(len(self.api.posts[thread]),1)
+
+    def test_pr_body_notice_retry_is_durable_and_silent_during_dnd(self):
+        self.send({'action':'opened','pull_request':self.topic.metadata},'opened','pull_request')
+        self.threads.silent_notifications=lambda:True
+        body=dict(self.topic.metadata,body='Edited body',updated_at='2026-11-03T00:01:00Z')
+        title=dict(body,title='Later title',updated_at='2026-11-03T00:02:00Z')
+        payload={'_events':[
+            {'event':'pull_request','payload':{'action':'edited','pull_request':body,'changes':{'body':{'from':'Original PR body'}}}},
+            {'event':'pull_request','payload':{'action':'edited','pull_request':title,'changes':{'title':{'from':'Old title'}}}},
+        ]}
+        self.api.lose_post=True
+        with self.assertRaises(ApiError):self.send(payload,'bundle-body','threadle_bundle')
+        thread=self.send(payload,'bundle-body','threadle_bundle')
+        messages=self.api.posts[thread]
+        self.assertEqual(len(messages),2)
+        self.assertTrue(messages[-1]['flags']&4096)
+
+    def test_new_pr_with_bundled_description_edit_does_not_get_redundant_notice(self):
+        body=dict(self.topic.metadata,body='Final body',updated_at='2026-11-03T00:01:00Z')
+        payload={'_events':[
+            {'event':'pull_request','payload':{'action':'opened','pull_request':self.topic.metadata}},
+            {'event':'pull_request','payload':{'action':'edited','pull_request':body,'changes':{'body':{'from':'Original PR body'}}}},
+        ]}
+        thread=self.send(payload,'creation-bundle','threadle_bundle')
+        self.assertEqual(len(self.api.posts[thread]),1)
+
     def test_stale_event_does_not_unarchive_a_closed_thread(self):
         thread=self.send(self.payload(),'one')
         self.send(self.payload('Newest','edited',time='2026-11-03T00:02:00Z'),'new')

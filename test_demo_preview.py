@@ -36,6 +36,15 @@ class PreviewTests(unittest.TestCase):
         finally:
             LANGUAGE.reset(token)
 
+    def test_topic_previews_start_without_a_thread_and_count_messages_dynamically(self):
+        html=demonstration()
+        self.assertEqual(html.count('data-topic-preview'),3)
+        self.assertEqual(html.count('data-feature-detail hidden'),3)
+        self.assertEqual(html.count('data-thread-count'),3)
+        self.assertEqual(html.count('data-feature-step="arrival" hidden'),3)
+        self.assertEqual(html.count('data-feature-step="description" hidden'),3)
+        self.assertNotIn('메시지 2개',html)
+
 
     def test_ci_preview_shows_workflow_progress_and_success_without_comments(self):
         html = demonstration().split('class="preview-case preview-ci"',1)[1].split('class="preview-case preview-alert"',1)[0]

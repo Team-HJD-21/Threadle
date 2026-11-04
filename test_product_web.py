@@ -8,10 +8,16 @@ class Structure(HTMLParser):
     def __init__(self, source):
         super().__init__()
         self.ids, self.anchors, self.forms, self.inputs = [], [], [], []
+        self.stack,self.feature_links,self.feature_details,self.feature_steps=[],[],[],[]
         self.feed(source)
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
+        panel=next((a.get('id') for _,a in reversed(self.stack) if a.get('role')=='tabpanel'),None)
+        if 'data-feature-open' in attrs:
+            self.feature_links.append((panel,any('preview-post' in a.get('class','').split() for _,a in self.stack)))
+        if 'data-feature-detail' in attrs:self.feature_details.append((panel,'hidden' in attrs))
+        if 'data-feature-step' in attrs:self.feature_steps.append((panel,attrs['data-feature-step'],'hidden' in attrs))
         if 'id' in attrs:
             self.ids.append(attrs['id'])
         if tag == 'a':
@@ -20,6 +26,13 @@ class Structure(HTMLParser):
             self.forms.append(attrs)
         if tag == 'input':
             self.inputs.append(attrs)
+        if tag not in ('img','input','meta','link','br','hr','source','wbr'):self.stack.append((tag,attrs))
+
+    def handle_endtag(self,tag):
+        for index in range(len(self.stack)-1,-1,-1):
+            if self.stack[index][0]==tag:
+                del self.stack[index:]
+                break
 
 
 class ProductPageTests(WebFixture):
@@ -36,6 +49,17 @@ class ProductPageTests(WebFixture):
             self.assertIn('/summary',body)
             self.assertIn('종단간 암호화' if lang=='ko' else 'not end-to-end encryption',body)
             self.assertNotIn('new threads are created after Do Not Disturb',body)
+
+    def test_feature_threads_are_attached_to_their_starters_and_initially_closed(self):
+        body=self.browser.request('GET','/connect/features?lang=en')[2]
+        markup=Structure(body)
+        self.assertEqual(len(markup.feature_links),3)
+        self.assertTrue(all(attached for _,attached in markup.feature_links))
+        self.assertTrue(all(hidden for _,hidden in markup.feature_details))
+        self.assertTrue(all(hidden for _,_,hidden in markup.feature_steps))
+        self.assertFalse(any(panel=='feature-panel-summary' for panel,_ in markup.feature_details))
+        self.assertIn('data-feature-replay',body)
+        self.assertIn('Only you can see this',body)
 
     def test_public_page_has_working_sections_and_existing_oauth_entry(self):
         status, headers, body = self.browser.request('GET', '/connect')
