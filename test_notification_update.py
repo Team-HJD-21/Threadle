@@ -69,7 +69,7 @@ class NotificationUpdateTests(unittest.TestCase):
         threads.deliver(topic,{'description':'body'},'first',lambda:False)
         text = next(iter(api.roots.values()))['embeds'][0]['description']
         self.assertEqual(next(iter(api.roots.values()))['embeds'][0]['author']['name'],'original-author')
-        self.assertIn('`feature/one` → `main`',text)
+        self.assertIn('`main` ← `feature/one`',text)
         self.assertEqual(next(iter(api.roots.values()))['embeds'][0]['timestamp'],'2026-11-01T01:00:00+00:00')
         self.assertNotIn('Opened by',text)
         self.assertNotIn('stay in this thread',text)

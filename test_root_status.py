@@ -42,6 +42,7 @@ class RootStatusTests(unittest.TestCase):
         return TopicRoots(self.threads,self.github).closed(topic or self.topic)
     def test_pr_starter_transitions_keep_id_author_time_marker_and_branch_metadata(self):
         identity=self.root();old=copy.deepcopy(self.api.roots[identity]['embeds'][0])
+        self.assertEqual(old['description'],'`main` ← `feature`')
         for obj,state,closed in [({'state':'open','draft':True},'Draft',False),({'state':'open','draft':False},'Open',False),({'state':'closed'},'Closed',True),({'state':'open'},'Open',False),({'state':'closed','merged':True},'Merged',True)]:
             self.assertEqual(self.refresh(obj),closed)
             embed=self.api.roots[identity]['embeds'][0]

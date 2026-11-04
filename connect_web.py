@@ -88,7 +88,7 @@ def footer():
 <div><dt>사업자등록번호</dt><dd>622-10-17519 <a class="business-info-link" href="https://www.ftc.go.kr/bizCommPop.do?wrkr_no=6221017519" target="_blank" rel="noopener noreferrer">(사업자정보확인)</a></dd></div>
 <div><dt>통신판매업 신고번호</dt><dd translate="no" lang="ko">2026-수원영통-1221호</dd></div><div><dt>사업장 주소</dt><dd translate="no" lang="ko">경기도 수원시 영통구 태장로 71번길 19</dd></div>
 </dl><div class="footer-policy"><a href="https://teamhjd.com/press/index.html" target="_blank" rel="noopener noreferrer">프레스킷</a><a href="https://teamhjd.com/content-policy/index.html" target="_blank" rel="noopener noreferrer">콘텐츠 이용 · AI 학습 정책</a><p>AI 검색·정보 조회는 허용하며, 콘텐츠의 AI 학습 이용은 금지합니다.</p></div>
-<small class="footer-copyright">© 2026 TeamHJD. All rights reserved. · v1.0.0-beta.29</small>
+<small class="footer-copyright">© 2026 TeamHJD. All rights reserved. · v1.0.0-beta.30</small>
 <details class="related-sites"><summary>관련 사이트<svg class="footer-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m6 15 6-6 6 6"></path></svg></summary><ul><li><a href="https://teamhjd.com/" target="_blank" rel="noopener noreferrer">TeamHJD 메인</a></li><li><a href="https://docs.teamhjd.com/" target="_blank" rel="noopener noreferrer">TeamHJD Docs</a></li></ul></details>
 </div></footer>'''
 
@@ -104,7 +104,7 @@ def page(title, body, landing=False):
     extra = '<link rel="icon" type="image/png" href="/connect/assets/threadle-avatar.png"><meta name="description" content="' + esc(description) + '">'
     extra += '<meta name="robots" content="' + ('index,follow' if public else 'noindex,nofollow') + '">'
     if landing:
-        extra += '<link rel="stylesheet" href="/connect/assets/landing.css?v=20261102-2"><link rel="stylesheet" href="/connect/assets/product.css?v=20261105-29"><script src="/connect/assets/preview.js?v=20261105-29" defer></script>'
+        extra += '<link rel="stylesheet" href="/connect/assets/landing.css?v=20261102-2"><link rel="stylesheet" href="/connect/assets/product.css?v=20261105-30"><script src="/connect/assets/preview.js?v=20261105-30" defer></script>'
     extra += '<link rel="stylesheet" href="/connect/assets/controls.css?v=20261102-6"><script src="/connect/assets/controls.js?v=1" defer></script>'
     if public:
         preview_image = esc(base + '/connect/assets/threadle-banner.png?v=20261102-9')

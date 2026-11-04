@@ -104,7 +104,7 @@ def alert_panes(t, avatar):
 
 def demonstration(t):
     cases = [
-        ('pr', 'PR', 'github-pr', '42', t('설정 화면 개선', 'Improve settings'), '`feature/settings` → `main`',
+        ('pr', 'PR', 'github-pr', '42', t('설정 화면 개선', 'Improve settings'), '`main` ← `feature/settings`',
          t('설정 화면을 작은 화면에서도 편하게 사용할 수 있도록 수정했습니다.', 'Make the settings page easier to use on smaller screens.'),
          t('변경 사항 확인했어요. LGTM!', 'Looks good to me. LGTM!')),
         ('issue', 'ISSUE', 'github-issue', '18', t('Threadle의 첫 번째 배달', 'Threadle’s first little delivery'), 'Bug · Priority: High',

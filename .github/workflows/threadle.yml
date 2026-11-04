@@ -13,9 +13,14 @@ permissions:
   contents: read
 concurrency:
   group: threadle-${{ github.event_name == 'pull_request' && github.ref || 'production' }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
-  verify:
+  regression:
+    name: Regression ${{ matrix.shard }}/4
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
@@ -24,11 +29,49 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            requirements-app.txt
+            deploy/media.json
       - run: python -m pip install -r requirements-app.txt "Pillow==13.0.0"
-      - name: Regression tests and deployment file checks
-        run: python -B deploy/ci.py
+      - name: Run every test in this partition
+        run: python -B deploy/ci.py --tests-only --shard ${{ matrix.shard }} --shards 4 --timings ci-results/shard-${{ matrix.shard }}.json
+      - name: Preserve test durations
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-timings-${{ matrix.shard }}
+          path: ci-results/shard-${{ matrix.shard }}.json
+          retention-days: 7
+  checks:
+    name: Deployment and preview checks
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Validate deployment files and Windows recovery
+        run: python -B deploy/ci.py --checks-only
       - name: Check runner shell under a restricted execution policy
         run: python -B deploy/test_runner_shell.py
+      - name: Check preview playback
+        run: node --test deploy/test_preview_clock.cjs
+  verify:
+    # Preserve the existing required-check name and fail it if any partition fails.
+    needs: [regression, checks]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every regression and deployment check
+        env:
+          REGRESSION_RESULT: ${{ needs.regression.result }}
+          CHECKS_RESULT: ${{ needs.checks.result }}
+        run: |
+          test "$REGRESSION_RESULT" = success
+          test "$CHECKS_RESULT" = success
   deploy:
     needs: verify
     if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && vars.THREADLE_CD_ENABLED == 'true'))

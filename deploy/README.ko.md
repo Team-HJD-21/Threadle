@@ -2,6 +2,14 @@
 
 운영 서버 경로는 `C:\ProgramData\TeamHJD\GitHubDiscord`입니다. 웹과 봇은 계속 노트북에서 실행합니다. GitHub는 검사와 배포 시작을 담당하고, 노트북의 전용 runner가 배포를 실행합니다.
 
+## CI 병렬 검증
+
+회귀 테스트는 Windows 호스팅 runner 4개에서 서로 겹치지 않게 분할해 실행합니다. 암호화 상태의 테스트와 일반 테스트를 모두 유지하며, 각 테스트의 클래스·모듈 초기화와 정리 순서를 유지합니다. 배포 파일·복구 절차·실행 정책·예시 재생 검사는 별도의 Windows 작업에서 동시에 실행합니다. 기존 `verify` 검사는 모든 작업의 성공을 확인하며, 실패·취소·생략된 검사가 있으면 배포하지 않습니다.
+
+같은 PR에 새 커밋을 올리면 이전 PR 검증은 취소합니다. main의 운영 배포는 중간 취소하지 않습니다. 각 분할의 로그에 느린 테스트 15개를 표시하고, 전체 테스트별 시간은 `ci-timings-1`부터 `ci-timings-4` 아티팩트에 7일 보관합니다. runner 가용 시간과 작업 시작 비용이 있어 실제 단축 시간은 Actions 실행 결과로 확인해야 합니다.
+
+로컬 전체 검증은 기존처럼 `python -B deploy/ci.py`로 실행합니다. 특정 분할은 `python -B deploy/ci.py --tests-only --shard 1 --shards 4 --timings ci-results/shard-1.json`, 배포 검사는 `python -B deploy/ci.py --checks-only`로 재현할 수 있습니다. 예시 재생 검사는 `node --test deploy/test_preview_clock.cjs`로 실행합니다.
+
 ## 최초 연결
 
 1. `Team-HJD-21/Threadle` → Settings → Actions → Runners → New self-hosted runner에서 Windows / x64를 선택합니다.

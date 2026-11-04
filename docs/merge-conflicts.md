@@ -6,7 +6,7 @@ Pull-request changes and merges schedule a shared repository scan within a few s
 
 One background worker groups active bindings by auth/installation/repository ID and fetches each complete snapshot once for all Discord destinations. It scans at most three due repositories per tick. One destination's send failure does not prevent others from receiving the warning. Disconnected/paused bindings are skipped and checked again before sending. No GitHub writes, automatic merges, repository CI edits or channel migrations occur.
 
-Alerts go directly through AlertFeed to the stored alert channel, bypassing DND and batching with no silent flag. They include repository, PR link/title and head → base branches, localized by each binding. Persistent per-binding episode state and normal alert receipts suppress repeated warnings and recover lost send responses. Resolved/reopened/reconflicted PRs can alert again. The first event after upgrading may report existing conflicts. Existing user Discord notification settings still apply.
+Alerts go directly through AlertFeed to the stored alert channel, bypassing DND and batching with no silent flag. They include repository, PR link/title and base ← head branches, localized by each binding. Persistent per-binding episode state and normal alert receipts suppress repeated warnings and recover lost send responses. Resolved/reopened/reconflicted PRs can alert again. The first event after upgrading may report existing conflicts. Existing user Discord notification settings still apply.
 
 Source semantics: https://docs.github.com/en/graphql/reference/pulls (MergeableState).
 
