@@ -87,7 +87,7 @@
     },
     "changelog.py": {
       "before": "261336f2f039d63348697c8fb4f9f7ec8f25c959ad6f0e2ccd74230f8c208e28",
-      "after": "7e333fa4c05dea072db2a1da004e77b134fa4867b91409bf9f4a132595ebcd5c",
+      "after": "93bb52e0572f3b4842b26198793abfe2cb7b35f65e2d42ed3909cff6eea855e2",
       "previous": [
         "ce59507c70872a51ef2bbd42a7ee232a5bd4e2692a6b0c8903887594a1e59b90",
         "70c46b09eeacc09189050699f22f47224d0f1b157c741d0f25f9f51bd23af677",
@@ -230,7 +230,7 @@
     },
     "notification_layout.py": {
       "before": "0f2e331db64524fb143329aac6312533683734bd68c1ac6c3cef59c848ac785d",
-      "after": "a581ae9aa2bb80c6c2c216bb1e2e7555c86757b28b6a16ac346cc42c449cd4b4",
+      "after": "0a04298e02b3be1d0ae2439615107b7dda9906fe9b722d8cc34f8eff7f75b23f",
       "previous": [
         "833371a2f021574216b64a9e0eed4e807d6ad9fb6718190e056e85f785772b1f",
         "8dc33ff16f1e942fdbe1813eb359daf5f6a51205dea5d410e06a342295daf1bb",

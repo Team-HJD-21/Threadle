@@ -237,6 +237,15 @@ def message_pages(embed):
             pages.append(current);current=[];used=0
         current.append(item);used+=count
     if current:pages.append(current)
+    # Discord displays only the first embed for each repeated URL in a message.
+    # Keep the first title linked, and leave continuation cards unlinked so their
+    # text and final Details remain visible without creating extra messages.
+    for page in pages:
+        seen=set()
+        for item in page:
+            url=item.get('url')
+            if url and url in seen:item.pop('url')
+            elif url:seen.add(url)
     return pages
 
 

@@ -27,3 +27,7 @@ Answered Discussion starter cards are blue; ordinary comments have a gray accent
 Only actual label/assignee/reviewer values use inline code. Description continuations keep the original accent; fields move to the last description part. Discord limits may still require multiple messages. Draft transitions refresh the original description pages with a gray accent.
 
 DND no longer defers new threads. Messages remain silent according to existing delivery rules, while Discord thread creation sounds may occur. Worker startup wakes legacy deferred jobs and clears their old pacing deadline. Existing starter/channel ownership is reused, and deleted pending Issue/Discussion topics are checked before recreation. Paused connections remain paused. Normal Discord throttling and error retries still apply to the backlog.
+
+## Visible long-description continuations
+
+Discord deduplicates embeds with the same URL inside one message, showing only the first. Pagination keeps the first occurrence linked and omits repeated embed URLs within that message. Text, final Details, source receipts, images and message boundaries remain unchanged. The same link can appear again in a different message. Existing descriptions are corrected on their next normal refresh; this does not bulk-rewrite old messages at startup.

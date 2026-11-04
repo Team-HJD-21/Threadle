@@ -11,6 +11,40 @@ import test_message_edits as edits
 from changelog import RELEASES,ADMIN_RELEASES,content
 
 class FullTextTests(unittest.TestCase):
+    def test_same_url_continuations_and_final_details_are_visible_in_one_message(self):
+        from notification_markdown import adapt
+        body='## First section\n'+('Ordinary description line.\n'*145)+'## Final section\nFINAL_LINE'
+        for kind,event,key in [('pr','pull_request','pull_request'),('issue','issues','issue'),('discussion','discussion','discussion')]:
+            obj={'number':1,'title':'Title','body':body,'labels':[{'name':'bug'}]}
+            topic=Topic('owner/repo',kind,1,'Title','https://github.com/owner/repo',obj)
+            pages=message_pages(make_embed(topic,event,{'action':'opened',key:obj}))
+            self.assertEqual(len(pages),1)
+            self.assertGreater(len(pages[0]),1)
+            # Apply Discord's URL deduplication rule, rather than just checking
+            # that the API payload contains the continuation.
+            visible=[];seen=set()
+            for embed in pages[0]:
+                url=embed.get('url')
+                if url and url in seen:continue
+                if url:seen.add(url)
+                visible.append(embed)
+            self.assertEqual(''.join(e.get('description','') for e in visible),adapt(body))
+            self.assertEqual(visible[0]['url'],topic.url)
+            self.assertTrue(visible[-1]['fields'])
+            self.assertIn('bug',str(visible[-1]['fields']))
+
+    def test_link_deduplication_is_local_to_each_message_and_keeps_distinct_links(self):
+        url='https://github.com/owner/repo/issues/1'
+        original={'title':'Title','url':url,'description':'x'*12000}
+        pages=message_pages(original)
+        self.assertGreater(len(pages),1)
+        self.assertTrue(all(page[0]['url']==url for page in pages))
+        self.assertEqual(original['url'],url)
+        other='https://github.com/owner/repo/issues/2'
+        bundle={'_embeds':[{'url':value,'description':'Text'} for value in (url,url,other)]}
+        self.assertEqual([e.get('url') for e in message_pages(bundle)[0]],[url,None,other])
+        self.assertEqual(bundle['_embeds'][1]['url'],url)
+
     def test_every_description_kind_keeps_the_complete_text(self):
         body=''.join(f'Line {n:04d} text and details.\n' for n in range(1000))+'END_OF_DESCRIPTION'
         for kind,event,key in [('pr','pull_request','pull_request'),('issue','issues','issue'),('discussion','discussion','discussion')]:
