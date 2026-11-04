@@ -40,6 +40,48 @@ class FullTextTests(unittest.TestCase):
         self.assertEqual([e['image']['url'] for page in pages for e in page if e.get('image')],['https://example.com/a.png','https://example.com/b.gif'])
         text=''.join(e.get('description','') for page in pages for e in page)
         self.assertIn('x'*12000,text);self.assertTrue(text.endswith('LAST_LINE'))
+    def test_images_and_captions_stay_in_source_order(self):
+        body='Before first\n![First](https://example.com/a.png)\nCaption for first\n<img src="https://example.com/b.gif">\nAfter second'
+        pages=message_pages({'title':'Title','description':body,'color':0x8957E5,
+                             'fields':[{'name':'Details','value':'Final metadata'}]})
+        embeds=[embed for page in pages for embed in page]
+        self.assertEqual([e['image']['url'] for e in embeds if e.get('image')],
+                         ['https://example.com/a.png','https://example.com/b.gif'])
+        self.assertIn('Before first',embeds[0]['description'])
+        self.assertNotIn('Caption for first',embeds[0]['description'])
+        self.assertIn('Caption for first',embeds[1]['description'])
+        self.assertEqual(embeds[-1]['description'],'After second')
+        self.assertEqual(embeds[-1]['fields'],[{'name':'Details','value':'Final metadata'}])
+        self.assertTrue(all(not e.get('fields') for e in embeds[:-1]))
+        self.assertTrue(all(e['color']==0x8957E5 for e in embeds))
+    def test_repeated_image_occurrences_are_not_moved_or_deduplicated(self):
+        body='Step one\n![A](https://example.com/a.png)\nStep two\n![A](https://example.com/a.png)\nDone'
+        pages=message_pages({'description':body})
+        embeds=[e for page in pages for e in page]
+        self.assertEqual([e['image']['url'] for e in embeds if e.get('image')],
+                         ['https://example.com/a.png','https://example.com/a.png'])
+        self.assertIn('Step two',embeds[1]['description'])
+        self.assertEqual(embeds[-1]['description'],'Done')
+    def test_details_follow_final_image_without_trailing_body(self):
+        pages=message_pages({'description':'Intro\n![A](https://example.com/a.png)',
+                             'fields':[{'name':'Details','value':'Value'}],
+                             'timestamp':'2026-11-05T00:00:00Z'})
+        embeds=[e for page in pages for e in page]
+        self.assertIn('image',embeds[0]);self.assertFalse(embeds[0].get('fields'))
+        self.assertNotIn('image',embeds[-1]);self.assertIn('fields',embeds[-1])
+        self.assertIn('timestamp',embeds[-1]);self.assertNotIn('timestamp',embeds[0])
+    def test_long_text_between_images_respects_message_limits(self):
+        body='Before\n![A](https://example.com/a.png)\n'+'middle '*1800+'\n![B](https://example.com/b.gif)\nLast'
+        pages=message_pages({'title':'Title','description':body})
+        flattened=[e for page in pages for e in page]
+        first=next(i for i,e in enumerate(flattened) if e.get('image',{}).get('url')=='https://example.com/a.png')
+        second=next(i for i,e in enumerate(flattened) if e.get('image',{}).get('url')=='https://example.com/b.gif')
+        self.assertNotIn('middle',flattened[first].get('description',''))
+        self.assertIn('middle',flattened[second]['description'])
+        self.assertEqual(''.join(e.get('description','') for e in flattened).count('middle'),1800)
+        self.assertTrue(all(units(e.get('description',''))<=3500 for e in flattened))
+        for page in pages:
+            self.assertLess(sum(units(e.get('description',''))+units(e.get('title','')) for e in page),6000)
     def test_long_pr_titles_all_have_individual_digest_links(self):
         with tempfile.TemporaryDirectory() as folder:
             from delivery import Queue

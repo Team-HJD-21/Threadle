@@ -34,6 +34,10 @@ class Api:
             except Exception: pass  # Telemetry must never interrupt notification delivery.
 
     def call(self, method, path, data=None):
+        tracking = getattr(self, 'message_tracking', None) if self.service == 'Discord' else None
+        operation = None
+        if tracking is not None:
+            data, operation = tracking.prepare(method, path, data)
         if isinstance(data, dict) and data.get('_files'):
             if self.service != 'Discord' or not ((method == 'POST' and re.fullmatch(r'/channels/\d+/messages', path)) or (method == 'PATCH' and re.fullmatch(r'/channels/\d+/messages/\d+', path))):
                 raise ValueError('Attachments are only supported for Discord channel messages')
@@ -61,6 +65,16 @@ class Api:
                     raw = response.read()
                     self.last_link = response.headers.get("Link", "")
                     result=json.loads(raw) if raw else None
+                    if self.service == 'Discord' and path == '/users/@me' and isinstance(result, dict):
+                        self.message_owner = result.get('id')
+                        if tracking is not None: tracking.set_owner(self.message_owner)
+                    if tracking is not None:
+                        tracking.remember(operation, result)
+                        # A recovered pre-send record may precede the first saved bot identity.
+                        if method == 'GET' and '/messages' in path and not tracking.owner:
+                            self.call('GET', '/users/@me')
+                        if method == 'DELETE': tracking.deleted(path)
+                        result = tracking.restore(path, result, getattr(self, 'message_owner', None))
                     if self.service=='Discord':
                         from delivery_metrics import discord_write
                         discord_write(method,path)
@@ -227,9 +241,8 @@ def route(event, payload, github):
             raise RuntimeError("Failed PR CI run could not be linked to a PR; no unrelated channel fallback was used.")
         numbers = sorted({int(pr["number"]) for pr in prs})
         return [topic_from(repo, "pr", github.call("GET", f"/repos/{repo}/pulls/{number}")) for number in numbers]
-    if event == "issues":
-        return [topic_from(repo, "issue", payload["issue"])]
-    if event == "issue_comment":
+    if event in ("issues", "issue_comment"):
+        # Issue-shaped metadata can refer to a PR; keep its existing PR thread identity.
         obj = payload["issue"]
         return [topic_from(repo, "pr" if "pull_request" in obj else "issue", obj)]
     if event in ("pull_request_target", "pull_request", "pull_request_review", "pull_request_review_comment"):

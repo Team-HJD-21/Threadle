@@ -88,7 +88,7 @@ def footer():
 <div><dt>사업자등록번호</dt><dd>622-10-17519 <a class="business-info-link" href="https://www.ftc.go.kr/bizCommPop.do?wrkr_no=6221017519" target="_blank" rel="noopener noreferrer">(사업자정보확인)</a></dd></div>
 <div><dt>통신판매업 신고번호</dt><dd translate="no" lang="ko">2026-수원영통-1221호</dd></div><div><dt>사업장 주소</dt><dd translate="no" lang="ko">경기도 수원시 영통구 태장로 71번길 19</dd></div>
 </dl><div class="footer-policy"><a href="https://teamhjd.com/press/index.html" target="_blank" rel="noopener noreferrer">프레스킷</a><a href="https://teamhjd.com/content-policy/index.html" target="_blank" rel="noopener noreferrer">콘텐츠 이용 · AI 학습 정책</a><p>AI 검색·정보 조회는 허용하며, 콘텐츠의 AI 학습 이용은 금지합니다.</p></div>
-<small class="footer-copyright">© 2026 TeamHJD. All rights reserved. · v1.0.0-beta.22</small>
+<small class="footer-copyright">© 2026 TeamHJD. All rights reserved. · v1.0.0-beta.24</small>
 <details class="related-sites"><summary>관련 사이트<svg class="footer-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m6 15 6-6 6 6"></path></svg></summary><ul><li><a href="https://teamhjd.com/" target="_blank" rel="noopener noreferrer">TeamHJD 메인</a></li><li><a href="https://docs.teamhjd.com/" target="_blank" rel="noopener noreferrer">TeamHJD Docs</a></li></ul></details>
 </div></footer>'''
 
@@ -451,7 +451,13 @@ class Onboarding:
             repo = next((r for i, r in self.repositories(session, installation) if int(r['id']) == repo_id), None)
             if repo is None:
                 raise ConnectError('저장소 접근이 변경됐습니다. 저장소를 다시 선택해 주세요.', 403)
-            body = '<p><strong>' + esc(repo['full_name']) + '</strong> → <strong>' + esc(guild['name']) + '</strong></p><div class="card">'
+            body = '<p><strong>' + esc(repo['full_name']) + '</strong> → <strong>' + esc(guild['name']) + '</strong></p>'
+            from product_web import t
+            if repo.get('visibility') == 'internal':
+                body += '<p class="muted repository-visibility">' + t('조직 내부 저장소 (GitHub)', 'Internal repository (GitHub)') + '</p>'
+            elif repo.get('private') is True or repo.get('visibility') == 'private':
+                body += '<p class="muted repository-visibility">' + t('비공개 저장소 (GitHub)', 'Private repository (GitHub)') + '</p>'
+            body += '<div class="card">'
             existing = next((b for b in self.service.registry.active()
                              if b.repo_id == repo_id and str(b.config['guild_id']) == str(guild['id'])), None)
             from notification_language import selected_language
@@ -472,7 +478,7 @@ class Onboarding:
                 body += '<p class="muted">연결 후 채널 이름은 원하는 대로 바꿔도 알림이 유지됩니다.</p>'
                 fields = language_field + legal_consent.fields(session)
                 fields += '<label for="workflow">CI 워크플로 이름 필터 (선택)</label><input id="workflow" name="workflow" maxlength="1000" placeholder="비워두면 모든 워크플로, 여러 개는 쉼표로 구분">'
-                fields += '<p class="muted">새 카테고리는 서버의 기본 역할 권한을 따릅니다. 비공개 저장소의 알림도 이 채널을 볼 수 있는 서버 구성원에게 공개됩니다.</p><button>카테고리·채널 자동 생성하고 연결하기</button>'
+                fields += '<button>카테고리·채널 자동 생성하고 연결하기</button>'
                 body += form('/connect/save', session, fields).replace('<form ','<form id="connection-form" ',1)
                 connection_form = True
             body += '</div>'

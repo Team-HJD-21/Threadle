@@ -71,6 +71,25 @@ class FakeDiscord:
 
 
 class RoutingTests(unittest.TestCase):
+    def test_pr_metadata_received_as_issues_keeps_pr_thread_identity(self):
+        event = payload()
+        event['issue']['pull_request'] = {'html_url': f'https://github.com/{REPO}/pull/12'}
+        expected = m.route('pull_request', dict(event, pull_request=event['issue']), Mock())[0]
+        for action in ('assigned', 'labeled', 'milestoned', 'edited'):
+            with self.subTest(action=action):
+                event['action'] = action
+                actual = m.route('issues', event, Mock())[0]
+                self.assertEqual('pr', actual.kind)
+                self.assertEqual(expected.key, actual.key)
+                self.assertEqual(expected.url, actual.url)
+
+    def test_regular_issue_metadata_stays_in_issue_channel(self):
+        event = payload()
+        event['action'] = 'milestoned'
+        actual = m.route('issues', event, Mock())[0]
+        self.assertEqual('issue', actual.kind)
+        self.assertEqual(f'https://github.com/{REPO}/issues/12', actual.url)
+
     def test_issue_comment_and_pr_conversation_comment_are_separate(self):
         event = payload()
         self.assertEqual("issue", m.route("issue_comment", event, Mock())[0].kind)

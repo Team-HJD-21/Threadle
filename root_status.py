@@ -178,11 +178,16 @@ class TopicRoots:
         if not known or not known[0]:
             self.remove(topic)
             with self.queue.connect() as db:db.execute('UPDATE deleted_topics SET cleaned=1 WHERE topic=?',(topic.key,))
+        else:
+            # Older versions removed Discord content without clearing its cached copy.
+            self.purge(topic)
         return True
 
     def remove(self,topic):
         location=self.location(topic)
-        if not location:return
+        if not location:
+            self.purge(topic)
+            return
         channel,identity=location;api=self.threads.api
         root=None;thread=None
         try:root=api.call('GET',f'/channels/{channel}/messages/{identity}')
@@ -201,15 +206,43 @@ class TopicRoots:
             try:api.call('DELETE',f'/channels/{channel}/messages/{identity}')
             except ApiError as error:
                 if error.status!=404:raise
-        if self.queue is not None:
-            with self.queue.connect() as db:
-                if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='message_sources'").fetchone():
+        self.purge(topic,location)
+
+    def purge(self,topic,location=None):
+        """Forget deleted content while retaining the replay-prevention tombstone."""
+        if self.queue is None:return
+        import json
+        with self.queue.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            db.execute('PRAGMA secure_delete=ON')
+            tables={row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            if location is None:
+                for table,column in (('links','thread'),('root_index','message'),('deferred_threads','message')):
+                    if table not in tables:continue
+                    location=db.execute('SELECT channel,'+column+' FROM '+table+' WHERE topic=?',(topic.key,)).fetchone()
+                    if location:break
+            if location:
+                channel,identity=location
+                if 'message_sources' in tables:
                     sources=[row[0] for row in db.execute('SELECT source FROM message_sources WHERE thread=?',(identity,))]
                     for source in sources:
-                        for table in ('source_pages','source_revisions','message_sources'):db.execute('DELETE FROM '+table+' WHERE source=?',(source,))
-                db.execute('DELETE FROM links WHERE topic=?',(topic.key,))
-                db.execute('DELETE FROM root_index WHERE topic=?',(topic.key,))
-                db.execute('DELETE FROM deferred_threads WHERE topic=?',(topic.key,))
-                # Do not send queued heads-ups or DND links for a thread that was deleted.
-                for table in ('notice_events','dnd_activity'):
-                    if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",(table,)).fetchone():db.execute('DELETE FROM '+table+' WHERE topic=?',(topic.key,))
+                        for table in ('source_delete_pages','source_pages','source_revisions','message_sources'):
+                            if table in tables:db.execute('DELETE FROM '+table+' WHERE source=?',(source,))
+                for table in ('hidden_message_markers','pending_message_markers'):
+                    if table in tables:
+                        # Parent channels contain other topics; only their exact starter is ours.
+                        db.execute('DELETE FROM '+table+' WHERE channel=? OR (channel=? AND message=?)',(identity,channel,identity))
+            for table in ('creation_snapshots','metadata_snapshot','metadata_bursts','metadata_events','metadata_states',
+                          'topic_thread_names','topic_visuals','links','root_index','deferred_threads','deferred_thread_jobs',
+                          'notice_events','dnd_activity'):
+                if table in tables:db.execute('DELETE FROM '+table+' WHERE topic=?',(topic.key,))
+            # A partially sent roundup may also contain another topic: keep its ID and rows.
+            if 'dnd_roundups' in tables:
+                for identity,raw in db.execute('SELECT id,payload FROM dnd_roundups').fetchall():
+                    batch=json.loads(raw)
+                    rows=batch['rows'];remaining=[row for row in rows if row[1]!=topic.key]
+                    if len(remaining)==len(rows):continue
+                    if remaining:
+                        batch['rows']=remaining
+                        db.execute('UPDATE dnd_roundups SET payload=? WHERE id=?',(json.dumps(batch),identity))
+                    else:db.execute('DELETE FROM dnd_roundups WHERE id=?',(identity,))

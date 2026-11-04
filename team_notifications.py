@@ -105,6 +105,11 @@ class TeamNotifications:
                                (str(channel), event_key, key, title, description, link, color, due, bucket))
 
     def topic(self, topic, event, payload, event_key, thread, channels, dnd_until=None):
+        from alert_policy import filter_alert
+        visible = filter_alert(event, payload)
+        if visible is None:
+            return
+        event, payload = visible
         if event != 'workflow_run':
             now=self.clock()
             until=dnd_until or allowed_time(now,self.options)

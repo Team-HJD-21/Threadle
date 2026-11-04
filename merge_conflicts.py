@@ -88,6 +88,8 @@ class ConflictMonitor:
         from discord_threads import ApiError,marker
         from root_status import editable_embed
         queue=self.service.queue(binding);api=self.service.discord()
+        from message_tracking import bind
+        bind(api,queue)
         with queue.connect() as db:posts=db.execute('SELECT target,channel,message,receipt FROM merge_conflict_posts WHERE number=? AND episode=? AND state<>?',(number,episode,state)).fetchall()
         for target,channel,message,receipt in posts:
             try:

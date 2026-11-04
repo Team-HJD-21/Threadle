@@ -49,6 +49,8 @@ def english_activity(event, payload):
 class AlertFeed:
     def __init__(self, api, config, queue):
         self.api, self.config, self.queue = api, config, queue
+        from message_tracking import bind
+        bind(api, queue)
         self.channel = config['alert_channel']
         with queue.connect() as db:
             db.execute('CREATE TABLE IF NOT EXISTS alerts (receipt TEXT PRIMARY KEY, message TEXT)')
@@ -102,6 +104,11 @@ class AlertFeed:
             db.execute('UPDATE alerts SET message=? WHERE receipt=?', (message, receipt))
 
     def topic(self, topic, event, payload, event_key, thread):
+        from alert_policy import filter_alert
+        selected = filter_alert(event, payload)
+        if selected is None:
+            return
+        event, payload = selected
         label = {'issue': 'ISSUE', 'pr': 'PR', 'discussion': 'Discussion'}[topic.kind]
         actor = clip(payload.get('sender', {}).get('login', 'GitHub'), 80)
         english = self.config.get('language') == 'en'

@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+import re
 import sqlite3
 import time
 import unittest
@@ -22,7 +23,8 @@ class ConfirmationTests(WebFixture):
 
     def test_unconfirmed_or_stale_notice_cannot_create_discord_channels_or_connections(self):
         self.configure()
-        for fields in ({}, {**self.accepted(), 'legal_age': '0'}, {**self.accepted(), 'legal_version': 'old'}):
+        without_audience = {key: value for key, value in self.accepted().items() if key != 'legal_audience'}
+        for fields in ({}, without_audience, {**self.accepted(), 'legal_age': '0'}, {**self.accepted(), 'legal_version': 'old'}):
             self.assertEqual(self.raw_save(fields)[0], 400)
             self.assertEqual(self.bot.created_payloads, [])
             self.assertEqual(self.service.registry.active(), [])
@@ -41,9 +43,56 @@ class ConfirmationTests(WebFixture):
             self.assertIn('legal_terms', html)
             self.assertIn('legal_age', html)
             self.assertIn('legal_audience', html)
-            self.assertNotIn(' checked', html)
+            for control in re.findall(r'<input\b[^>]*>', html):
+                if 'name="legal_' in control:
+                    self.assertNotRegex(control, r'\schecked(?:\s|=|>)')
             self.assertIn('Before you connect' if language == 'en' else '연결 전 확인', html)
             self.assertIn('rel="noopener noreferrer"', html)
+            self.assert_audience_notice(html, language)
+
+    def assert_audience_notice(self, html, language):
+        self.assertIn('legal-audience-notice', html)
+        for text in (('titles, bodies, comments, reviews, images, and GIFs',
+                      'even without GitHub access', 'default role permissions',
+                      'checked which roles and members') if language == 'en' else
+                     ('제목·본문·댓글·리뷰·이미지·GIF', 'GitHub 접근 권한이 없는 구성원도',
+                      '서버의 기본 역할 권한', '채널을 볼 수 있는 역할·구성원을 확인')):
+            self.assertIn(text, html)
+
+    def test_repository_visibility_notice_only_labels_known_private_or_internal_repositories(self):
+        self.configure()
+        original_repositories = self.users.repositories
+        for visibility, ko, en in (({'private': True}, '비공개 저장소 (GitHub)', 'Private repository (GitHub)'),
+                                   ({'visibility': 'private'}, '비공개 저장소 (GitHub)', 'Private repository (GitHub)'),
+                                   ({'private': True, 'visibility': 'internal'}, '조직 내부 저장소 (GitHub)', 'Internal repository (GitHub)'),
+                                   ({'private': False, 'visibility': 'public'}, None, None), ({}, None, None)):
+            with patch.object(self.users, 'repositories', side_effect=lambda token, installation, extra=visibility:
+                              [{**repo, **extra} for repo in original_repositories(token, installation)]):
+                for language, label in (('ko', ko), ('en', en)):
+                    self.browser.language = language
+                    status, _, html = self.browser.request('GET', '/connect/channels')
+                    self.assertEqual(status, 200)
+                    if label:
+                        self.assertIn('repository-visibility', html)
+                        self.assertIn(label, html)
+                    else:
+                        self.assertNotIn('repository-visibility', html)
+
+    def test_team_settings_preserve_audience_notice_and_require_confirmation_on_apply(self):
+        self.configure()
+        for language in ('ko', 'en'):
+            self.browser.language = language
+            status, _, html = self.browser.request('GET', '/connect/team')
+            self.assertEqual(status, 200)
+            self.assert_audience_notice(html, language)
+            self.assertIn('name="legal_audience" value="1" required', html)
+            self.assertNotIn('name="legal_audience" value="1" required checked', html)
+        fields = {key: value for key, value in self.accepted().items() if key != 'legal_audience'}
+        status, _, _ = self.browser.request('POST', '/connect/team/apply',
+                                            {'csrf': self.session().data['csrf'], **fields})
+        self.assertEqual(status, 400)
+        self.assertEqual(self.bot.created_payloads, [])
+        self.assertEqual(self.service.registry.active(), [])
 
     def test_acceptance_is_idempotent_and_scoped_to_repository(self):
         self.configure()
@@ -51,6 +100,7 @@ class ConfirmationTests(WebFixture):
         self.assertEqual(self.raw_save()[0], 303)
         html = self.browser.request('GET', '/connect/channels')[2]
         self.assertNotIn('name="legal_terms"', html)
+        self.assertIn('legal-audience-notice', html)
         with self.service.registry.db() as db:
             self.assertEqual(db.execute('SELECT count(*) FROM legal_acceptances').fetchone()[0], 1)
         session = self.session()
@@ -157,3 +207,16 @@ class RetentionTests(unittest.TestCase):
         Retention(self.service).purge()
         with self.service.registry.db() as db:
             self.assertEqual(db.execute('SELECT count(*) FROM legal_acceptances').fetchone()[0],0)
+
+    def test_connection_expiry_removes_email_snapshots_but_keeps_operator_subscription(self):
+        from test_service import config
+        self.service.operator_mail.subscribe('operator@example.com','operator',True)
+        identity=self.service.registry.connect(11,'team/repo',101,config(1000),'1','22')
+        self.service.registry.disable(identity)
+        with self.service.registry.db() as db:
+            self.assertEqual(db.execute('SELECT count(*) FROM operator_mail_outbox').fetchone()[0],1)
+            db.execute('UPDATE connection_retention SET disconnected_at=? WHERE id=?',(self.old,identity))
+        Retention(self.service).purge()
+        with self.service.registry.db() as db:
+            self.assertEqual(db.execute('SELECT count(*) FROM operator_mail_outbox').fetchone()[0],0)
+        self.assertTrue(self.service.operator_mail.subscribed('operator@example.com'))
