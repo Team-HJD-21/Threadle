@@ -99,6 +99,8 @@ class Service:
         self.web = Onboarding.create(self)
         from discord_connect import DiscordConnect
         self.discord_connect = DiscordConnect.create(self)
+        from operator_mail import OperatorMail
+        self.operator_mail = OperatorMail(self)
         from operator_web import OperatorWeb
         self.operator = OperatorWeb(self)
         from guild_lifecycle import GuildLifecycle
@@ -339,6 +341,7 @@ class Service:
 
     def run(self, stop):
         workers = {}
+        self.operator_mail.start(stop)
         from presence import Presence
         presence_worker = Presence(self).start(stop)
         self.guilds.start(stop)

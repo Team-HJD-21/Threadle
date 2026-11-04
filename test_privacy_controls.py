@@ -157,3 +157,16 @@ class RetentionTests(unittest.TestCase):
         Retention(self.service).purge()
         with self.service.registry.db() as db:
             self.assertEqual(db.execute('SELECT count(*) FROM legal_acceptances').fetchone()[0],0)
+
+    def test_connection_expiry_removes_email_snapshots_but_keeps_operator_subscription(self):
+        from test_service import config
+        self.service.operator_mail.subscribe('operator@example.com','operator',True)
+        identity=self.service.registry.connect(11,'team/repo',101,config(1000),'1','22')
+        self.service.registry.disable(identity)
+        with self.service.registry.db() as db:
+            self.assertEqual(db.execute('SELECT count(*) FROM operator_mail_outbox').fetchone()[0],1)
+            db.execute('UPDATE connection_retention SET disconnected_at=? WHERE id=?',(self.old,identity))
+        Retention(self.service).purge()
+        with self.service.registry.db() as db:
+            self.assertEqual(db.execute('SELECT count(*) FROM operator_mail_outbox').fetchone()[0],0)
+        self.assertTrue(self.service.operator_mail.subscribed('operator@example.com'))

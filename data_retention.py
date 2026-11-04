@@ -62,6 +62,7 @@ class Retention:
                 db.execute('DELETE FROM connection_audit WHERE binding=?',(identity,))
                 db.execute('DELETE FROM legal_acceptances WHERE binding=?',(identity,))
                 db.execute('DELETE FROM connection_welcomes WHERE binding=?',(identity,))
+                db.execute('DELETE FROM operator_mail_outbox WHERE binding=?',(identity,))
                 db.execute('DELETE FROM admin_audit WHERE binding=?',(identity,))
                 db.execute('DELETE FROM admin_paused WHERE id=?',(identity,))
                 db.execute('DELETE FROM connection_retention WHERE id=?',(identity,))

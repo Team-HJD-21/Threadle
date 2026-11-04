@@ -51,6 +51,8 @@ class Registry:
             ''')
             from settings_audit import schema
             schema(db)
+            from operator_mail import schema as mail_schema
+            mail_schema(db)
             db.execute('CREATE TABLE IF NOT EXISTS connection_welcomes(guild TEXT NOT NULL,repo_id INTEGER NOT NULL,binding TEXT NOT NULL,phase INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(guild,repo_id))')
             db.execute('CREATE TABLE IF NOT EXISTS connection_retention(id TEXT PRIMARY KEY, disconnected_at REAL NOT NULL)')
             db.execute('CREATE TABLE IF NOT EXISTS retention_scopes(scope TEXT PRIMARY KEY)')
@@ -126,6 +128,9 @@ class Registry:
             db.execute('INSERT INTO bindings(id,tenant,repo_id,repo,installation,auth,guild,config,legacy_state,enabled) VALUES(?,?,?,?,?,?,?,?,?,1)',
                        (identity, tenant, repo_id, repo, installation, auth, str(config['guild_id']),
                         json.dumps(config), int(legacy_state)))
+            if auth == 'app':
+                from operator_mail import enqueue
+                enqueue(db,identity,repo,str(config['guild_id']))
         return identity
 
     def connect(self, repo_id, repo, installation, config, discord_user, github_user, consent=None):
@@ -156,6 +161,8 @@ class Registry:
             self.acceptance(db, identity, discord_user, github_user, consent)
             if row is None:
                 db.execute('INSERT OR IGNORE INTO connection_welcomes(guild,repo_id,binding) VALUES(?,?,?)',(guild,repo_id,identity))
+            from operator_mail import enqueue
+            enqueue(db,identity,repo,guild)
         return identity
 
     @staticmethod

@@ -1,5 +1,5 @@
 {
-  "version": "v1.0.0-beta.23",
+  "version": "v1.0.0-beta.24",
   "baseline": "2026.11.02.8",
   "files": {
     "demo_web.py": {
@@ -37,7 +37,7 @@
     },
     "connect_web.py": {
       "before": "a10a26dc8a437897a74a705d18b2eed378b2ec30b7b95f9298d833ba91b81db9",
-      "after": "f9e7de777831e1a01f9b8c57786595316f01292a2e613e858171cb7efee6fa4e",
+      "after": "1c760c334a435693f7187be644846d1c7f8076c8c846b097cd1ebd8167138298",
       "previous": [
         "039da5474270896cb0d94cff9d8fbc012749be2cba8d41af02c9c38a98df280b",
         "c71b37f392a2f9bb79cbe8c361c5e7f45ea94591c0199f198598a1d360930c39",
@@ -70,12 +70,13 @@
         "781866acf74382fffa36a5998be1ee664a1b4ab1aba7abdfab336f75bf59c034",
         "7966032402df98ff0dbce85527e56e06f6e4caf6dafec4fdea2fb8f2c7b6627f",
         "ce2f52b75a4f3ebd29ccdf88cd8dd922519928aa95648ce732d87c0552b09ad6",
-        "e1cefee296c219b6edb0eb9627620241c111a53cd2acc5c1469e3bdfdf729e63"
+        "e1cefee296c219b6edb0eb9627620241c111a53cd2acc5c1469e3bdfdf729e63",
+        "f9e7de777831e1a01f9b8c57786595316f01292a2e613e858171cb7efee6fa4e"
       ]
     },
     "changelog.py": {
       "before": "261336f2f039d63348697c8fb4f9f7ec8f25c959ad6f0e2ccd74230f8c208e28",
-      "after": "0282210fdaaafbbf6fe5dfb881cbbf1c5fe4d94ead02e62c9463921f729d3390",
+      "after": "dd50a8b60869b6778c2c647182ea1c8cad37e99e2eea6a5ce5f09fe43db69605",
       "previous": [
         "ce59507c70872a51ef2bbd42a7ee232a5bd4e2692a6b0c8903887594a1e59b90",
         "70c46b09eeacc09189050699f22f47224d0f1b157c741d0f25f9f51bd23af677",
@@ -114,7 +115,8 @@
         "bf04754373d0e96c4c42135b52ac93f28b2ecd5bd8edfb729d96eb5b7e8f5b86",
         "291be3547db63efcc7fc1e832e81ca2ec8832069f08e76c72e75e1e1a6b4bf83",
         "713d1f1ec1dfbb0b01a0a34b8c2457be597b4cfa4771226058c8c8782e77d79b",
-        "ba3c12fa0fc3ce006074ee173b032fef1f02e72920ba236c8dc6ef7e728b4722"
+        "ba3c12fa0fc3ce006074ee173b032fef1f02e72920ba236c8dc6ef7e728b4722",
+        "0282210fdaaafbbf6fe5dfb881cbbf1c5fe4d94ead02e62c9463921f729d3390"
       ]
     },
     "web_assets/preview.js": {
@@ -142,7 +144,7 @@
     },
     "service.py": {
       "before": "8ef021eb91f276ae424209884b25cd423995d41e1455bbb6bfd63a0ab0206d1e",
-      "after": "d2ffb314f0a967407ecaf6969ccb2b9fd4da16be0928ba540d903b744ba1a9a5",
+      "after": "ecd3cb0816672bbc10ad9475e9589298d26ffbf9fd5de1d222e6ad050052b4b1",
       "previous": [
         "2b39caa084daa3eaa290f3bf3573d907c4d36513a97abf24be24bc9458e3f397",
         "a687e18707282836bb64ec6159556183889032368eacccaaacf86ba8116a1588",
@@ -161,7 +163,8 @@
         "3b8fa8e71b19378f783d5145abcffa65bddc14d1fdc69d9d694aeec192917cbc",
         "83791458a04b59c8bcd7805f94eb7c8d02b8cd5863b0317685f835efceaf759c",
         "25dbf302c263bb73d397488a2f4ade93000cdce4e04057d0249554dbb4b953fc",
-        "8848c34cf54679c299021731a139543c7c9cc31a672eba39f7e5637377d3fbae"
+        "8848c34cf54679c299021731a139543c7c9cc31a672eba39f7e5637377d3fbae",
+        "d2ffb314f0a967407ecaf6969ccb2b9fd4da16be0928ba540d903b744ba1a9a5"
       ]
     },
     "auth.py": {
@@ -170,7 +173,7 @@
     },
     "discord_threads.py": {
       "before": "0b353710016c6563fda1178e599cacca7ab802854803040f0866ef940dcbec94",
-      "after": "d15edd0132a6cb42968eb280ffe62417d130a2f5e8858ed5588634c2105392ed",
+      "after": "067024b5e4c5428b0b0ed6f3e52aaa0f5f2c76fb3c875c0e80983a1613c468e4",
       "previous": [
         "7db8a83427bc41833c8673eb12f23da21cad41888357873706070557c0d50cd5",
         "11914c2dee5b538656765b97ba424055a2ed686dd6e543be11390b0c20dcd7a5",
@@ -186,12 +189,13 @@
         "769d580a7b8f10d3c5f7043bd145e1f1996ecec8978b6c9d5efed70b52cc80b5",
         "f4022434c690295affb8fe6feeff867f1e6bb612ec0d6a74d9563f79ceea9063",
         "29a0b0ee3dd65680d19be779308f0b3b38d3d9db447b7a18eb1f749f02e502e6",
-        "44f56e169b1b8da756dcb979808f9f88943e9865563ed02ab14bae572abe82db"
+        "44f56e169b1b8da756dcb979808f9f88943e9865563ed02ab14bae572abe82db",
+        "d15edd0132a6cb42968eb280ffe62417d130a2f5e8858ed5588634c2105392ed"
       ]
     },
     "notification_media.py": {
       "before": "8de2185cda462cf8cff64cc21a3eb38b3849390951cdeafcabc0a720015aa484",
-      "after": "96a281aebc00c0df01bb4379c7de9df46cec8ffcf912f19307f4e5320d548335",
+      "after": "8b3f9275e4ed48094c72d0afd0d427ece471b6c44cd82c8d60df42305c5557ee",
       "previous": [
         "606b47fa89b1e59eac0adcc456992b2b3d32f10f7986dec74d4fd39536fde6a4",
         "96a281aebc00c0df01bb4379c7de9df46cec8ffcf912f19307f4e5320d548335",
@@ -213,33 +217,36 @@
     },
     "alert_feed.py": {
       "before": "c617136c345ffe142d18541874c1322549d2b489fdfc8f44e356a083f3bf0516",
-      "after": "da7fd6b9afe624a18f838455a86414e0bd5a9fc45a267f7befd812af86479fff",
+      "after": "57661b749b456c94519a695c68b0012016a8d2f95d1332a2c09095aba3634dc9",
       "previous": [
         "21873e6a5f74799cdbab164298547048ad2ed7e6d04b852a365f0fc74ede9bb2",
         "5f9638e2cae12fc1e77e6129c86377a0ab45d778cf10212d49c5f067dab0b080",
         "f53d2dd187a798a1e9f540a86e245ba70c1b9626f7b2041502d7e8a8e2d085c7",
-        "bf1899487633451c5f08fb57c241c144ac0db152bc9c5615204a6031408a2027"
+        "bf1899487633451c5f08fb57c241c144ac0db152bc9c5615204a6031408a2027",
+        "da7fd6b9afe624a18f838455a86414e0bd5a9fc45a267f7befd812af86479fff"
       ]
     },
     "team_notifications.py": {
       "before": "6904471f68f57f58851b7e4f6c1c4f3d8d72ffedb177a5c20982b5a1ebf15eb6",
-      "after": "9fc92e919cdda0c305656c55fa24c1cafe2ee3f6beeb76d5349be115a90009dd",
+      "after": "ccae4fdcc8537506825df7027bf228774501362850fce7987f63dabd36c68b2a",
       "previous": [
         "8cb672fdf1523f327cc6da04a33f0a4ac02bc133733b190f66c6c64ea59fa2d6",
         "a4fbbc8c9b222ad07ad2e75d20d7baea4b1801045b8481d5612ad6eda850a607",
         "28f99ebe91f55fc81605131a08b5e87ac20500032f13ec18abfcb727eb972676",
-        "425078b05086f866b0e8a0b8aa61b84032bc13858bd185c929af56ee98adf942"
+        "425078b05086f866b0e8a0b8aa61b84032bc13858bd185c929af56ee98adf942",
+        "9fc92e919cdda0c305656c55fa24c1cafe2ee3f6beeb76d5349be115a90009dd"
       ]
     },
     "registry.py": {
       "before": "adfa9743b40023f8e23159262a0e478894d6c7e05a1e24e80348d47bc616b503",
-      "after": "34da97abb0710333d4b26488d84313c69a674ec584c6d291e70ed814e3645c95",
+      "after": "07b59a90cbe38f267f9f4864cf3d991bf13245570a6117fce7e081c1c1b2fb8e",
       "previous": [
         "58e3fe261ed4bfb98d927677fa42d139218317c3a037309ccf385c17fba009e6",
         "9f95d3e12f87375c3231487fc7457c95dbd70e922f1eef50232564f6b9d8b63a",
         "d9ad1ce46dbafe995634683c523dad64037bc4763d2a9c23284af0a730ace60e",
         "095a1c75e8667544272ed31082962af5d771ac9078d90b16015bd7d0dc39b31e",
-        "455f7e8775fb9bf6089c98336f4f8414356996c6205b7246cf0950b6eae31af9"
+        "455f7e8775fb9bf6089c98336f4f8414356996c6205b7246cf0950b6eae31af9",
+        "34da97abb0710333d4b26488d84313c69a674ec584c6d291e70ed814e3645c95"
       ]
     },
     "workflow_notifications.py": {
@@ -349,11 +356,12 @@
     },
     "data_retention.py": {
       "before": "840d8779cc129d3a9c02ad70e3b8a389955c4c84baa8534aa5ca7d876ab4f2cf",
-      "after": "c15e7fbad6b9e1458371ace7a8cf6fdbfbeca6f552d759a9770aa2ac050fbddd",
+      "after": "120fd77a0dfdef56d8e47e09e44b2d5dbf87d4b1d6b9fc4858b911ecc234cc62",
       "previous": [
         "ef1669e44962ae14c5ed62a02d92e2b2151b84dc035bbbc152793039ffe04a11",
         "e8def22525108ac33a59d4896e5fa9020804d79eb01d3f1e1e5a56a3a857d0ea",
-        "9c1262ca546debce61b43a9dcc4b144debd1646651630808dc9d12aba25e64d7"
+        "9c1262ca546debce61b43a9dcc4b144debd1646651630808dc9d12aba25e64d7",
+        "c15e7fbad6b9e1458371ace7a8cf6fdbfbeca6f552d759a9770aa2ac050fbddd"
       ]
     },
     "notification_markdown.py": {
@@ -365,14 +373,15 @@
     },
     "operator_web.py": {
       "before": "4d8f1a2dbd4ab2386ee998aeb749d57102e20079fd6a98639e075b673f2a7521",
-      "after": "f5012d3691b2b6adad56d3d2f1f55127b7b88296ed3b9becb95685499b0dab20",
+      "after": "ca00105e8d3d7823147cefae349bbb1052d2adddfd31941c9b41eff5108313a3",
       "previous": [
         "f130b24216884b60f6d39b486eea7eedd5a99852b0906464904cb7614bbe566f",
         "2a3c11704933ec6f16553e828cb91d6e4859e3caa34722e93f6acaddb734a4d7",
         "376e4d4dd40615a653e245d7318520e063e16c5edb7a8ef2bc9c5c90aebd8a2d",
         "67e562327e6303841e7c3fe2b08574f03308c677e0e502f5b591ab47b73c31c7",
         "d1fd8a7e8ea3dbd16a169d242cc66105ab4d6c34bce9f23d0d6ebf04834fa607",
-        "a3d74da7ca485545b676b63c6a6e226a53da77fc4f68ee5af132b35cd12b1560"
+        "a3d74da7ca485545b676b63c6a6e226a53da77fc4f68ee5af132b35cd12b1560",
+        "f5012d3691b2b6adad56d3d2f1f55127b7b88296ed3b9becb95685499b0dab20"
       ]
     },
     "repository_summary.py": {
@@ -433,11 +442,12 @@
     },
     "delivery.py": {
       "before": "a25bc5076e93ad49abc4a0d552f8d000f94c8a48b5041d151e463a28d880cb8f",
-      "after": "70db8c2203de012b843730e058db608cf8c9b2926bb1856e269e1a848d5d131d",
+      "after": "69199a517408540081ab7ddb55d0123caec36dab65bd0f185a4f47b13e10234e",
       "previous": [
         "b53c78ccd42f68d99f0bba55c1384fcd66d2f0ab50c23d912600debfee8fdf35",
         "54ada684cebd0899c3e7fe74d09ee0368f72c6b0c5adb59539e27bb4bbea8ec9",
-        "f9fd931f20bee24ca906868b6b29c7f974e096612969f7b66bba755923586cde"
+        "f9fd931f20bee24ca906868b6b29c7f974e096612969f7b66bba755923586cde",
+        "70db8c2203de012b843730e058db608cf8c9b2926bb1856e269e1a848d5d131d"
       ]
     },
     "deferred_threads.py": {
@@ -449,9 +459,10 @@
     },
     "merge_conflicts.py": {
       "before": null,
-      "after": "6507894a04f647af353d3af9231f0ba1a63d36f140200751b600376ffbf2869d",
+      "after": "38802e0234909df0907dc27211523226ad56f3c9725f7449c96dd0e142a9de2e",
       "previous": [
-        "82d8da62dfc64bc0234597139aa3c43e04aabaecab18adeb245662799306b8cd"
+        "82d8da62dfc64bc0234597139aa3c43e04aabaecab18adeb245662799306b8cd",
+        "6507894a04f647af353d3af9231f0ba1a63d36f140200751b600376ffbf2869d"
       ]
     },
     "metadata_notifications.py": {
@@ -503,6 +514,18 @@
     "api_usage.py": {
       "before": null,
       "after": "0f006ed8fa66d5b0938cbd22793765ff7068b2fbf05d108acb0d4c493ba5e4b1"
+    },
+    "message_tracking.py": {
+      "before": null,
+      "after": "cb34d175e5c5946ccc5b2044b8442dc577647dc3918c6962dfb3409334fdb54a"
+    },
+    "operator_mail.py": {
+      "before": null,
+      "after": "0981338d15b7a9013cf4e2d29b8b083df644720b7bacbc6a08a661fc6a5f0c4b"
+    },
+    "alert_policy.py": {
+      "before": null,
+      "after": "95fcc7e83ffe61366d58920b21f2ad38799fd98b9abd567b25f5e929fd79a14f"
     }
   }
 }

@@ -34,6 +34,10 @@ class Api:
             except Exception: pass  # Telemetry must never interrupt notification delivery.
 
     def call(self, method, path, data=None):
+        tracking = getattr(self, 'message_tracking', None) if self.service == 'Discord' else None
+        operation = None
+        if tracking is not None:
+            data, operation = tracking.prepare(method, path, data)
         if isinstance(data, dict) and data.get('_files'):
             if self.service != 'Discord' or not ((method == 'POST' and re.fullmatch(r'/channels/\d+/messages', path)) or (method == 'PATCH' and re.fullmatch(r'/channels/\d+/messages/\d+', path))):
                 raise ValueError('Attachments are only supported for Discord channel messages')
@@ -61,6 +65,16 @@ class Api:
                     raw = response.read()
                     self.last_link = response.headers.get("Link", "")
                     result=json.loads(raw) if raw else None
+                    if self.service == 'Discord' and path == '/users/@me' and isinstance(result, dict):
+                        self.message_owner = result.get('id')
+                        if tracking is not None: tracking.set_owner(self.message_owner)
+                    if tracking is not None:
+                        tracking.remember(operation, result)
+                        # A recovered pre-send record may precede the first saved bot identity.
+                        if method == 'GET' and '/messages' in path and not tracking.owner:
+                            self.call('GET', '/users/@me')
+                        if method == 'DELETE': tracking.deleted(path)
+                        result = tracking.restore(path, result, getattr(self, 'message_owner', None))
                     if self.service=='Discord':
                         from delivery_metrics import discord_write
                         discord_write(method,path)

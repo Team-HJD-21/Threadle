@@ -1,4 +1,5 @@
 import html
+import copy
 from html.parser import HTMLParser
 import re
 import json
@@ -34,37 +35,62 @@ class Images(HTMLParser):
             if value:self.urls.append(value)
 
 
+def image_reference(url):
+    return bool(url and (re.search(r'\.(gif|png|jpe?g|webp)(?:[?#]|$)',url,re.I)
+                        or urlsplit(url).hostname=='github.com' and '/user-attachments/assets/' in urlsplit(url).path))
+
+
 def media_embeds(original):
-    embed=dict(original)
+    """Keep text/image order while giving each image its own full-width embed.
+
+    Discord places an embed's image after its description. Ending a segment at
+    each image therefore preserves the source reading order without a gallery.
+    """
+    embed=copy.deepcopy(original)
     from notification_markdown import protect_code,adapt
     body,restore=protect_code(embed.get('description',''))
     body=adapt(body)
-    parser=Images()
-    parser.feed(body)
-    urls=list(parser.urls)
-    def markdown(match):
-        url=safe_image_url(match.group(2).strip('<>'))
-        if not url:return match.group(0)
-        urls.append(url)
-        return '['+(match.group(1) or 'Image')+']('+url+')'
-    body=re.sub(r'!\[([^\]]*)\]\((https://[^\s)]+)(?:\s+"[^"]*")?\)',markdown,body)
-    def image_tag(match):
-        image=Images();image.feed(match.group(0))
-        return '\n[Image]('+image.urls[0]+')\n' if image.urls else ''
-    body=re.sub(r'<img\b[^>]*>',image_tag,body,flags=re.I|re.S)
-    for value in re.findall(r'https://[^\s<>\]"\)]+',body):
-        url=safe_image_url(value)
-        if url and (re.search(r'\.(gif|png|jpe?g|webp)(?:[?#]|$)',url,re.I) or urlsplit(url).hostname=='github.com' and '/user-attachments/assets/' in urlsplit(url).path):
-            urls.append(url)
-    urls=list(dict.fromkeys(urls))
-    embed['description']=restore(body).strip()
-    if not urls:return [embed]
-    embed['image']={'url':urls[0]}
-    result=[embed]
-    for url in urls[1:]:
-        result.append({'image':{'url':url},'color':embed.get('color',0x2DA44E)})
-    if embed.get('timestamp') and len(result)>1:
-        result[-1]['timestamp']=embed.pop('timestamp')
+    pattern=(r'(?P<markdown>!?\[(?P<alt>[^\]\n]*)\]\(\s*'
+             r'(?P<destination><https://[^>\s]+>|https://(?:[^\s()]+|\([^()\s]*\))+)'
+             r'(?:\s+"[^"]*")?\s*\))'
+             r'|(?P<html><img\b[^>]*>)'
+             r'|(?P<plain>https://[^\s<>\]"\)]+)')
+    segments=[];cursor=0
+    for match in re.finditer(pattern,body,re.I|re.S):
+        label='Image';url=None
+        if match['html']:
+            image=Images();image.feed(match['html'])
+            url=image.urls[0] if image.urls else None
+        elif match['markdown']:
+            candidate=safe_image_url(match['destination'].strip('<>'))
+            if match['markdown'].startswith('!') or image_reference(candidate):
+                url=candidate;label=match['alt'] or label
+        else:
+            candidate=safe_image_url(match['plain'])
+            if image_reference(candidate):url=candidate
+        if not url:continue
+        # Keep a source link next to the image for inaccessible/private media.
+        segments.append((restore(body[cursor:match.start()]+'['+label+']('+url+')').strip(),url))
+        cursor=match.end()
+    if not segments:
+        embed['description']=restore(body).strip()
+        return [embed]
+    result=[]
+    for text,url in segments:
+        part=({key:value for key,value in embed.items() if key not in ('description','fields','image','timestamp','footer')}
+              if not result else {'color':embed.get('color',0x2DA44E)})
+        if text:part['description']=text
+        part['image']={'url':url}
+        result.append(part)
+    trailing=restore(body[cursor:]).strip()
+    # Fields must follow the entire description, including its final image.
+    if trailing or embed.get('fields'):
+        part={'color':embed.get('color',0x2DA44E)}
+        if trailing:part['description']=trailing
+        if embed.get('fields'):part['fields']=embed['fields']
+        result.append(part)
+    for key in ('timestamp','footer'):
+        if key in embed:result[-1][key]=embed[key]
     return result
 
 

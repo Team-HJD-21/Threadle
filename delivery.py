@@ -125,6 +125,8 @@ class CachedThreads(Threads):
     def __init__(self, discord, guild, channels, queue, language='ko'):
         super().__init__(discord, guild, channels, language)
         self.queue = queue
+        from message_tracking import bind
+        bind(discord, queue)
         if queue is not None:
             with queue.connect() as db:
                 migrating = not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='thread_receipts'").fetchone()
