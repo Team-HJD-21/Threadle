@@ -16,7 +16,10 @@ function renderThreadleSequence(panel,elapsed,reduced,closed=false) {
   });
   const messages=detail?[...detail.querySelectorAll('.preview-post[data-feature-step]')].filter(item=>!item.hidden).length:0;
   const count=position>=threadlePreviewSteps.thread?Math.max(1,messages):0;
-  panel.querySelectorAll('[data-thread-count]').forEach(label=>{label.textContent=label.dataset.countLabel.replace('{count}',String(count));});
+  panel.querySelectorAll('[data-thread-count]').forEach(label=>{
+    const text=label.dataset.countLabel.replace('{count}',String(count));
+    label.textContent=count===1?text.replace('messages','message'):text;
+  });
 }
 
 (() => {
