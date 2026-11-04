@@ -147,14 +147,14 @@ class ReadableNotificationsTests(unittest.TestCase):
         self.assertGreater(len(pages),2)
         self.assertTrue(all(len(page.encode('utf-16-le'))//2<=1850 for page in pages))
 
-    def test_github_html_and_markdown_gifs_become_images_with_fallback_links(self):
+    def test_github_html_and_markdown_gifs_become_images_without_redundant_links(self):
         from notification_media import media_embeds
         url='https://github.com/user-attachments/assets/abc-123'
         result=media_embeds({'description':'Review\n<img width="480" alt="demo" src="'+url+'" />\n![Next](https://example.com/demo.gif)','url':'https://github.com/one/repo/pull/1'})
         self.assertEqual(result[0]['image']['url'],url)
         self.assertEqual(result[1]['image']['url'],'https://example.com/demo.gif')
         self.assertNotIn('<img',result[0]['description'])
-        self.assertIn(url,result[0]['description'])
+        self.assertNotIn(url,result[0].get('description',''))
         self.assertEqual(media_embeds({'description':'<img src="file:///private">'})[0].get('image'),None)
 
     def test_summary_command_sends_all_pages_as_private_cards_and_skips_acknowledged_pages(self):

@@ -25,7 +25,7 @@ from pr_routing import FileIndex, PrRouter
 from team_notifications import TeamNotifications
 
 EVENTS = {'issues', 'issue_comment', 'pull_request', 'pull_request_review',
-          'pull_request_review_comment', 'discussion', 'discussion_comment', 'workflow_run', 'push'}
+          'pull_request_review_comment', 'pull_request_review_thread', 'discussion', 'discussion_comment', 'workflow_run', 'push'}
 LOG = logging.getLogger('service')
 
 
@@ -259,7 +259,7 @@ class Service:
                 with queue.connect() as db:had_thread=db.execute('SELECT 1 FROM links WHERE topic=?',(topic.key,)).fetchone()
                 from message_edits import deliver_events
                 thread = deliver_events(routed,topic,event,payload,'webhook:'+delivery,
-                                        lambda topic=topic: roots.closed(topic),binding.config.get('language','ko'))
+                                        lambda topic=topic: roots.closed(topic),binding.config.get('language','ko'),github=github)
                 if thread is None:continue
                 if topic.kind=='pr' and not had_thread:self.conflicts.signal(binding,delivery+':thread-ready','pull_request',{'action':'opened'})
                 if notices:

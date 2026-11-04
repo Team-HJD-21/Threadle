@@ -250,10 +250,17 @@ def refresh_state_only(threads,topic,closed):
     if not locked and owned and finished:threads.api.call('PATCH','/channels/'+thread_id,{'archived':True})
     return thread_id
 
-def deliver_events(threads,topic,event,payload,event_key,closed,language):
+def deliver_events(threads,topic,event,payload,event_key,closed,language,github=None):
     from delivery import CachedThreads
     if not isinstance(threads,CachedThreads):return threads.deliver(topic,make_embed(topic,event,payload,language),event_key,closed)
     entries=[(row['event'],row['payload']) for row in payload['_events']] if event=='threadle_bundle' else [(event,payload)]
+    from review_conversations import relevant,ReviewConversations
+    if github is not None and topic.kind=='pr' and any(relevant(e,p) for e,p in entries):
+        reviewed=ReviewConversations(threads,github).deliver(topic,entries,event_key,closed,language)
+        entries=[(e,p) for e,p in entries if not relevant(e,p)]
+        if not entries:return reviewed
+        event='threadle_bundle'
+        payload=dict(payload,_events=[{'event':e,'payload':p} for e,p in entries])
     sources={};remaining=[]
     mutable=None
     # Deletions win over late creates/edits, including entries bundled out of order.
