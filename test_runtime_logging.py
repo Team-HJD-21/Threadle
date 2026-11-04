@@ -71,11 +71,14 @@ class CoordinatorLoggingTests(unittest.TestCase):
 
     def test_coordinator_exception_is_logged_and_still_exits_for_recovery(self):
         self.service.web=None;self.service.discord_connect=None
-        stop=threading.Event()
-        with patch('presence.Presence.start',return_value=Mock()),patch('guild_lifecycle.GuildLifecycle.start'),patch('data_retention.Retention.start'),patch('ci_channel_migration.CiChannelMigration.start'),patch('webhook_recovery.WebhookRecovery.start'),patch.object(self.service.registry,'active',side_effect=sqlite3.OperationalError('database is locked')):
+        stop=threading.Event();ready=threading.Event();ready.set()
+        presence=Mock()
+        presence.join.side_effect=lambda **kwargs:self.assertFalse(ready.is_set())
+        with patch('presence.Presence.start',return_value=presence),patch('guild_lifecycle.GuildLifecycle.start'),patch('data_retention.Retention.start'),patch('ci_channel_migration.CiChannelMigration.start'),patch('webhook_recovery.WebhookRecovery.start'),patch.object(self.service.registry,'active',side_effect=sqlite3.OperationalError('database is locked')):
             with self.assertLogs('service',level='ERROR') as logs, self.assertRaises(sqlite3.OperationalError):
-                self.service.run(stop)
+                self.service.run(stop,ready=ready)
         self.assertTrue(stop.is_set())
+        self.assertFalse(ready.is_set())
         self.assertIn('Traceback',logs.output[0])
         self.assertIn('database is locked',logs.output[0])
         self.assertIn('Coordinator stopped',logs.output[0])

@@ -68,6 +68,41 @@ class EncryptionTests(unittest.TestCase):
         self.assertTrue(verify(fresh)['encrypted'])
         self.assertFalse(list(fresh.rglob('*.dpapi')))
 
+    def test_finalize_can_remove_guard_while_live_receiver_opens_encrypted_state(self):
+        import threading
+        from concurrent.futures import ThreadPoolExecutor
+        migrate(self.root,self.job)
+        active=self.root/'state-conversion-active.json'
+        entered=threading.Event();finished=threading.Event()
+        original=Path.read_text
+        def read(path,*args,**kwargs):
+            if path==active and threading.current_thread().name.startswith('guard-reader'):
+                entered.set()
+                if not finished.wait(5):raise TimeoutError('Finalize did not finish')
+            return original(path,*args,**kwargs)
+        with patch.object(Path,'read_text',read),ThreadPoolExecutor(max_workers=1,thread_name_prefix='guard-reader') as worker:
+            future=worker.submit(self.service.registry.active)
+            try:
+                self.assertTrue(entered.wait(5))
+                finalize(self.root,self.job)
+            finally:finished.set()
+            self.assertEqual(future.result(timeout=5),self.service.registry.active())
+        self.assertIsNotNone(self.queue.next())
+
+    def test_post_finalize_failure_can_rollback_existing_encryption_without_resetting_live_data(self):
+        migrate(self.root,self.job);finalize(self.root,self.job)
+        next_job=self.root/'cd-deployments'/'next-deployment'
+        self.assertEqual(migrate(self.root,next_job),0)
+        finalize(self.root,next_job)
+        self.queue.put('after-finalize','issues',{'body':'keep live event'})
+        expected=Service(self.root,{}).registry.active()
+        rollback(self.root,next_job)
+        self.assertEqual(Service(self.root,{}).registry.active(),expected)
+        with self.queue.connect() as db:
+            self.assertEqual({r[0] for r in db.execute('SELECT id FROM jobs')},{'private-event','after-finalize'})
+        self.assertTrue((self.root/state_db.POLICY).exists())
+        self.assertFalse((self.root/'state-conversion-active.json').exists())
+
     def test_wal_contains_no_plain_repository_body(self):
         migrate(self.root,self.job); finalize(self.root,self.job)
         with self.queue.connect() as keeper:
@@ -197,6 +232,35 @@ class EncryptionTests(unittest.TestCase):
         raw = bytearray(path.read_bytes()); raw[80] ^= 1; path.write_bytes(raw)
         with self.assertRaises(state_db.StorageError): Service(self.root, {})
         self.assertEqual(path.read_bytes(), raw)
+
+
+class GuardRaceTests(unittest.TestCase):
+    def setUp(self):
+        self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
+        self.root=Path(self.temp.name)
+        (self.root/state_db.POLICY).write_text('{}')
+        self.active=self.root/'state-conversion-active.json'
+        self.path=self.root/'connections.sqlite3'
+
+    def test_guard_removed_during_read_is_treated_as_completed_conversion(self):
+        self.active.write_text('{"state":"awaiting-health"}')
+        original=Path.read_text
+        def remove_before_read(path,*args,**kwargs):
+            if path==self.active:self.active.unlink()
+            return original(path,*args,**kwargs)
+        with patch.object(Path,'read_text',remove_before_read):
+            self.assertEqual(state_db.key_root(self.path),self.root)
+
+    def test_offline_conversion_states_still_block_database_access(self):
+        for state in ('preparing','replacing','rolling-back'):
+            self.active.write_text(json.dumps({'state':state}))
+            with self.assertRaises(state_db.StorageError):state_db.key_root(self.path)
+
+    def test_unreadable_and_invalid_guards_are_not_ignored(self):
+        self.active.write_text('invalid json')
+        with self.assertRaises(ValueError):state_db.key_root(self.path)
+        with patch.object(Path,'read_text',side_effect=PermissionError):
+            with self.assertRaises(PermissionError):state_db.key_root(self.path)
 
 
 if __name__ == '__main__': unittest.main()

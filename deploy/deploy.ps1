@@ -12,6 +12,7 @@ $folder = $scheduler.GetFolder('\')
 $taskName = 'TeamHJD-GitHubDiscord-Receiver'
 . (Join-Path $PSScriptRoot 'recovery_settings.ps1')
 . (Join-Path $PSScriptRoot 'receiver_process.ps1')
+. (Join-Path $PSScriptRoot 'receiver_health.ps1')
 $receiverWasEnabled = $null
 $recoveryChanged = $false
 $taskBackup = Join-Path $job 'receiver-task-before.xml'
@@ -45,22 +46,16 @@ function Stop-Receiver {
     Write-Host ('Receiver stop timeout: taskState='+$task.State+' listening8787='+$listening+' ownedProcesses='+$remaining.Count)
     throw 'Receiver did not stop; no files were replaced.'
 }
+function Wait-Receiver([int]$StableChecks=2) {
+    $settings = Get-Content -LiteralPath (Join-Path $Root 'public-settings.json') -Raw | ConvertFrom-Json
+    $hostName = ([Uri]$settings.PUBLIC_BASE_URL).Authority
+    Wait-ReceiverHealthy -HostName $hostName -StableChecks $StableChecks
+}
 function Start-Receiver {
     $task = $folder.GetTask($taskName)
     if ($null -ne $script:receiverWasEnabled) { $task.Enabled = $script:receiverWasEnabled }
     if ($task.State -notin @(2,4)) { $task.Run($null) | Out-Null }
-    $settings = Get-Content -LiteralPath (Join-Path $Root 'public-settings.json') -Raw | ConvertFrom-Json
-    $hostName = ([Uri]$settings.PUBLIC_BASE_URL).Authority
-    $deadline = [DateTime]::UtcNow.AddSeconds(60)
-    do {
-        try {
-            $health = Invoke-WebRequest 'http://127.0.0.1:8787/health' -UseBasicParsing -TimeoutSec 2
-            $page = Invoke-WebRequest 'http://127.0.0.1:8787/connect' -Headers @{Host=$hostName} -UseBasicParsing -TimeoutSec 2
-            if ($health.StatusCode -eq 200 -and $health.Content.Trim() -eq 'receiver-ready' -and $page.StatusCode -eq 200) { return }
-        } catch { }
-        Start-Sleep -Milliseconds 500
-    } while ([DateTime]::UtcNow -lt $deadline)
-    throw 'Receiver or connection page did not become healthy.'
+    Wait-Receiver
 }
 $stopped = $false
 $stopRequested = $false
@@ -85,6 +80,7 @@ try {
     Enable-ReceiverRecovery -Folder $folder -TaskName $taskName -Root $Root -BackupFile $taskBackup
     Start-Receiver
     Invoke-StateEncryption 'finalize'
+    Wait-Receiver -StableChecks 6
     $stopped = $false
     'passed' | Set-Content -LiteralPath (Join-Path $job 'result.txt')
     Write-Host ('DEPLOYMENT PASSED. Backup: ' + $job)

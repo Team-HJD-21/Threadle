@@ -199,6 +199,23 @@ class ServiceTests(unittest.TestCase):
             server.server_close()
             thread.join()
 
+    def test_health_requires_coordinator_readiness_and_withdraws_it_on_failure(self):
+        ready=threading.Event()
+        server=ThreadingHTTPServer(('127.0.0.1',0),handler(self.service,ready))
+        thread=threading.Thread(target=server.serve_forever);thread.start()
+        try:
+            for available,status,text in [(False,503,'receiver-starting'),(True,200,'receiver-ready'),(False,503,'receiver-starting')]:
+                if available:ready.set()
+                else:ready.clear()
+                connection=http.client.HTTPConnection('127.0.0.1',server.server_port,timeout=3)
+                try:
+                    connection.request('GET','/health');response=connection.getresponse()
+                    self.assertEqual(response.status,status)
+                    self.assertEqual(response.read().decode(),text)
+                finally:connection.close()
+        finally:
+            server.shutdown();server.server_close();thread.join()
+
     @unittest.skipUnless(shutil.which('powershell.exe'), 'Windows PowerShell is required')
     def test_windows_powershell_recognizes_health_as_ready(self):
         server = ThreadingHTTPServer(('127.0.0.1', 0), handler(self.service))

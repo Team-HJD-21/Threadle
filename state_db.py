@@ -65,8 +65,16 @@ def key_root(path):
         return None
     for parent in path.parents:
         active = parent / 'state-conversion-active.json'
-        if active.exists():
-            if linked(active) or json.loads(active.read_text('utf-8')).get('state') != 'awaiting-health':
+        # Finalize removes this guard while the healthy receiver is opening DBs.
+        # Read once instead of checking existence before a second filesystem call.
+        if linked(active):
+            raise StorageError('Linked conversion guard rejected')
+        try:
+            transition = active.read_text('utf-8')
+        except FileNotFoundError:
+            transition = None
+        if transition is not None:
+            if linked(active) or json.loads(transition).get('state') != 'awaiting-health':
                 raise StorageError('Offline state conversion requires recovery before starting the receiver')
         if (parent / POLICY).exists():
             for part in (path, *path.parents):

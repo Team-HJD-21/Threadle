@@ -328,7 +328,11 @@ def _rollback(root, job):
             os.replace(destination, path)
         refresh_manifests(root, record['rollback_manifests'], False, key)
         (root / state_db.POLICY).unlink(missing_ok=True)
-    remove_private(root, private)
+    # A completed deployment has already removed its private staging directory.
+    # Existing encrypted state needs no export; preserve its live data when a
+    # post-finalize health check asks CD to restore the previous application.
+    if record['state'] != 'complete' or private.exists() or state_db.linked(private):
+        remove_private(root, private)
     record['state'] = 'rolled-back'; atomic_json(journal, record)
     (root / 'state-conversion-active.json').unlink(missing_ok=True)
 

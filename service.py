@@ -340,6 +340,7 @@ class Service:
                 stop.wait(5)
 
     def run(self, stop, ready=None):
+        readiness=ready
         workers = {}
         self.operator_mail.start(stop)
         from presence import Presence
@@ -386,16 +387,18 @@ class Service:
                     ready=None
                 stop.wait(.2)
         except Exception:
+            if readiness is not None:readiness.clear()
             log_exception(LOG,'Coordinator stopped; receiver will exit with failure')
             raise
         finally:
+            if readiness is not None:readiness.clear()
             stop.set()
             for _, thread, signal in workers.values():
                 signal.set()
             presence_worker.join(timeout=5)
 
 
-def handler(service):
+def handler(service, ready=None):
     class Handler(BaseHTTPRequestHandler):
         def setup(self):
             super().setup()
@@ -417,8 +420,11 @@ def handler(service):
                 if service.web is not None:
                     return service.web.handle(self)
                 return self.respond(503, 'Connection setup is not enabled yet')
-            self.respond(200 if self.path == '/health' else 404,
-                         'receiver-ready' if self.path == '/health' else 'not found')
+            if self.path == '/health':
+                healthy = ready is None or ready.is_set()
+                return self.respond(200 if healthy else 503,
+                                    'receiver-ready' if healthy else 'receiver-starting')
+            self.respond(404, 'not found')
 
         def do_POST(self):
             if urlsplit(self.path).path == '/discord/interactions':
@@ -508,16 +514,17 @@ def main():
         print('Smoke passed for binding:', binding.id)
         return
     stop = threading.Event()
-    server = HttpServer(('127.0.0.1', args.port), handler(service))
+    ready = threading.Event()
+    server = HttpServer(('127.0.0.1', args.port), handler(service, ready))
     LOG.info('HTTP receiver listening port=%s',server.server_address[1])
     failed = threading.Event()
-    ready = threading.Event()
     from restart_notices import RestartNotices
     RestartNotices(service).start(stop,ready)
     def coordinator():
         try:
             service.run(stop,ready=ready)
         except Exception:
+            ready.clear()
             log_exception(LOG,'Coordinator failure is stopping HTTP receiver')
             failed.set()
             server.shutdown()
