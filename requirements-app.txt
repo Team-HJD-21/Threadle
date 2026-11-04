@@ -1,1 +1,2 @@
 PyJWT[crypto]>=2.10,<3
+sqlcipher3==0.6.4

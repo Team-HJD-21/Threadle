@@ -4,6 +4,8 @@ Threadle creates a local SQLite snapshot before applying a deployment and once p
 
 Snapshots live under `database-backups` in the configured runtime directory. Every published snapshot passes SHA-256 and SQLite quick-check validation and a restoration into a temporary directory. Failed or interrupted attempts are not published. Backup failure before deployment leaves application files unchanged and restarts the previous receiver. The administrator page shows the latest successful backup/restore-check time.
 
+After the state-encryption rollout, these database files and online WAL content use SQLCipher encryption. Existing valid managed snapshots are converted during the offline deployment; new snapshots stay encrypted throughout backup and restore-check. Keys are excluded and must be recovered separately. See [state-encryption.md](state-encryption.md) for migration, rollback and passphrase-protected recovery-key export. Plaintext legacy snapshots remain readable before the rollout.
+
 ## Scope and retention
 
 Included: connection registry, channel layouts, repository-file cache, legacy queue, and per-connection delivery queues, thread/message links and pending work. OAuth/login sessions, credentials, keys and configuration files are excluded. Treat backups as private repository data and keep the runtime directory restricted to its existing operators.
@@ -22,6 +24,8 @@ python state_backups.py restore-check --snapshot 'C:\ProgramData\TeamHJD\GitHubD
 ```
 
 The restore target must not exist. This command does not replace operating databases or change the running service. It validates the source before creating the target, copies only allowlisted database paths and validates restored files. Do not point it at the live runtime directory.
+
+For an encrypted snapshot copied outside its original runtime tree, add `--key-root 'C:\ProgramData\TeamHJD\GitHubDiscord'` to point at the original protected key. Restored files remain encrypted; restore-check does not export the key or create a plaintext database. A replacement runtime needs the separately recovered key and configuration before service startup.
 
 Actual recovery is a separate operator action: stop intake and delivery, retain the damaged state for investigation, select a verified snapshot compatible with the deployed application schema, review replay/duplicate implications, then replace the complete intended database set with the service stopped. Preserve required configuration/keys; users may need to sign in again because login sessions are excluded. No automatic live database rollback is performed.
 

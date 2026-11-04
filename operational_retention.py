@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 import re
 import shutil
-import sqlite3
+import state_db as sqlite3
 
 DAYS = 30 * 86400
 LOG = logging.getLogger('retention')

@@ -79,6 +79,9 @@ def prepare(root, source, job):
     subprocess.run([os.sys.executable, '-B', '-I', '-c', check, str(candidate)], check=True)
     from deploy.media_dependency import stage
     stage(root,source,job)
+    if manifest.get('state_encryption') is True:
+        from deploy.cipher_dependency import stage as stage_cipher
+        stage_cipher(root,source,job)
     print('Preflight passed: ' + manifest['version'])
 
 
@@ -97,6 +100,8 @@ def apply(root, job):
             raise ValueError('Staged file changed: ' + name)
     from deploy.media_dependency import install
     install(root,job)
+    from deploy.cipher_dependency import install as install_cipher
+    install_cipher(root,job)
     for name, rule in manifest['files'].items():
         target = root / name
         if not target.exists() or digest(target.read_bytes()) != rule['after']:
@@ -105,6 +110,12 @@ def apply(root, job):
 
 
 def restore(root, job):
+    if (root/'state-conversion-active.json').exists():
+        raise ValueError('Recover the interrupted state conversion before restoring application files')
+    if (root/'state-encryption.json').exists() and (job/'state-conversion.json').exists():
+        conversion=json.loads((job/'state-conversion.json').read_text('utf-8'))
+        if conversion.get('previous') is None and conversion.get('state') not in ('aborted','rolled-back'):
+            raise ValueError('Restore database compatibility with state_encryption.py rollback before restoring old application files')
     records = json.loads((job / 'before.json').read_text('utf-8'))
     for name, expected in records.items():
         if expected is not None and hashlib.sha256((job / 'backup' / name).read_bytes()).hexdigest() != expected:
@@ -117,6 +128,8 @@ def restore(root, job):
             atomic_write(target, (job / 'backup' / name).read_bytes())
     from deploy.media_dependency import restore as restore_media
     restore_media(root,job)
+    from deploy.cipher_dependency import restore as restore_cipher
+    restore_cipher(root,job)
     print('Previous files restored and verified')
 
 
