@@ -1,7 +1,7 @@
 import json
 import logging
 import re
-import sqlite3
+import state_db as sqlite3
 import threading
 import time
 

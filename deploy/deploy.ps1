@@ -19,6 +19,10 @@ function Invoke-Patch([string]$Action) {
     & $runtime.python -B (Join-Path $PSScriptRoot 'patch_runtime.py') $Action --root $Root --source $source --job $job
     if ($LASTEXITCODE -ne 0) { throw ('Deployment phase failed: ' + $Action) }
 }
+function Invoke-StateEncryption([string]$Action) {
+    & $runtime.python -B (Join-Path $source 'state_encryption.py') $Action --root $Root --job $job --offline
+    if ($LASTEXITCODE -ne 0) { throw ('State encryption phase failed: ' + $Action) }
+}
 function Stop-Receiver {
     $task = $folder.GetTask($taskName)
     if ($null -eq $script:receiverWasEnabled) { $script:receiverWasEnabled = $task.Enabled }
@@ -76,9 +80,11 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'State backup validation failed; previous receiver will restart without applying changes.' }
     $applying = $true
     Invoke-Patch 'apply'
+    Invoke-StateEncryption 'migrate'
     $recoveryChanged = $true
     Enable-ReceiverRecovery -Folder $folder -TaskName $taskName -Root $Root -BackupFile $taskBackup
     Start-Receiver
+    Invoke-StateEncryption 'finalize'
     $stopped = $false
     'passed' | Set-Content -LiteralPath (Join-Path $job 'result.txt')
     Write-Host ('DEPLOYMENT PASSED. Backup: ' + $job)
@@ -93,6 +99,7 @@ try {
     if ($applying) {
         try {
             Stop-Receiver
+            Invoke-StateEncryption 'rollback'
             Invoke-Patch 'restore'
             Start-Receiver
             $stopped = $false

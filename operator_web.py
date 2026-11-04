@@ -3,7 +3,7 @@ import hmac
 import json
 import re
 import shutil
-import sqlite3
+import state_db as sqlite3
 import time
 import threading
 from contextlib import closing

@@ -1,5 +1,5 @@
 import json
-import sqlite3
+import state_db as sqlite3
 import time
 from contextlib import contextmanager
 from discord_threads import Threads, marker

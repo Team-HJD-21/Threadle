@@ -2,7 +2,7 @@ from contextlib import contextmanager
 import json
 import logging
 import math
-import sqlite3
+import state_db as sqlite3
 import time
 import uuid
 

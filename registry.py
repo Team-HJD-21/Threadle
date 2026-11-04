@@ -1,6 +1,6 @@
 import json
 import re
-import sqlite3
+import state_db as sqlite3
 import uuid
 import time
 from contextlib import contextmanager

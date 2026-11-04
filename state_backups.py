@@ -9,7 +9,7 @@ import math
 from pathlib import Path,PurePosixPath
 import re
 import shutil
-import sqlite3
+import state_db as sqlite3
 import threading
 import time
 import uuid
@@ -42,9 +42,9 @@ def checksum(path):
     return digest.hexdigest()
 
 
-def integrity(path):
+def integrity(path,key_from=None):
     if any(path.with_name(path.name+suffix).exists() for suffix in ('-wal','-shm','-journal')):raise ValueError('Snapshot must be a standalone database')
-    with closing(sqlite3.connect(path.as_uri()+'?mode=ro',uri=True,timeout=5)) as db:
+    with closing(sqlite3.connect(path.as_uri()+'?mode=ro',uri=True,timeout=5,key_from=key_from)) as db:
         if db.execute('PRAGMA quick_check').fetchall()!=[('ok',)]:raise ValueError('State database integrity check failed')
 
 
@@ -106,28 +106,29 @@ def manifest(folder):
     return data
 
 
-def verify(folder):
+def verify(folder,key_from=None):
     folder=Path(folder)
     if linked(folder):raise ValueError('Linked snapshot rejected')
     folder=folder.resolve();data=manifest(folder)
     for row in data['files']:
         path=safe(folder,row['path'])
         if not path.is_file() or path.stat().st_size!=row['size'] or checksum(path)!=row['sha256']:raise ValueError('State snapshot checksum mismatch')
-        integrity(path)
+        integrity(path,key_from)
     return data
 
 
-def restore_check(folder,target):
+def restore_check(folder,target,key_from=None):
     folder=Path(folder)
     if linked(folder):raise ValueError('Linked snapshot rejected')
     folder=folder.resolve();target=Path(target)
     if target.exists() or linked(target) or any(linked(p) for p in target.parents):raise ValueError('Restore check requires a new, unlinked directory')
-    data=verify(folder);target.mkdir(parents=True)
+    key_from=key_from or sqlite3.key_root(folder/'connections.sqlite3')
+    data=verify(folder,key_from);target.mkdir(parents=True)
     for row in data['files']:
         source=safe(folder,row['path']);destination=safe(target,row['path']);destination.parent.mkdir(parents=True,exist_ok=True)
         shutil.copy2(source,destination)
         if checksum(destination)!=row['sha256']:raise ValueError('Restored state checksum mismatch')
-        integrity(destination.resolve())
+        integrity(destination.resolve(),key_from)
     return len(data['files'])
 
 
@@ -208,6 +209,8 @@ def create(root,reason='daily',stop=None):
                 if safe(root,relative).is_file():copy_db(relative)
             if not identities<=binding_ids(registry):raise RuntimeError('Connections changed during backup; retry later')
             data={'format':1,'complete':True,'created':now,'reason':reason,'bindings':sorted(identities),'files':files}
+            if (root/sqlite3.POLICY).exists():
+                data.update(encrypted=True,key_id=hashlib.sha256(sqlite3.load_key(root)).hexdigest())
             (pending/'manifest.json').write_text(json.dumps(data,indent=2)+'\n','utf-8')
             restore_check(pending,scratch);remove_managed(parent,scratch)
             destination=parent/name;pending.rename(destination)
@@ -240,7 +243,7 @@ class StateBackups:
 
 
 if __name__=='__main__':
-    parser=argparse.ArgumentParser();parser.add_argument('action',choices=['create','verify','restore-check']);parser.add_argument('--root',type=Path);parser.add_argument('--snapshot',type=Path);parser.add_argument('--target',type=Path);parser.add_argument('--reason',default='manual');args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('action',choices=['create','verify','restore-check']);parser.add_argument('--root',type=Path);parser.add_argument('--key-root',type=Path);parser.add_argument('--snapshot',type=Path);parser.add_argument('--target',type=Path);parser.add_argument('--reason',default='manual');args=parser.parse_args()
     if args.action=='create':print('STATE_BACKUP_VERIFIED:',create(args.root,args.reason))
-    elif args.action=='verify':print('STATE_BACKUP_VERIFIED files=',len(verify(args.snapshot)['files']))
-    else:print('STATE_RESTORE_CHECK_PASSED files=',restore_check(args.snapshot,args.target))
+    elif args.action=='verify':print('STATE_BACKUP_VERIFIED files=',len(verify(args.snapshot,args.key_root)['files']))
+    else:print('STATE_RESTORE_CHECK_PASSED files=',restore_check(args.snapshot,args.target,args.key_root))

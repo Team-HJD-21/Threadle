@@ -9,7 +9,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import shutil
-import sqlite3
+import state_db as sqlite3
 import subprocess
 import sys
 import time

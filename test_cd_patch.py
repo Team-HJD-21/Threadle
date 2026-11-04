@@ -30,6 +30,9 @@ class DeploymentTests(unittest.TestCase):
         media = patch('deploy.media_dependency.stage')
         media.start()
         self.addCleanup(media.stop)
+        cipher = patch('deploy.cipher_dependency.stage')
+        cipher.start()
+        self.addCleanup(cipher.stop)
 
     def tearDown(self):
         self.temp.cleanup()
