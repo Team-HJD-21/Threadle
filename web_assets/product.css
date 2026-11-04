@@ -128,6 +128,21 @@
 @media(prefers-reduced-motion:reduce){.preview-arrival,.preview-message{animation:none}.preview-tabs label{transition:none}}
 
 .preview-feed,.preview-detail-scroll{min-height:0}
+.threadle-preview [hidden]{display:none!important}
+.threadle-preview [data-topic-preview]{grid-template-columns:21% minmax(0,1fr)}
+.threadle-preview [data-topic-preview].is-thread-open{grid-template-columns:21% minmax(0,39%) minmax(0,40%)}
+.threadle-preview .preview-post>div{flex:0 1 auto;max-width:390px}
+.threadle-preview [data-topic-preview] [data-feature-step]{animation:preview-notification-arrive .4s ease-out both}
+.threadle-preview.is-paused [data-feature-step]{animation-play-state:paused}
+.preview-post article.preview-comment-card{border-left-color:#8b949e!important}
+@container(max-width:560px){.threadle-preview [data-topic-preview]{grid-template-columns:25% minmax(0,1fr)}.threadle-preview [data-topic-preview].is-thread-open{grid-template-columns:25% minmax(0,32%) minmax(0,43%)}}
+@media(prefers-reduced-motion:reduce){.threadle-preview [data-topic-preview] [data-feature-step]{animation:none!important}}
+.preview-topic{position:relative;--thread-avatar:30px;--thread-gap:8px;--thread-indent:15px;--thread-tail:25px}
+.preview-topic .preview-thread-card:before{display:none}
+.preview-topic:has(.preview-thread-card:not([hidden])):before{content:'';position:absolute;left:calc(var(--thread-avatar)/2);top:calc(var(--thread-avatar) + 5px);bottom:var(--thread-tail);width:calc(var(--thread-avatar)/2 + var(--thread-gap) + var(--thread-indent));border:solid #565860;border-width:0 0 1px 1px;border-radius:0 0 0 8px;pointer-events:none}
+@media(max-width:760px){.preview-topic{--thread-avatar:clamp(14px,3vw,24px);--thread-gap:4px;--thread-indent:7px;--thread-tail:14px}}
+@container(max-width:560px){.preview-topic{--thread-avatar:14px;--thread-gap:3px}}
+
 
 /* Vector controls are decorative within the animated Discord preview. */
 .preview-icon{display:inline-block;width:18px;height:18px;flex:0 0 auto;vertical-align:middle;color:inherit}.preview-tools{display:inline-flex;align-items:center;gap:8px;flex:0 0 auto;color:#b5bac1}.preview-case header .preview-tools{margin-left:auto}.preview-case header .preview-header-name,.preview-case header .preview-server-name{margin-left:0;min-width:0;overflow:hidden;text-overflow:ellipsis;flex:1}.preview-case header>.preview-icon{width:18px;height:18px;color:#aeb0b6}.preview-sidebar header>.preview-icon{width:14px;height:14px}.preview-sidebar-content>p{display:flex;align-items:center;gap:9px}.preview-sidebar-content>p .preview-icon{width:19px;height:19px}.preview-channel{display:flex;align-items:center;gap:7px}.preview-channel>.preview-icon{color:#949ba4;width:19px;height:19px}.preview-channel>span{min-width:0;overflow:hidden;text-overflow:ellipsis}.preview-user>b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.preview-user .preview-tools{margin-left:auto;color:#b5bac1;gap:5px}.preview-user .preview-icon{width:14px;height:14px}.preview-user .preview-status{margin-left:0;color:#3ba55c;display:inline-flex}.preview-status .preview-icon{width:9px;height:9px}.preview-hash{display:flex;align-items:center;justify-content:center;height:60px}.preview-hash>.preview-icon{width:38px;height:38px;color:#dbdee1}.preview-post em{display:inline-flex;align-items:center;gap:2px;vertical-align:middle;line-height:1.1}.preview-post em>.preview-icon{width:9px;height:9px}.preview-thread-card>span{display:flex;align-items:center;gap:2px}.preview-thread-card>span>.preview-icon{width:11px;height:11px}.preview-compose{display:flex;align-items:center;gap:8px}.preview-compose-hint{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}.preview-compose>.preview-tools{gap:6px}.preview-compose .preview-tools>.preview-icon{width:15px;height:15px}.preview-compose>.preview-icon{width:21px;height:21px}.preview-detail>header .preview-tools>.preview-icon{width:16px;height:16px}
@@ -217,17 +232,32 @@ button.preview-channel{width:100%;border:0;background:transparent;text-align:lef
 .feature-title{display:block;font-size:19px;font-weight:700;margin-bottom:12px}.feature-copy{display:block;font-size:14px;line-height:1.8;color:var(--muted)}
 .product-page .feature-showcase button.feature-item[aria-selected=true]{border-color:var(--accent);background:#25352f;box-shadow:inset 0 0 0 1px var(--accent)}
 .feature-item:focus-visible{outline:3px solid var(--accent);outline-offset:4px}
-.feature-scene[hidden]{display:none!important}.feature-scene .preview-case{display:grid;height:100%;--kind:#2da44e}.feature-scene .preview-window{height:clamp(390px,53vw,650px)}
-.feature-scene{animation:feature-scene-in .3s ease-out}.feature-scene .preview-sidebar header{font-size:clamp(8px,1.4vw,14px)}
+/* Feature examples share the home Discord layout and starter component. */
+.feature-scene[hidden],.feature-scene [hidden]{display:none!important}
+.feature-showcase [data-feature-preview]{max-width:1100px;margin:0 auto}
+.feature-scene .preview-window{height:clamp(420px,43vw,540px);display:flex;flex-direction:column}
+.feature-scene .preview-traffic{flex:0 0 24px;box-sizing:border-box}
+.feature-scene .preview-case{display:grid;flex:1;height:auto;min-height:0;grid-template-columns:21% minmax(0,1fr);grid-template-rows:minmax(0,1fr);--kind:#2da44e}
+.feature-scene .preview-case.is-thread-open{grid-template-columns:21% minmax(0,39%) minmax(0,40%)}
+.feature-scene .preview-feed{justify-content:flex-start}
+.feature-scene [data-feature-step]{animation:feature-scene-in .3s ease-out both}
+.feature-showcase.is-paused [data-feature-step]{animation-play-state:paused}
 .feature-scene .feature-gray{border-left-color:#8b949e}.feature-scene article.feature-green{border-left-color:#2da44e}.feature-scene .feature-blue{border-left-color:#0969da}
-.feature-scene-note{font-size:clamp(9px,1.1vw,13px);line-height:1.7;color:#b5bac1;padding:14px;background:#2b2d31;border-radius:8px;margin:16px 0}.feature-scene-note .preview-icon{width:14px;height:14px}
-.feature-showcase.is-paused .preview-arrival,.feature-showcase.is-paused .preview-message{animation-play-state:paused!important}
+.product-page .threadle-preview button.preview-thread-card{display:block;width:calc(100% - 15px);margin:10px 0 0 15px;padding:8px;background:#313338;border:1px solid #484a52;border-radius:4px;color:#dbdee1;text-align:left;white-space:normal;font:inherit;box-shadow:none;transform:none}
+.product-page .threadle-preview button.preview-thread-card[data-feature-open]:hover:not(:disabled){background:#404249;color:#fff;transform:none;box-shadow:none}
+.product-page .feature-showcase [data-feature-preview] button[type=button]:hover:not(:disabled){background:transparent;color:#dbdee1;transform:none;box-shadow:none}
+.product-page .feature-showcase .feature-scene button.preview-thread-card[data-feature-open]:hover:not(:disabled){background:#404249;color:#fff;transform:none;box-shadow:none}
+.product-page .feature-scene button[data-feature-back]{padding:0;background:transparent;border:0;color:#b5bac1;box-shadow:none;transform:none;display:inline-flex;align-items:center;justify-content:center}
+.feature-scene button:focus-visible{outline:2px solid #83baff;outline-offset:2px}
+.feature-user-command{display:flex;flex-direction:column;gap:6px;padding:0 0 18px 38px;font-size:12px}
+.feature-scene-note{font-size:12px;line-height:1.75;color:var(--muted);margin:14px 0 0;padding:0 4px}
+.feature-scene{animation:feature-scene-in .25s ease-out}.feature-showcase .preview-playback{gap:20px}
+.product-page .feature-showcase .preview-playback button{background:transparent;color:var(--muted);padding:6px 0;border:0;min-height:0;font-size:12px;box-shadow:none;transform:none}
+.product-page .feature-showcase .preview-playback button[type=button]:hover:not(:disabled){background:transparent;color:var(--text);transform:none;box-shadow:none}
+.feature-scene.is-state-updated .preview-state-card,.feature-scene.is-state-updated .preview-description-card{border-left-color:#8957e5!important}
 .security-note{margin:44px 0 20px;padding:32px;border:1px solid var(--line);border-radius:18px;background:var(--surface);max-width:100%;line-height:1.8}.security-note h2{font-size:clamp(23px,3vw,32px);margin:8px 0 16px}.security-note .eyebrow{font-size:12px;color:var(--accent);letter-spacing:.1em}.security-note .muted{font-size:13px}
-@keyframes feature-scene-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-@media(max-width:600px){.feature-showcase .feature-grid{gap:10px}.product-page .feature-showcase button.feature-item{padding:16px}.feature-title{font-size:15px}.feature-copy{font-size:12px}.security-note{padding:22px}.feature-scene .preview-window{height:420px}.feature-scene-note{padding:8px}}
-@media(prefers-reduced-motion:reduce){.feature-scene{animation:none}.feature-scene .preview-arrival,.feature-scene .preview-message{animation:none!important}}
-
-.feature-scene.is-state-updated .preview-pr .preview-state-card,.feature-scene.is-state-updated .preview-pr .preview-description-card{border-left-color:#8957e5!important}
-@media(max-width:600px){.feature-scene .preview-case{grid-template-columns:40% 60%;height:calc(100% - 24px)}.feature-scene .preview-sidebar{display:none}.feature-scene .preview-post article{font-size:10px}.feature-scene .preview-detail-scroll>h2{font-size:17px}.feature-scene .preview-detail-scroll{padding:12px 8px}.feature-scene .preview-feed{padding:12px 7px}}
-
+@keyframes feature-scene-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@media(max-width:760px){.feature-scene .preview-case{grid-template-columns:25% minmax(0,1fr)}.feature-scene .preview-case.is-thread-open{grid-template-columns:25% minmax(0,32%) minmax(0,43%)}.product-page .threadle-preview button.preview-thread-card{width:calc(100% - 7px);margin-left:7px;padding:4px}.feature-user-command{font-size:inherit;padding-left:22px}}
+@media(max-width:600px){.feature-showcase .feature-grid{gap:10px}.product-page .feature-showcase button.feature-item{padding:16px}.feature-title{font-size:15px}.feature-copy{font-size:12px}.security-note{padding:22px}.feature-scene .preview-window{height:clamp(340px,90vw,420px)}.feature-scene-note{font-size:11px}}
+@media(prefers-reduced-motion:reduce){.feature-scene,.feature-scene [data-feature-step]{animation:none!important}}
 .product-page .feature-showcase button.feature-item[data-feature]:hover:not(:disabled){background:#25352f;color:var(--text);transform:none;box-shadow:none}

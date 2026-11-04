@@ -339,7 +339,7 @@ class Service:
                 log_exception(LOG,'Connection retry binding=%s error=%s', binding.id, type(error).__name__)
                 stop.wait(5)
 
-    def run(self, stop):
+    def run(self, stop, ready=None):
         workers = {}
         self.operator_mail.start(stop)
         from presence import Presence
@@ -381,6 +381,9 @@ class Service:
                         workers[identity] = binding, thread, signal
                         thread.start()
                 self.dispatch()
+                if ready is not None:
+                    ready.set()
+                    ready=None
                 stop.wait(.2)
         except Exception:
             log_exception(LOG,'Coordinator stopped; receiver will exit with failure')
@@ -508,9 +511,12 @@ def main():
     server = HttpServer(('127.0.0.1', args.port), handler(service))
     LOG.info('HTTP receiver listening port=%s',server.server_address[1])
     failed = threading.Event()
+    ready = threading.Event()
+    from restart_notices import RestartNotices
+    RestartNotices(service).start(stop,ready)
     def coordinator():
         try:
-            service.run(stop)
+            service.run(stop,ready=ready)
         except Exception:
             log_exception(LOG,'Coordinator failure is stopping HTTP receiver')
             failed.set()
