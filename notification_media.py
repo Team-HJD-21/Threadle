@@ -57,20 +57,20 @@ def media_embeds(original):
              r'|(?P<plain>https://[^\s<>\]"\)]+)')
     segments=[];cursor=0
     for match in re.finditer(pattern,body,re.I|re.S):
-        label='Image';url=None
+        url=None
         if match['html']:
             image=Images();image.feed(match['html'])
             url=image.urls[0] if image.urls else None
         elif match['markdown']:
             candidate=safe_image_url(match['destination'].strip('<>'))
             if match['markdown'].startswith('!') or image_reference(candidate):
-                url=candidate;label=match['alt'] or label
+                url=candidate
         else:
             candidate=safe_image_url(match['plain'])
             if image_reference(candidate):url=candidate
         if not url:continue
-        # Keep a source link next to the image for inaccessible/private media.
-        segments.append((restore(body[cursor:match.start()]+'['+label+']('+url+')').strip(),url))
+        # The image itself is displayed below this text; do not repeat its link.
+        segments.append((restore(body[cursor:match.start()]).strip(),url))
         cursor=match.end()
     if not segments:
         embed['description']=restore(body).strip()

@@ -245,7 +245,7 @@ def route(event, payload, github):
         # Issue-shaped metadata can refer to a PR; keep its existing PR thread identity.
         obj = payload["issue"]
         return [topic_from(repo, "pr" if "pull_request" in obj else "issue", obj)]
-    if event in ("pull_request_target", "pull_request", "pull_request_review", "pull_request_review_comment"):
+    if event in ("pull_request_target", "pull_request", "pull_request_review", "pull_request_review_comment", "pull_request_review_thread"):
         return [topic_from(repo, "pr", payload["pull_request"])]
     if event in ("discussion", "discussion_comment"):
         return [topic_from(repo, "discussion", payload["discussion"])]
@@ -454,6 +454,8 @@ def make_embed(topic, event, payload, language='ko'):
         body = render_commits(topic.repo,payload,english)
     if event == "pull_request_review" and str(obj.get("state", "")).lower() != "commented":
         body = ('Review: ' if english else '리뷰 결과: ') + obj.get('state', 'unknown') + '\n\n' + body
+    if event=='pull_request_review' and obj.get('id'):
+        body='**Review #'+str(obj['id'])+'**\n\n'+body
     if obj.get("path"):
         body = f"`{clip(obj['path'], 220)}:{obj.get('line') or obj.get('original_line') or ''}`\n\n" + body
     extras = field_details(payload, english) if event == "issues" else []

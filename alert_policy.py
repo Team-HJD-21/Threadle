@@ -12,6 +12,7 @@ def should_alert(event, payload):
         return any(should_alert(row.get('event'), row.get('payload') or {})
                    for row in payload.get('_events', []) if isinstance(row, dict))
     action = payload.get('action')
+    if event=='pull_request_review_thread':return False
     if action in METADATA_ACTIONS or action == 'edited':
         return False
     if event in COMMENT_EVENTS:

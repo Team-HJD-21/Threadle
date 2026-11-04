@@ -54,6 +54,29 @@ class FullTextTests(unittest.TestCase):
         self.assertEqual(embeds[-1]['fields'],[{'name':'Details','value':'Final metadata'}])
         self.assertTrue(all(not e.get('fields') for e in embeds[:-1]))
         self.assertTrue(all(e['color']==0x8957E5 for e in embeds))
+    def test_media_has_no_redundant_link_but_keeps_comment_and_captions(self):
+        for image in ('![Image](https://example.com/a.gif)',
+                      '[GIF](https://example.com/a.gif)',
+                      '<img src="https://example.com/a.gif" alt="Image">',
+                      'https://example.com/a.gif'):
+            with self.subTest(image=image):
+                pages=message_pages({'title':'New comment',
+                                     'description':'LGTM!!\n'+image+'\nOriginal caption'})
+                embeds=[e for page in pages for e in page]
+                self.assertEqual(embeds[0]['description'],'LGTM!!')
+                self.assertEqual(embeds[0]['image']['url'],'https://example.com/a.gif')
+                self.assertEqual(embeds[-1]['description'],'Original caption')
+                self.assertEqual(embeds[0]['title'],'New comment')
+    def test_image_only_comment_stays_a_valid_image_embed(self):
+        pages=message_pages({'title':'New comment','description':'![Image](https://example.com/a.gif)'})
+        self.assertEqual(len(pages),1)
+        self.assertNotIn('description',pages[0][0])
+        self.assertEqual(pages[0][0]['image']['url'],'https://example.com/a.gif')
+    def test_ordinary_links_and_literal_image_examples_remain(self):
+        body='[GitHub](https://github.com/owner/repo)\n`![Image](https://example.com/code.gif)`'
+        pages=message_pages({'description':body+'\n![Image](https://example.com/a.gif)'})
+        self.assertEqual(pages[0][0]['description'],body)
+        self.assertEqual(pages[0][0]['image']['url'],'https://example.com/a.gif')
     def test_repeated_image_occurrences_are_not_moved_or_deduplicated(self):
         body='Step one\n![A](https://example.com/a.png)\nStep two\n![A](https://example.com/a.png)\nDone'
         pages=message_pages({'description':body})

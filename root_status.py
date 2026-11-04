@@ -216,6 +216,8 @@ class TopicRoots:
             db.execute('BEGIN IMMEDIATE')
             db.execute('PRAGMA secure_delete=ON')
             tables={row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            for table in ('review_members','review_conversations'):
+                if table in tables:db.execute('DELETE FROM '+table+' WHERE topic=?',(topic.key,))
             if location is None:
                 for table,column in (('links','thread'),('root_index','message'),('deferred_threads','message')):
                     if table not in tables:continue

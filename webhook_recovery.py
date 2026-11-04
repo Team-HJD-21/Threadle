@@ -36,7 +36,7 @@ class WebhookRecovery:
                     continue
                 if when < cutoff or (row.get('installation_id'),row.get('repository_id')) not in active:
                     continue
-                if row.get('event') not in ('issues','pull_request','issue_comment','discussion','discussion_comment','pull_request_review','pull_request_review_comment','workflow_run','push'):
+                if row.get('event') not in ('issues','pull_request','issue_comment','discussion','discussion_comment','pull_request_review','pull_request_review_comment','pull_request_review_thread','workflow_run','push'):
                     continue
                 guid = row.get('guid','')
                 if re.fullmatch(r'[a-fA-F0-9-]{16,64}',guid) and str(row.get('id','')).isdigit():

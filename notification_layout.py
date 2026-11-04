@@ -241,7 +241,7 @@ def message_pages(embed):
 
 
 def topic_identity(event,payload):
-    if event not in CREATION | {'issue_comment','pull_request_review','pull_request_review_comment','discussion_comment'}:
+    if event not in CREATION | {'issue_comment','pull_request_review','pull_request_review_comment','pull_request_review_thread','discussion_comment'}:
         return None
     obj=issue_object(payload)
     kind='pr' if 'pull_request' in payload or 'pull_request' in obj else 'discussion' if 'discussion' in payload else 'issue'
