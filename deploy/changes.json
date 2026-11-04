@@ -1,5 +1,5 @@
 {
-  "version": "v1.0.0-beta.26",
+  "version": "v1.0.0-beta.27",
   "baseline": "2026.11.02.8",
   "files": {
     "demo_web.py": {
@@ -38,7 +38,7 @@
     },
     "connect_web.py": {
       "before": "a10a26dc8a437897a74a705d18b2eed378b2ec30b7b95f9298d833ba91b81db9",
-      "after": "d795695940a3d2fa72768f4642e01aadcfb9e851ee3c92dbef5a652020f76efc",
+      "after": "cc0ef7ac2f351877daffa4e11e91af6ed2b98373606c7d3e8f4a91f57cf91a4e",
       "previous": [
         "039da5474270896cb0d94cff9d8fbc012749be2cba8d41af02c9c38a98df280b",
         "c71b37f392a2f9bb79cbe8c361c5e7f45ea94591c0199f198598a1d360930c39",
@@ -75,12 +75,13 @@
         "f9e7de777831e1a01f9b8c57786595316f01292a2e613e858171cb7efee6fa4e",
         "1c760c334a435693f7187be644846d1c7f8076c8c846b097cd1ebd8167138298",
         "84d18389c49daa677bf1cc6f7a3dbd519fb0c5c281e0e902eda9b2438c7c9ce6",
-        "dd625b91a0018093925442e40ad2585380a703623f5e0e523536079b62f2c405"
+        "dd625b91a0018093925442e40ad2585380a703623f5e0e523536079b62f2c405",
+        "d795695940a3d2fa72768f4642e01aadcfb9e851ee3c92dbef5a652020f76efc"
       ]
     },
     "changelog.py": {
       "before": "261336f2f039d63348697c8fb4f9f7ec8f25c959ad6f0e2ccd74230f8c208e28",
-      "after": "a5828b42b5851c5e98501224d5c5baab1edb3519e466498280bf2db2e41a1f52",
+      "after": "aeeab7d1314e0ffed90327bab1e525d937431452fbb5db1a278fddf527a4257a",
       "previous": [
         "ce59507c70872a51ef2bbd42a7ee232a5bd4e2692a6b0c8903887594a1e59b90",
         "70c46b09eeacc09189050699f22f47224d0f1b157c741d0f25f9f51bd23af677",
@@ -123,7 +124,8 @@
         "0282210fdaaafbbf6fe5dfb881cbbf1c5fe4d94ead02e62c9463921f729d3390",
         "dd50a8b60869b6778c2c647182ea1c8cad37e99e2eea6a5ce5f09fe43db69605",
         "6d15170068756a01de699064024aa463f3e4e9b36c8bdfaff3aa20a6af1298c1",
-        "19655087efbff4c0a84c837741f374a8b47aeb8eb8129474297f6d5e6213e70f"
+        "19655087efbff4c0a84c837741f374a8b47aeb8eb8129474297f6d5e6213e70f",
+        "a5828b42b5851c5e98501224d5c5baab1edb3519e466498280bf2db2e41a1f52"
       ]
     },
     "web_assets/preview.js": {
@@ -203,11 +205,12 @@
     },
     "notification_media.py": {
       "before": "8de2185cda462cf8cff64cc21a3eb38b3849390951cdeafcabc0a720015aa484",
-      "after": "8b3f9275e4ed48094c72d0afd0d427ece471b6c44cd82c8d60df42305c5557ee",
+      "after": "50b0c8262a71142b3411e4d4a1e685562bfb229c1c8c9226b68809a82378189c",
       "previous": [
         "606b47fa89b1e59eac0adcc456992b2b3d32f10f7986dec74d4fd39536fde6a4",
         "96a281aebc00c0df01bb4379c7de9df46cec8ffcf912f19307f4e5320d548335",
-        "194fefbcb7a9c2f032975617f7e34d830d98e548adf001423d40c762db7f0b35"
+        "194fefbcb7a9c2f032975617f7e34d830d98e548adf001423d40c762db7f0b35",
+        "8b3f9275e4ed48094c72d0afd0d427ece471b6c44cd82c8d60df42305c5557ee"
       ]
     },
     "notification_layout.py": {
