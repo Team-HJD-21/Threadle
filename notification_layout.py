@@ -85,7 +85,7 @@ def creation_embed(topic, payload, language='ko'):
         fields.append({'name': english, 'value': clip(value or none, 600), 'inline': inline})
     if topic.kind == 'pr':
         head,base = obj.get('head',{}).get('ref'),obj.get('base',{}).get('ref')
-        branch = '`'+str(head).replace('`','')+'` → `'+str(base).replace('`','')+'`' if head and base else unknown
+        branch = '`'+str(base).replace('`','')+'` ← `'+str(head).replace('`','')+'`' if head and base else unknown
         add('브랜치','Branches',branch,False)
     actor = display(obj.get('user')) or display(payload.get('sender')) or 'GitHub'
     if topic.kind == 'discussion':

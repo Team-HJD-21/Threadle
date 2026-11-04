@@ -117,15 +117,20 @@ function renderThreadleSequence(panel,elapsed,reduced,closed=false) {
     const replay = root.querySelector('[data-feature-replay]');
     let visible = !('IntersectionObserver' in window);
     let selected = 0, paused = motion.matches, elapsed = 0, last = null, timer, manuallyClosed = false;
+    const cycleDuration = 21000;
     function clock() {
       clearTimeout(timer);
       const now = performance.now();
       if (last !== null && !paused && !document.hidden && visible) elapsed += now-last;
       last = !paused && !document.hidden && visible ? now : null;
+      if (!paused && !motion.matches && elapsed >= cycleDuration) {
+        select((selected+1)%tabs.length);
+        return;
+      }
       const panel = panels[selected];
       panel.classList.toggle('is-state-updated', selected === 0 && (motion.matches||elapsed >= 16000));
       renderThreadleSequence(panel,elapsed,motion.matches,manuallyClosed);
-      if (!paused && !document.hidden && visible && elapsed < 17000) timer = setTimeout(clock,100);
+      if (!paused && !document.hidden && visible) timer = setTimeout(clock,100);
     }
     function playback() {
       pause.setAttribute('aria-pressed',String(paused));

@@ -14,7 +14,7 @@ def showcase(t):
         ('summary',t('리뷰와 열린 PR을 챙기는 요약','Keep reviews and open PRs in view'),t('열린 PR 재알림과 일일·주간 요약을 각각 설정하세요. /summary로 필요할 때 바로 확인할 수도 있습니다.','Configure open-PR reminders and daily and weekly summaries independently. Use /summary whenever you need an overview.')),
     ]
 
-    out='<section class="product-section feature-showcase" data-feature-showcase><div class="section-heading"><h1>'+t('알림 설정','Make it work for your team')+'</h1><p>'+t('항목을 선택하고 Discord에서 어떻게 보이는지 확인해 보세요.','Choose a feature to see how it works in Discord.')+'</p></div><div class="feature-grid" role="tablist" aria-label="'+t('기능 예시','Feature examples')+'">'
+    out='<section class="product-section feature-showcase" data-feature-showcase><div class="section-heading"><h1>'+t('알림 설정','Make it work for your team')+'</h1><p>'+t('네 가지 예시가 차례로 재생됩니다. 궁금한 항목을 직접 선택해도 좋아요.','Four examples play in turn. You can also choose a feature to explore.')+'</p></div><div class="feature-grid" role="tablist" aria-label="'+t('기능 예시','Feature examples')+'">'
     for i,(key,title,description) in enumerate(items):
         out+='<button type="button" class="feature-item" role="tab" id="feature-tab-'+key+'" aria-controls="feature-panel-'+key+'" aria-selected="'+str(i==0).lower()+'" tabindex="'+('0' if i==0 else '-1')+'" data-feature="'+key+'"><span class="feature-title">'+title+'</span><span class="feature-copy">'+description+'</span></button>'
     out+='</div><div class="threadle-preview" data-feature-preview><div class="preview-playback"><button type="button" data-feature-replay>'+t('처음부터 보기','Replay')+'</button><button type="button" data-feature-pause aria-pressed="false" data-play="'+t('예시 재생','Play example')+'" data-pause="'+t('예시 일시정지','Pause example')+'">'+t('예시 일시정지','Pause example')+'</button></div>'
@@ -30,7 +30,7 @@ def showcase(t):
         for name in channels:out+='<div class="preview-channel'+(' is-selected' if name==channel else '')+'">'+icon('hash')+'<span>'+name+'</span></div>'
         out+='</div><div class="preview-user">'+avatar+'<b>Demo team</b></div></aside><div class="preview-main"><header>'+icon('hash')+'<span class="preview-header-name">'+channel+'</span>'+tools('thread','bell','pin','members','search')+'</header><div class="preview-feed preview-summary-feed"><div class="preview-date">'+t('오늘','Today')+'</div>'
         if key!='summary':
-            out+=starter_post(t,avatar,kind,number,subject,'feature/settings → main' if kind=='pr' else '',staged=True)
+            out+=starter_post(t,avatar,kind,number,subject,'main ← feature/settings' if kind=='pr' else '',staged=True)
         else:
             out+=post('<strong>'+t('아직 열린 PR을 모아왔어요.','Here are your open PRs.')+'</strong><p>TeamHJD/threadle · '+t('열린 PR 2개','2 open PRs')+'</p><p>• #42 '+t('설정 화면 개선','Improve settings')+'<br>• #43 '+t('모바일 메뉴 수정','Fix the mobile menu')+'</p>','arrival','feature-blue')
             out+=post('<strong>'+t('일일 PR · Issue 현황','Daily PR · Issue overview')+'</strong><p>'+t('열린 PR 2개 · 리뷰 요청 대기 1개','2 open PRs · 1 awaiting review')+'</p>','summary','feature-blue')
@@ -54,4 +54,4 @@ def showcase(t):
             'summary':t('재알림과 일일·주간 요약은 각각 설정합니다. /summary 결과도 채널에서 확인합니다.','Configure reminders and daily/weekly summaries independently. /summary results appear in the channel too.'),
         }
         out+='<p class="feature-scene-note">'+notes[key]+'</p></div>'
-    return out+'<p class="preview-disclaimer">'+t('작동 예시입니다. 항목을 선택하거나 처음부터 다시 볼 수 있습니다.','Illustrative examples. Choose a feature or replay its sequence.')+'</p></div></section>'+security(t)
+    return out+'<p class="preview-disclaimer">'+t('작동 예시입니다. 네 가지 예시가 반복 재생되며, 항목 선택·일시정지·다시 보기가 가능합니다.','Illustrative examples cycle automatically. Choose a feature, pause, or replay at any time.')+'</p></div></section>'+security(t)

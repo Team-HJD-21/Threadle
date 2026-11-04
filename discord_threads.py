@@ -203,7 +203,7 @@ def root_description(topic, english=False):
     if topic.kind == 'pr':
         head, base = obj.get('head', {}).get('ref'), obj.get('base', {}).get('ref')
         if head and base:
-            lines.append('`' + str(head).replace('`', '') + '` → `' + str(base).replace('`', '') + '`')
+            lines.append('`' + str(base).replace('`', '') + '` ← `' + str(head).replace('`', '') + '`')
     return '\n'.join(lines)
 
 

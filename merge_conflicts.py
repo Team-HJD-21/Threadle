@@ -66,7 +66,7 @@ class ConflictMonitor:
         if previous:return
         english=config.get('language')=='en';url=f'https://github.com/{binding.repo}/pull/{number}'
         def branch(value):return '`'+clip(str(value or 'unknown').replace('`','').replace('@','@\u200b'),140)+'`'
-        description='**'+binding.repo+'**\n'+('Branch: ' if english else '브랜치: ')+branch(row.get('headRefName'))+' → '+branch(row.get('baseRefName'))+'\n\n'
+        description='**'+binding.repo+'**\n'+('Branch: ' if english else '브랜치: ')+branch(row.get('baseRefName'))+' ← '+branch(row.get('headRefName'))+'\n\n'
         description+=('This PR conflicts with its base branch. Resolve the conflicts before merging.' if english else '대상 브랜치와 Merge conflict가 생겼어요. 충돌을 해결한 뒤 병합해 주세요.')
         description+=('\n[Open PR](' if english else '\n[PR 확인하기](')+url+')'
         source=binding.repo+':merge-conflict:'+str(number);event='conflict:'+str(number)+':'+str(episode)

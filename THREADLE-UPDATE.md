@@ -27,7 +27,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\ProgramData\TeamHJD\
 - PR에 커밋이 추가되는 `pull_request.synchronize`는 기존 PR 스레드로 갑니다. GitHub App의 Pull request 이벤트가 활성화되어 있어야 합니다. 커밋 자체에 달린 댓글 수집은 별도 기능이며 이번 변경에 포함하지 않습니다.
 - 리뷰 요청/요청 제거, 담당자 할당/해제, 라벨 추가/제거, 마일스톤 지정/해제, 초안 전환에는 PR 본문을 반복하지 않습니다. 변경된 담당자/라벨/마일스톤은 표시합니다.
 - `commented` 리뷰는 결과 문구 없이 실제 작성한 댓글을 표시합니다. 본문 없는 `commented` 리뷰 이벤트는 건너뛰며, 별도로 도착하는 인라인 댓글은 보냅니다.
-- 새 PR/Issue/Discussion 스레드 첫 안내에는 작성자를 표시합니다. PR에는 `head` → `base` 브랜치를 표시하며, 작성 시각은 Discord의 사용자 시간대 표시를 사용합니다. 기존 스레드의 첫 메시지를 일괄 수정하지 않습니다.
+- 새 PR/Issue/Discussion 스레드 첫 안내에는 작성자를 표시합니다. PR에는 `base` ← `head` 브랜치를 표시하며, 작성 시각은 Discord의 사용자 시간대 표시를 사용합니다. 기존 스레드의 첫 메시지를 일괄 수정하지 않습니다.
 - 열린 PR 반복 알림은 담당자와 요청된 리뷰어가 없어도 동작하며 초안도 포함합니다. 설정한 간격마다 반복하고, 종료되면 멈춥니다. 조용한 시간이 끝나면 미뤄진 안내부터 처리합니다. 기존 `review_hours` 설정을 그대로 사용합니다.
 - 일일/주간 요약은 열린 PR 제목(최대 15개, 나머지는 `/summary`로 조회), 가장 오래된 미해결 Issue 5개, 최근 완료된 Issue 5개를 보여줍니다. Issue의 작은 하단 숫자는 전체 남은 Issue 수입니다. 완료 이유가 `COMPLETED`인 Issue만 최근 완료에 포함합니다.
 - `/summary type:PR|Issue|Discussion repository:<선택> page:1`은 각 종류의 미종료 항목 제목을 조회합니다. 응답은 명령어 실행자에게만 보입니다.

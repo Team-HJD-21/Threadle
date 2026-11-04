@@ -1,10 +1,10 @@
 {
-  "version": "v1.0.0-beta.29",
+  "version": "v1.0.0-beta.30",
   "baseline": "2026.11.02.8",
   "files": {
     "demo_web.py": {
       "before": "0c065593f354889a1c8d450b94b6b08f29a1055142e32ed2e35419d81a876ecf",
-      "after": "715be39c9ef41a759c8bb4772b73ae7f87cc697af115dda72f364a484d0f9b04",
+      "after": "4055fd45fb587cb7443cfa823653cd4dcc032251095ab7d20f2d9f1f77e3be9c",
       "previous": [
         "fd87bc94261e94f959aa65b28a01bdb44c11054a0e84ac9f88b15e7018273438",
         "afeb765fa4db1d2ab32f24cc05fead6a97e2c21acb17c1df38cb0727235facb9",
@@ -16,7 +16,8 @@
         "cc0800db754c87ac248d970ae01c64cad95c65d74e843d044869dc51aa4a10ee",
         "1cfc500d8d88b4e7238b6a78a63fd4fe9ef97e6a0cac5d996f584399f4ffa90f",
         "41e7352609ab979fe0626ac2c3821b6f27722001e7bf29b88c07cd78444c8d4a",
-        "29def3582f557af2799ac0a718a65ec7bc471170fd00f3e456e7ed82afaad66c"
+        "29def3582f557af2799ac0a718a65ec7bc471170fd00f3e456e7ed82afaad66c",
+        "715be39c9ef41a759c8bb4772b73ae7f87cc697af115dda72f364a484d0f9b04"
       ]
     },
     "web_assets/product.css": {
@@ -40,7 +41,7 @@
     },
     "connect_web.py": {
       "before": "a10a26dc8a437897a74a705d18b2eed378b2ec30b7b95f9298d833ba91b81db9",
-      "after": "667566c6871e1595b3ab0bb8e53923627d3652c0156b8556ef92fda859260b83",
+      "after": "22521b606528222950ed06ad91dfb454bc895f72fa3d47647480f7d144fa896f",
       "previous": [
         "039da5474270896cb0d94cff9d8fbc012749be2cba8d41af02c9c38a98df280b",
         "c71b37f392a2f9bb79cbe8c361c5e7f45ea94591c0199f198598a1d360930c39",
@@ -80,12 +81,13 @@
         "dd625b91a0018093925442e40ad2585380a703623f5e0e523536079b62f2c405",
         "d795695940a3d2fa72768f4642e01aadcfb9e851ee3c92dbef5a652020f76efc",
         "cc0ef7ac2f351877daffa4e11e91af6ed2b98373606c7d3e8f4a91f57cf91a4e",
-        "a39277352ec1114b548e47a01d1f02dda3c2e788291497b77ca0abf257faa675"
+        "a39277352ec1114b548e47a01d1f02dda3c2e788291497b77ca0abf257faa675",
+        "667566c6871e1595b3ab0bb8e53923627d3652c0156b8556ef92fda859260b83"
       ]
     },
     "changelog.py": {
       "before": "261336f2f039d63348697c8fb4f9f7ec8f25c959ad6f0e2ccd74230f8c208e28",
-      "after": "089871a02f3e5c1f747ba28f59842728b8f2cbb4ea2839ad4264c0b2c19dba36",
+      "after": "7e333fa4c05dea072db2a1da004e77b134fa4867b91409bf9f4a132595ebcd5c",
       "previous": [
         "ce59507c70872a51ef2bbd42a7ee232a5bd4e2692a6b0c8903887594a1e59b90",
         "70c46b09eeacc09189050699f22f47224d0f1b157c741d0f25f9f51bd23af677",
@@ -131,12 +133,13 @@
         "19655087efbff4c0a84c837741f374a8b47aeb8eb8129474297f6d5e6213e70f",
         "a5828b42b5851c5e98501224d5c5baab1edb3519e466498280bf2db2e41a1f52",
         "aeeab7d1314e0ffed90327bab1e525d937431452fbb5db1a278fddf527a4257a",
-        "2a94d9f42b9fdcc145c169f2d304b2f29a8d464bd8af547928531d5920c2cb67"
+        "2a94d9f42b9fdcc145c169f2d304b2f29a8d464bd8af547928531d5920c2cb67",
+        "089871a02f3e5c1f747ba28f59842728b8f2cbb4ea2839ad4264c0b2c19dba36"
       ]
     },
     "web_assets/preview.js": {
       "before": "d083d67194af8e6a3a72ab647e522e1bdd941e36e49cbfe2ca5c2d51996cc262",
-      "after": "b92280ba1e0acaa0ce2a3b0e0499acbeead3f23036d438aab2b6e8a063542f06",
+      "after": "46703bcfe9f99f9fb74eadac59e220c15a96796b4a8c03768d32bad96bc308b3",
       "previous": [
         null,
         "8ab1aedbe209fd96c3cca0412609e1e9821a72190079c429081694e66ed8dbae",
@@ -145,7 +148,8 @@
         "f8a2fff2cac2e98abeb3bad044ea019a0ded8d30b6774775a6cf4164b771b70c",
         "c92f6691680ca6bca72b8b79682cb4dda44e1451db65bca07563564aad58be1a",
         "2de0decf6b768a1c434d2496ca86e3de0eb4442d1cbbfd72641455b9e8ed1ffe",
-        "bcd539a2de7122b861c9a5531541cb76db05330f228f464ebafffdf49f5d7637"
+        "bcd539a2de7122b861c9a5531541cb76db05330f228f464ebafffdf49f5d7637",
+        "b92280ba1e0acaa0ce2a3b0e0499acbeead3f23036d438aab2b6e8a063542f06"
       ]
     },
     "web_assets/threadle-banner.png": {
@@ -192,7 +196,7 @@
     },
     "discord_threads.py": {
       "before": "0b353710016c6563fda1178e599cacca7ab802854803040f0866ef940dcbec94",
-      "after": "73a4b189b06b10855734929ada1d5f97e643027b56a099f4ca7c64b1e609dc4e",
+      "after": "6dacbeb946c824bb319bc8cf5caeb17f9bcb0628ab37b1c0c8d25e216d83cf17",
       "previous": [
         "7db8a83427bc41833c8673eb12f23da21cad41888357873706070557c0d50cd5",
         "11914c2dee5b538656765b97ba424055a2ed686dd6e543be11390b0c20dcd7a5",
@@ -210,7 +214,8 @@
         "29a0b0ee3dd65680d19be779308f0b3b38d3d9db447b7a18eb1f749f02e502e6",
         "44f56e169b1b8da756dcb979808f9f88943e9865563ed02ab14bae572abe82db",
         "d15edd0132a6cb42968eb280ffe62417d130a2f5e8858ed5588634c2105392ed",
-        "067024b5e4c5428b0b0ed6f3e52aaa0f5f2c76fb3c875c0e80983a1613c468e4"
+        "067024b5e4c5428b0b0ed6f3e52aaa0f5f2c76fb3c875c0e80983a1613c468e4",
+        "73a4b189b06b10855734929ada1d5f97e643027b56a099f4ca7c64b1e609dc4e"
       ]
     },
     "notification_media.py": {
@@ -225,7 +230,7 @@
     },
     "notification_layout.py": {
       "before": "0f2e331db64524fb143329aac6312533683734bd68c1ac6c3cef59c848ac785d",
-      "after": "e9197645240cd030a5eee634d2f82091fd8671d0cabde92c7b5a911257608bed",
+      "after": "a581ae9aa2bb80c6c2c216bb1e2e7555c86757b28b6a16ac346cc42c449cd4b4",
       "previous": [
         "833371a2f021574216b64a9e0eed4e807d6ad9fb6718190e056e85f785772b1f",
         "8dc33ff16f1e942fdbe1813eb359daf5f6a51205dea5d410e06a342295daf1bb",
@@ -234,7 +239,8 @@
         "6740dfeed4c5026a8758232038751a7c9bfec823d9544fcc48267e399dee6508",
         "9275c4668aeb4b408bb9a6ba72cfd1ceab5ce6728762d48b5c0223b809b9a9bf",
         "1e29a1da55a837677696f58619a60614072c6e08742a64e2eee290d01fd9b4c6",
-        "c0db6a7f64e388cdebd9f1aa65d33f3b38c6b84451a0a0d1edc7915281779843"
+        "c0db6a7f64e388cdebd9f1aa65d33f3b38c6b84451a0a0d1edc7915281779843",
+        "e9197645240cd030a5eee634d2f82091fd8671d0cabde92c7b5a911257608bed"
       ]
     },
     "alert_feed.py": {
@@ -499,10 +505,11 @@
     },
     "merge_conflicts.py": {
       "before": null,
-      "after": "38802e0234909df0907dc27211523226ad56f3c9725f7449c96dd0e142a9de2e",
+      "after": "fb865e6f146500d0a483f81bd9c5fb097cbcd23d057f9a71613e22708600456d",
       "previous": [
         "82d8da62dfc64bc0234597139aa3c43e04aabaecab18adeb245662799306b8cd",
-        "6507894a04f647af353d3af9231f0ba1a63d36f140200751b600376ffbf2869d"
+        "6507894a04f647af353d3af9231f0ba1a63d36f140200751b600376ffbf2869d",
+        "38802e0234909df0907dc27211523226ad56f3c9725f7449c96dd0e142a9de2e"
       ]
     },
     "metadata_notifications.py": {
@@ -602,10 +609,11 @@
     },
     "feature_showcase.py": {
       "before": null,
-      "after": "a0940c2cec0c26fe9d68249b7aebc64a10942f70c64b21dfd9498e612b17f252",
+      "after": "7809520c517585a15ffadea87a61f4a7fbe4eefb9db07c03f7e6b35f97f1ee39",
       "previous": [
         "83cad84a1f0951668f22fa2d34c025ccc9cd9f5202f4f0b66e43dde8ac6da246",
-        "5c6df253085001f771890d3a898ec02d3efe2ffc703ca58d09ea9f81b38406c6"
+        "5c6df253085001f771890d3a898ec02d3efe2ffc703ca58d09ea9f81b38406c6",
+        "a0940c2cec0c26fe9d68249b7aebc64a10942f70c64b21dfd9498e612b17f252"
       ]
     },
     "review_conversations.py": {
