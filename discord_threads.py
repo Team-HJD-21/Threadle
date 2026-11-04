@@ -227,9 +227,8 @@ def route(event, payload, github):
             raise RuntimeError("Failed PR CI run could not be linked to a PR; no unrelated channel fallback was used.")
         numbers = sorted({int(pr["number"]) for pr in prs})
         return [topic_from(repo, "pr", github.call("GET", f"/repos/{repo}/pulls/{number}")) for number in numbers]
-    if event == "issues":
-        return [topic_from(repo, "issue", payload["issue"])]
-    if event == "issue_comment":
+    if event in ("issues", "issue_comment"):
+        # Issue-shaped metadata can refer to a PR; keep its existing PR thread identity.
         obj = payload["issue"]
         return [topic_from(repo, "pr" if "pull_request" in obj else "issue", obj)]
     if event in ("pull_request_target", "pull_request", "pull_request_review", "pull_request_review_comment"):

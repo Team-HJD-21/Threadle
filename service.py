@@ -242,6 +242,8 @@ class Service:
                     routed.bot = threads.bot
                     routed.media_fetcher = getattr(github, "fetch_media", None)
                 routed.silent_notifications=lambda:bool(delivery_mode(queue,delivery,event,binding.config.get('team_notifications',{}),time.time()))
+                LOG.info('Routing topic binding=%s event=%s kind=%s number=%s channel=%s',
+                         binding.id,event,topic.kind,topic.number,destination)
                 roots.threads=routed
                 from deferred_threads import defer
                 deferred=defer(routed,roots,topic,event,payload,delivery,binding.config.get('team_notifications',{}),time.time())
