@@ -687,7 +687,10 @@
     },
     "connect_auth.py": {
       "before": null,
-      "after": "28622ffbdf7f887534fe7ac29ce1f1882ed38b34b13a24c9ebe6c8474d9f8830"
+      "after": "28622ffbdf7f887534fe7ac29ce1f1882ed38b34b13a24c9ebe6c8474d9f8830",
+      "previous": [
+        "4a5e14fb22546471bbb329efabfa87e244bb569520c13f554a21fce1eb063634"
+      ]
     }
   },
   "state_encryption": true

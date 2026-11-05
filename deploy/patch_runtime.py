@@ -42,13 +42,16 @@ def prepare(root, source, job):
     manifest = read_manifest(source)
     if job.exists():
         raise ValueError('Deployment job already exists')
+    mismatches = []
     for name, rule in manifest['files'].items():
         target = root / name
         if target.is_symlink() or not target.resolve().is_relative_to(root.resolve()):
             raise ValueError('Unexpected target location: ' + name)
         actual = digest(target.read_bytes()) if target.exists() else None
         if actual not in [rule['before'], rule['after'], *rule.get('previous', [])]:
-            raise ValueError('Server differs from supported baseline; no files changed: ' + name)
+            mismatches.append(name + ' (installed sha256=' + (actual or 'missing') + ')')
+    if mismatches:
+        raise ValueError('Server differs from supported baseline; no files changed: ' + '; '.join(mismatches))
     job.mkdir(parents=True)
     candidate = job / 'candidate'
     candidate.mkdir()

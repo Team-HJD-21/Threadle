@@ -2,6 +2,7 @@ import contextlib
 import io
 import json
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -10,6 +11,35 @@ from deploy import ci
 
 
 class RunnerTests(unittest.TestCase):
+    def test_first_managed_file_must_accept_its_existing_git_source(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root/'deploy').mkdir()
+            (root/'deploy/changes.json').write_text('{"files":{}}')
+            (root/'legacy.py').write_bytes(b'existing_source = True\r\n')
+            subprocess.run(['git', 'init', '-q', str(root)], check=True)
+            subprocess.run(['git', 'add', '.'], cwd=root, check=True, capture_output=True)
+            subprocess.run(['git', '-c', 'commit.gpgsign=false', '-c', 'user.name=Threadle tests',
+                            '-c', 'user.email=tests@threadle.invalid', 'commit', '-qm', 'fixture'], cwd=root, check=True)
+            baseline = ci.read_baseline(root, 'HEAD', ['legacy.py', 'new.py'])
+            installed = ci.digest(b'existing_source = True\n')
+            self.assertEqual(baseline['files']['legacy.py']['after'], installed)
+            self.assertNotIn('new.py', baseline['files'])
+            candidate = {'files': {'legacy.py': {'before': None, 'after': 'new-source'}}}
+            with self.assertRaisesRegex(ValueError, 'legacy.py'):
+                ci.check_upgrade(candidate, baseline)
+            candidate['files']['legacy.py']['previous'] = [installed]
+            ci.check_upgrade(candidate, baseline)
+
+    def test_manifest_accepts_every_observed_managed_python_file_on_production(self):
+        root = Path(__file__).parent
+        observed = json.loads((root/'deploy/fixtures/production-python-baseline.json').read_text())
+        current = ci.read_manifest(root)
+        for name, actual in observed['files'].items():
+            with self.subTest(name=name):
+                rule = current['files'][name]
+                self.assertIn(actual, [rule['before'], rule['after'], *rule.get('previous', [])])
+
     def test_current_manifest_upgrades_the_last_successful_production_release(self):
         root = Path(__file__).parent
         previous = json.loads((root/'deploy/fixtures/beta31-upgrade-baseline.json').read_text())

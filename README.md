@@ -16,9 +16,14 @@ The deployment checks installed file identities, backs up only listed files, app
 PR checks also compare the deployment manifest against the destination branch.
 Every previously supported runtime checksum must remain accepted, including the
 previous release's current checksum. Removing one fails CI before deployment.
+When a file first enters the managed list, CI also reads its predecessor's Git
+source: an existing application file cannot be treated as a brand-new absent file.
 A captured beta.31 production manifest independently checks the upgrade path from
-the last successful release before the beta.32 baseline-list fix. Unknown server
-modifications still stop deployment before files are changed.
+the last successful release before the beta.32 baseline-list fix, including its
+previously unmanaged connection-authentication module. A separate checksum-only
+production sample covers every managed Python entry, including absent new files.
+Unknown server modifications still stop deployment before files are changed;
+preflight reports all mismatches and installed hashes together.
 
 ## Local checks
 
