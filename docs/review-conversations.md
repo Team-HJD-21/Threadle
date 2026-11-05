@@ -9,6 +9,16 @@ message and displays its Review ID. Each code/file conversation has one mutable
 card identifying that same parent review with a GitHub link, file/line, and
 Unresolved (red) or Resolved (green). Replies append author, local Discord timestamp
 and original Markdown to that card. Edits and deletions refresh the conversation.
+The overall review is delivered before its code/file cards for Commented,
+Approved, and Changes requested. If a child webhook arrives first, the current
+GraphQL snapshot supplies the submitted parent and its full body; its normal
+webhook later reuses the same review source rather than posting another message.
+Failed parent delivery retries before publishing the child. Existing historical
+cards are not deleted/reposted to reorder Discord history.
+
+Dates beside comment authors use Discord's short date-and-time timestamp (`s`),
+which displays an actual date and time in each reader's local time zone and locale,
+instead of long month names or a relative Yesterday/Today label.
 Long bodies and media use the existing lossless mutable pagination, so unusually
 long conversations can span continuation messages with the same status color.
 

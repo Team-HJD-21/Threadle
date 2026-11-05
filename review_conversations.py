@@ -5,7 +5,7 @@ from discord_threads import nonce
 from topic_state import RED,GREEN
 
 COMMENT_FIELDS='''id databaseId body url createdAt updatedAt author{login}
-  replyTo{databaseId} review:pullRequestReview{databaseId state url author{login}}'''
+  replyTo{databaseId} review:pullRequestReview{databaseId state body submittedAt url author{login}}'''
 QUERY='''query($owner:String!,$name:String!,$number:Int!,$cursor:String){
   repository(owner:$owner,name:$name){pullRequest(number:$number){id
     reviewThreads(first:50,after:$cursor){pageInfo{hasNextPage endCursor} nodes{
@@ -92,7 +92,7 @@ def render(topic,thread):
         author=(comment.get('author') or {}).get('login','GitHub').replace('*','\\*')
         try:
             stamp=int(dt.datetime.fromisoformat(comment['createdAt'].replace('Z','+00:00')).timestamp())
-            when=' · <t:'+str(stamp)+':f>'
+            when=' · <t:'+str(stamp)+':s>'
         except (KeyError,TypeError,ValueError,OverflowError):when=''
         conversation.append('**'+author+'**'+when+'\n'+(comment.get('body') or ''))
     return {'title':f'PR #{topic.number} · Review thread','url':root.get('url') or topic.url,
@@ -106,6 +106,36 @@ class ReviewConversations:
         with self.queue.connect() as db:
             db.execute('CREATE TABLE IF NOT EXISTS review_conversations(topic TEXT NOT NULL,node TEXT NOT NULL,root TEXT NOT NULL,PRIMARY KEY(topic,node))')
             db.execute('CREATE TABLE IF NOT EXISTS review_members(topic TEXT NOT NULL,comment TEXT NOT NULL,node TEXT NOT NULL,PRIMARY KEY(topic,comment))')
+            db.execute('CREATE TABLE IF NOT EXISTS review_parent_ready(topic TEXT NOT NULL,review TEXT NOT NULL,PRIMARY KEY(topic,review))')
+
+    def parent(self,topic,review,entries,event_key,mutable,closed,language):
+        """A child webhook can beat review.submitted. Publish its actual parent first."""
+        from discord_threads import make_embed
+        identity=str(review.get('databaseId',''))
+        if not identity.isdigit() or str(review.get('state','')).upper()=='PENDING' or 'body' not in review:
+            raise RuntimeError('Submitted parent review is not yet available; retrying')
+        with self.queue.connect() as db:
+            if db.execute('SELECT 1 FROM review_parent_ready WHERE topic=? AND review=?',(topic.key,identity)).fetchone():return
+            source='github-source:'+nonce(topic.key+':review:'+identity)
+            current=db.execute('SELECT revision FROM message_sources WHERE source=?',(source,)).fetchone()
+        value={'id':int(identity),'state':review['state'].lower(),'body':review['body'] or '',
+               'submitted_at':review.get('submittedAt'),'html_url':review.get('url') or topic.url,
+               'user':{'login':(review.get('author') or {}).get('login','GitHub')}}
+        for event,payload in entries:
+            candidate=payload.get('review') or {}
+            if event=='pull_request_review' and str(candidate.get('id'))==identity and payload.get('action') in ('submitted','edited'):
+                value.update(candidate)
+        policy=getattr(self.threads.api,'mention_policy',None)
+        if policy is not None:
+            from account_mentions import names
+            policy.names.update(names(value.get('body','')))
+        payload={'action':'edited' if current else 'submitted','review':value}
+        # Render as a submitted review even when adopting/completing an existing card.
+        rendered=make_embed(topic,'pull_request_review',dict(payload,action='submitted'),language)
+        mutable.update(topic,'review:'+identity,value,'pull_request_review',payload,
+                       'review-parent:'+identity,rendered,closed,language)
+        with self.queue.connect() as db:
+            db.execute('INSERT OR IGNORE INTO review_parent_ready VALUES(?,?)',(topic.key,identity))
 
     def deliver(self,topic,entries,event_key,closed,language):
         from message_edits import MutableMessages
@@ -152,6 +182,8 @@ class ReviewConversations:
             source='github-source:'+nonce(topic.key+':'+kind)
             with self.queue.connect() as db:
                 previous=db.execute('SELECT revision FROM message_sources WHERE source=?',(source,)).fetchone()
+            if not previous:
+                self.parent(topic,thread['comments'][0].get('review') or {},entries,event_key,mutable,closed,language)
             version=dt.datetime.now(dt.timezone.utc).timestamp()
             if previous:version=max(version,previous[0]+0.001)
             obj={'html_url':thread['comments'][0].get('url'),

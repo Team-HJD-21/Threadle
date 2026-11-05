@@ -1,4 +1,5 @@
 import copy
+import re
 from pathlib import Path
 import tempfile
 import unittest
@@ -18,7 +19,8 @@ def comment(identity,body='Please clarify this.',review=70):
             'createdAt':f'2026-11-05T00:{identity%60:02d}:00Z','updatedAt':'2026-11-05T00:59:00Z',
             'author':{'login':'reviewer' if identity==1 else 'developer'},
             'replyTo':None if identity==1 else {'databaseId':1},
-            'review':{'databaseId':review,'state':'CHANGES_REQUESTED','author':{'login':'reviewer'},
+            'review':{'databaseId':review,'state':'CHANGES_REQUESTED','body':'Overall review',
+                      'submittedAt':'2026-11-05T00:45:00Z','author':{'login':'reviewer'},
                       'url':f'https://github.com/owner/repo/pull/1#pullrequestreview-{review}'}}
 
 
@@ -50,7 +52,10 @@ class ReviewConversationTests(unittest.TestCase):
                  'thread':{'node_id':'T1'}}
         return deliver_events(self.threads,self.topic,event,payload,key or action+str(identity),lambda:False,'ko',github=self.github)
 
-    def posts(self):return next(iter(self.api.posts.values()))
+    def all_posts(self):return next(iter(self.api.posts.values()))
+
+    def posts(self):
+        return [row for row in self.all_posts() if not re.search(r' · (Approved|Review comment|Changes requested)(?: \(\d+/\d+\))?$',row['embeds'][0]['title'])]
 
     def test_four_roots_create_four_red_cards_with_parent_review(self):
         self.current=[conversation('T'+str(n),[comment(n)]) for n in range(1,5)]
@@ -162,6 +167,63 @@ class ReviewConversationTests(unittest.TestCase):
         self.send()
         self.assertIn('Review #70',self.posts()[0]['embeds'][0]['description'])
 
+    def test_all_three_parent_review_types_precede_children_when_child_webhook_arrives_first(self):
+        states={'COMMENTED':'Review comment','APPROVED':'Approved','CHANGES_REQUESTED':'Changes requested'}
+        for index,(state,label) in enumerate(states.items(),1):
+            with self.subTest(state=state):
+                self.topic=Topic('owner/repo','pr',index,'Title',f'https://github.com/owner/repo/pull/{index}',{'number':index,'title':'Title'})
+                self.current=[conversation(comments=[comment(1,review=70+index)])]
+                self.current[0]['comments']['nodes'][0]['review'].update(state=state,body='Overall '+label)
+                self.send(key='first-child-'+state)
+                rows=list(self.api.posts.values())[-1]
+                self.assertEqual(len(rows),2)
+                self.assertEqual(rows[0]['embeds'][0]['title'],f'PR #{index} · {label}')
+                self.assertIn('Overall '+label,rows[0]['embeds'][0]['description'])
+                self.assertEqual(rows[1]['embeds'][0]['title'],f'PR #{index} · Review thread')
+                before=[row['id'] for row in rows]
+                deliver_events(self.threads,self.topic,'pull_request_review',{'action':'submitted','review':{
+                    'id':70+index,'state':state.lower(),'body':'Overall '+label,'submitted_at':'2026-11-05T00:45:00Z'}},
+                    'late-parent-'+state,lambda:False,'ko',github=self.github)
+                self.assertEqual([row['id'] for row in rows],before)
+
+    def test_child_first_bundle_also_posts_parent_first_and_later_comments_do_not_duplicate_it(self):
+        for order in (0,1):
+            self.topic=Topic('owner/repo','pr',order+10,'Title','https://github.com/owner/repo/pull/10',{'number':order+10,'title':'Title'})
+            entries=[{'event':'pull_request_review_comment','payload':{'action':'created','comment':{'id':1}}},
+                     {'event':'pull_request_review','payload':{'action':'submitted','review':{'id':70,'state':'approved','body':'LGTM'}}}]
+            if order:entries.reverse()
+            deliver_events(self.threads,self.topic,'threadle_bundle',{'_events':entries},'ordered-bundle',lambda:False,'ko',github=self.github)
+            rows=list(self.api.posts.values())[-1]
+            self.assertEqual(len(rows),2)
+            self.assertIn('Approved',rows[0]['embeds'][0]['title'])
+            self.assertIn('LGTM',rows[0]['embeds'][0]['description'])
+            self.assertIn('Review thread',rows[1]['embeds'][0]['title'])
+
+    def test_missing_parent_body_retries_without_publishing_child_or_placeholder(self):
+        del self.current[0]['comments']['nodes'][0]['review']['body']
+        with self.assertRaises(RuntimeError):self.send()
+        self.assertEqual(self.api.posts,{})
+
+    def test_parent_post_failure_retries_same_card_before_child_and_keeps_dnd(self):
+        self.threads.silent_notifications=lambda:True
+        self.api.lose_post=True
+        with self.assertRaises(Exception):self.send()
+        self.send()
+        self.assertEqual(len(self.all_posts()),2)
+        self.assertIn('Changes requested',self.all_posts()[0]['embeds'][0]['title'])
+        self.assertIn('Review thread',self.all_posts()[1]['embeds'][0]['title'])
+        self.assertTrue(all(row['flags'] & 4096 for row in self.all_posts()))
+
+    def test_comment_dates_use_discord_short_local_date_and_time(self):
+        self.current[0]['comments']['nodes'][0]['createdAt']='2026-11-05T09:00:00+09:00'
+        self.send()
+        import datetime as dt
+        stamp=int(dt.datetime(2026,11,5,tzinfo=dt.timezone.utc).timestamp())
+        description=self.posts()[0]['embeds'][0]['description']
+        self.assertIn('**reviewer** · <t:'+str(stamp)+':s>',description)
+        self.assertNotIn(':f>',description)
+        self.assertNotIn('Yesterday',description)
+
     def test_mixed_bundle_keeps_summary_and_folds_replies(self):
         self.current[0]['comments']['nodes'].append(comment(2,'Reply'))
         payload={'_events':[
@@ -170,8 +232,8 @@ class ReviewConversationTests(unittest.TestCase):
             {'event':'pull_request_review_comment','payload':{'action':'created','comment':{'id':2}}},
         ]}
         deliver_events(self.threads,self.topic,'threadle_bundle',payload,'bundle',lambda:False,'ko',github=self.github)
-        self.assertEqual(len(self.posts()),2)
-        descriptions=[r['embeds'][0]['description'] for r in self.posts()]
+        self.assertEqual(len(self.all_posts()),2)
+        descriptions=[r['embeds'][0]['description'] for r in self.all_posts()]
         self.assertEqual(sum('Overall review' in t for t in descriptions),1)
         self.assertEqual(sum('Reply' in t for t in descriptions),1)
 
