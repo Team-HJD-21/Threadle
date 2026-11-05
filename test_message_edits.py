@@ -44,6 +44,124 @@ class EditTests(unittest.TestCase):
         return {'action':action,'comment':{'id':identity,'body':body,'html_url':f'https://github.com/owner/repo/pull/1#issuecomment-{identity}','updated_at':time},'sender':{'login':'author'}}
     def send(self,payload,event_key,event='issue_comment'):
         return deliver_events(self.threads,self.topic,event,payload,event_key,lambda:False,'ko')
+
+    def edit_body(self,body,event='body-edit',time='2026-11-03T00:01:00Z'):
+        return self.send({'action':'edited','pull_request':dict(self.topic.metadata,body=body,updated_at=time)},event,'pull_request')
+
+    def test_growing_description_is_replaced_as_one_group_after_comments(self):
+        thread=self.send({'action':'opened','pull_request':self.topic.metadata},'opened','pull_request')
+        old=self.api.posts[thread][0]['id']
+        self.send(self.payload('KEEP THIS COMMENT'),'comment')
+        comment=copy.deepcopy(self.api.posts[thread][-1])
+        body=('Description paragraph.\n'*550)+'FINAL_DESCRIPTION'
+        self.edit_body(body)
+        rows=self.api.posts[thread]
+        self.assertNotIn(old,[row['id'] for row in rows])
+        self.assertEqual(rows[0],comment)
+        self.assertGreater(len(rows[1:]),1)
+        self.assertEqual(''.join(e.get('description','') for row in rows[1:] for e in row['embeds']),body)
+        self.assertTrue(all(row['flags']&4096 for row in rows[1:]))
+        # Replay and restart keep the new IDs, and a regular content edit still PATCHes.
+        identities=[row['id'] for row in rows]
+        self.threads=CachedThreads(self.api,'g',{'pr':'c'},Queue(self.queue.path));self.threads.bot={'id':'bot'}
+        self.edit_body(body)
+        self.edit_body(body.replace('paragraph','PARAGRAPH'),'next-edit','2026-11-03T00:02:00Z')
+        self.assertEqual([row['id'] for row in self.api.posts[thread]],identities)
+
+    def test_body_replacement_keeps_old_group_until_lost_post_is_recovered(self):
+        thread=self.edit_body('Original body','original','2026-11-03T00:00:00Z')
+        old=self.api.posts[thread][0]['id']
+        self.send(self.payload('Unrelated comment'),'comment')
+        self.api.lose_post=True
+        body='Before\n![image](https://example.com/a.png)\nAfter'
+        with self.assertRaises(ApiError):self.edit_body(body)
+        self.assertIn(old,[r['id'] for r in self.api.posts[thread]])
+        self.threads=CachedThreads(self.api,'g',{'pr':'c'},Queue(self.queue.path));self.threads.bot={'id':'bot'}
+        self.edit_body(body)
+        rows=self.api.posts[thread]
+        self.assertEqual(len(rows),3)
+        self.assertEqual(rows[0]['embeds'][0]['description'],'Unrelated comment')
+        self.assertEqual(rows[1]['embeds'][0]['description'],'Before')
+        self.assertEqual(rows[2]['embeds'][0]['description'],'After')
+        self.assertNotIn(old,[r['id'] for r in rows])
+
+    def test_replacement_cleanup_retries_and_never_deletes_before_all_pages_exist(self):
+        thread=self.edit_body('Original','original','2026-11-03T00:00:00Z')
+        original=self.api.call
+        failed=[False]
+        def fail_delete(method,path,data=None):
+            if method=='DELETE' and not failed[0]:
+                failed[0]=True;raise ApiError('Discord',403,50013)
+            return original(method,path,data)
+        self.api.call=fail_delete
+        body='![A](https://example.com/a.png)\n![B](https://example.com/b.png)'
+        with self.assertRaises(ApiError):self.edit_body(body)
+        self.assertEqual(len(self.api.posts[thread]),4)  # old + two images + final Details
+        new=[r['id'] for r in self.api.posts[thread][1:]]
+        self.edit_body(body)
+        self.assertEqual([r['id'] for r in self.api.posts[thread]],new)
+
+    def test_newer_edit_supersedes_an_incomplete_replacement(self):
+        thread=self.edit_body('Original','original','2026-11-03T00:00:00Z')
+        self.api.lose_post=True
+        with self.assertRaises(ApiError):self.edit_body('![A](https://example.com/a.png)\nAfter')
+        self.edit_body('Final body','newer','2026-11-03T00:02:00Z')
+        self.assertEqual(len(self.api.posts[thread]),1)
+        self.assertEqual(self.api.posts[thread][0]['embeds'][0]['description'],'Final body')
+
+    def test_issue_and_discussion_bodies_relocate_without_touching_comments(self):
+        self.threads.channels.update(issue='c',discussion='c')
+        for kind,event,key in [('issue','issues','issue'),('discussion','discussion','discussion')]:
+            with self.subTest(kind=kind):
+                self.topic=Topic('owner/repo',kind,1,'Title','https://github.com/owner/repo/'+kind+'/1',dict(self.topic.metadata))
+                thread=self.send({'action':'opened' if kind=='issue' else 'created',key:self.topic.metadata},kind+'-opened',event)
+                self.send(self.payload('Preserved '+kind),kind+'-comment')
+                comment=copy.deepcopy(self.api.posts[thread][-1])
+                obj=dict(self.topic.metadata,body='Before\n![A](https://example.com/a.png)\nAfter',updated_at='2026-11-03T00:01:00Z')
+                self.send({'action':'edited',key:obj},kind+'-edited',event)
+                rows=self.api.posts[thread]
+                self.assertEqual(rows[0],comment)
+                self.assertEqual(len(rows),3)
+                self.assertEqual(rows[1]['embeds'][0]['description'],'Before')
+                self.assertEqual(rows[2]['embeds'][0]['description'],'After')
+
+    def test_image_layout_changes_replace_even_when_page_count_is_unchanged(self):
+        thread=self.edit_body('Before\n![A](https://example.com/a.png)\nAfter','original','2026-11-03T00:00:00Z')
+        originals=[r['id'] for r in self.api.posts[thread]]
+        self.send(self.payload('Keep this comment'),'comment')
+        comment=copy.deepcopy(self.api.posts[thread][-1])
+        self.edit_body('Before\n![B](https://example.com/b.png)\nAfter')
+        rows=self.api.posts[thread]
+        self.assertEqual(rows[0],comment)
+        self.assertFalse(set(originals)&{r['id'] for r in rows})
+        self.assertEqual(rows[1]['embeds'][0]['image']['url'],'https://example.com/b.png')
+
+    def test_second_page_failure_preserves_old_body_and_retries_only_missing_pages(self):
+        thread=self.edit_body('Original','original','2026-11-03T00:00:00Z')
+        old=self.api.posts[thread][0]['id'];original=self.api.call;posts=[0]
+        def fail_second_post(method,path,data=None):
+            if method=='POST' and path.endswith('/messages'):
+                posts[0]+=1
+                if posts[0]==2:raise ApiError('Discord',503)
+            return original(method,path,data)
+        self.api.call=fail_second_post
+        body='Before\n![A](https://example.com/a.png)\nAfter'
+        with self.assertRaises(ApiError):self.edit_body(body)
+        self.assertEqual([r['id'] for r in self.api.posts[thread]][0],old)
+        first_new=self.api.posts[thread][1]['id']
+        self.edit_body(body)
+        self.assertEqual(len(self.api.posts[thread]),2)
+        self.assertEqual(self.api.posts[thread][0]['id'],first_new)
+
+    def test_description_change_notice_links_to_the_new_group(self):
+        thread=self.edit_body('Original','original','2026-11-03T00:00:00Z')
+        self.send(self.payload('Comment'),'comment')
+        obj=dict(self.topic.metadata,body='Before\n![A](https://example.com/a.png)\nAfter',updated_at='2026-11-03T00:01:00Z')
+        self.send({'action':'edited','pull_request':obj,'changes':{'body':{'from':'Original'}}},'change','pull_request')
+        rows=self.api.posts[thread]
+        self.assertEqual(rows[0]['embeds'][0]['description'],'Comment')
+        self.assertEqual(rows[-1]['embeds'][0]['url'],f"https://discord.com/channels/g/{thread}/{rows[1]['id']}")
+        self.assertIn('Description updated',rows[-1]['embeds'][0]['title'])
     def test_comment_updates_same_message_after_restart(self):
         thread=self.send(self.payload(),'one');message=self.api.posts[thread][0]['id']
         self.threads=CachedThreads(self.api,'g',{'pr':'c'},Queue(self.queue.path));self.threads.bot={'id':'bot'}

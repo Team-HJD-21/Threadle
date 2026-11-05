@@ -3,22 +3,33 @@ import html
 import re
 import uuid
 
+CODE_PATTERN=r'^ {0,3}```[^\n]*\n.*?(?:^ {0,3}```[^\n]*$|\Z)|^ {0,3}~~~[^\n]*\n.*?(?:^ {0,3}~~~[^\n]*$|\Z)|`+[^`\n]+`+'
+
+
+def strip_comments(text):
+    # Match literal code and comments in source order. A fence inside a hidden
+    # comment must not hide its closing --> from the comment remover.
+    return re.sub(CODE_PATTERN+r'|<!--.*?(?:-->|\Z)',
+                  lambda m:'' if m.group(0).startswith('<!--') else m.group(0),
+                  text,flags=re.M|re.S)
+
 
 def protect_code(text):
+    text=strip_comments(text)
     blocks=[]
     prefix="\uE000THREADLE"+uuid.uuid4().hex+":"
     def save(match):
         blocks.append(match.group(0))
         return prefix+str(len(blocks)-1)+'\uE001'
     # Fences and inline code are literal: do not interpret their image or HTML examples.
-    pattern=r'(?ms)^```[^\n]*\n.*?(?:^```[^\n]*$|\Z)|^~~~[^\n]*\n.*?(?:^~~~[^\n]*$|\Z)|`+[^`\n]+`+'
-    masked=re.sub(pattern,save,text)
+    masked=re.sub(CODE_PATTERN,save,text,flags=re.M|re.S)
     def restore(value):
         return re.sub(re.escape(prefix)+r'(\d+)\uE001',lambda m:blocks[int(m.group(1))],value)
     return masked,restore
 
 
 def adapt(text):
+    text=strip_comments(text)
     text=re.sub(r'(?mi)^(\s*)[-*+] \[([ xX])\] ',lambda m:m.group(1)+('☑ ' if m.group(2).lower()=='x' else '☐ '),text)
     text=re.sub(r'<summary\b[^>]*>(.*?)</summary>',lambda m:'**'+html.unescape(re.sub(r'<[^>]+>','',m.group(1)))+'**\n',text,flags=re.I|re.S)
     text=re.sub(r'</?details\b[^>]*>','\n',text,flags=re.I)

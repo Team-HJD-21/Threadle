@@ -8,19 +8,21 @@ def thread(hunk,line=33,**values):
 
 
 class ReviewCodeTests(unittest.TestCase):
-    def test_code_before_review_line_and_line_numbers_are_visible(self):
+    def test_code_before_review_line_and_anchor_are_visible_without_a_gutter(self):
         value=thread('@@ -30,4 +30,4 @@\n+    }, true, cancellation);\n+}\n+\n+public Task JoinLobbyAsync(string lobbyId)')
         shown=preview(value)
         self.assertIn('`Example.cs:33`',shown)
-        self.assertIn('```diff\n',shown)
-        self.assertIn('+   30 |     }, true, cancellation);',shown)
-        self.assertIn('+   33 | public Task JoinLobbyAsync(string lobbyId)',shown)
+        self.assertIn('```csharp\n',shown)
+        self.assertIn('    }, true, cancellation);',shown)
+        self.assertIn('\npublic Task JoinLobbyAsync(string lobbyId)',shown)
+        self.assertNotIn(' | ',shown)
         self.assertNotIn('Assets/Scripts',shown)
 
-    def test_deleted_line_uses_left_side_numbers_and_preserves_diff_signs(self):
+    def test_deleted_line_shows_left_side_code_and_anchor(self):
         value=thread('@@ -10,2 +10,2 @@\n same\n-old();\n+new();',11,diffSide='LEFT')
         shown=preview(value)
-        self.assertIn('-   11 | old();',shown)
+        self.assertIn('Example.cs:11',shown)
+        self.assertIn('\nsame\nold();\n',shown)
         self.assertNotIn('new();',shown)
 
     def test_original_anchor_is_used_for_outdated_and_shifted_reviews(self):
@@ -41,7 +43,7 @@ class ReviewCodeTests(unittest.TestCase):
         shown=preview(value)
         self.assertLess(len(shown),3000)
         self.assertIn('…',shown)
-        self.assertIn('100 |',shown)
+        self.assertNotIn(' | ',shown)
         self.assertIn('Example.cs:1–100',shown)
 
     def test_code_fences_urls_and_html_in_source_are_literal(self):
@@ -50,3 +52,31 @@ class ReviewCodeTests(unittest.TestCase):
         pages=message_pages({'description':preview(value),'color':123})
         self.assertFalse(any(e.get('image') for p in pages for e in p))
         self.assertIn('<a href=',pages[0][0]['description'])
+
+    def test_right_side_omits_deleted_code_and_dedents_without_reformatting(self):
+        value=thread('@@ -173,1 +159,3 @@\n-            unrelatedOldCode();\n+            // Shared indentation\n+            if (ready)\n+                Run("    keep literal spaces");',161)
+        shown=preview(value)
+        self.assertIn('```csharp\n// Shared indentation\nif (ready)\n    Run("    keep literal spaces");\n```',shown)
+        self.assertNotIn('unrelatedOldCode',shown)
+        self.assertNotIn('173',shown)
+
+    def test_hunk_gaps_do_not_borrow_context_and_tabs_keep_relative_indent(self):
+        value=thread('@@ -1 +1 @@\n+unrelated();\n@@ -30,2 +30,2 @@\n+\t\tif (ready)\n+\t\t\tRun();',31)
+        shown=preview(value)
+        self.assertIn('\nif (ready)\n\tRun();\n',shown)
+        self.assertNotIn('unrelated',shown)
+
+    def test_common_indentation_is_removed_before_optional_width_limit(self):
+        shown=preview(thread('@@ -1 +1 @@\n+'+' '*220+'Run();',1))
+        self.assertIn('\nRun();\n',shown)
+        self.assertNotIn('…',shown)
+
+    def test_language_is_allowlisted_and_source_cannot_close_the_fence(self):
+        for path,tag in [('file.py','python'),('file.TS','typescript'),('file.unknown','')]:
+            shown=preview(thread('@@ -1 +1 @@\n+code();',1,path=path))
+            self.assertIn('\n```'+tag+'\ncode();\n```',shown)
+        from notification_layout import message_pages
+        shown=preview(thread('@@ -1,3 +1,3 @@\n+const text = `\n+```\n+<!-- literal -->`;',3))
+        self.assertEqual(sum(line=='```' for line in shown.splitlines()),1)
+        pages=message_pages({'description':shown})
+        self.assertIn('<!-- literal -->',pages[0][0]['description'])

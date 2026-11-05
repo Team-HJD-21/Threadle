@@ -6,7 +6,7 @@ from discord_threads import ApiError,Topic,nonce
 from review_conversations import ReviewConversations,snapshot,source_kind
 
 LOG=logging.getLogger('review-repair')
-VERSION='review-authors-context-v2'
+VERSION='review-readable-context-v3'
 
 
 class ReviewRepair:
@@ -91,4 +91,22 @@ class ReviewRepair:
         if self.service.comment_bridge is not None:routed.review_replies=self.service.comment_bridge.replies.context(binding)
         from root_status import TopicRoots
         roots=TopicRoots(routed,github)
+        self.regroup_body(topic,pr,routed,roots,link[1])
         ReviewConversations(routed,github).deliver(topic,entries,'repair:'+VERSION,lambda:roots.closed(topic),binding.config.get('language','ko'),current=current)
+
+    def regroup_body(self,topic,pr,routed,roots,thread):
+        """Repair a tracked PR body split around other known messages, once.
+
+        Reuse the PR already fetched for review reconciliation; do not add polling
+        or revisit bodies whose pages are still together.
+        """
+        source='github-source:'+nonce(topic.key+':body')
+        with self.queue.connect() as db:
+            own=db.execute('SELECT page,message FROM source_pages WHERE source=? ORDER BY page',(source,)).fetchall()
+            if len(own)<2 or not all(str(row[1]).isdigit() for row in own):return
+            low,high=min(int(row[1]) for row in own),max(int(row[1]) for row in own)
+            others=db.execute('SELECT p.message FROM source_pages p JOIN message_sources s ON s.source=p.source WHERE s.thread=? AND p.source!=?',(str(thread),source)).fetchall()
+        if not any(str(message).isdigit() and low<int(message)<high for (message,) in others):return
+        from message_edits import MutableMessages
+        MutableMessages(routed).update(topic,'body',pr,'pull_request',{'action':'edited','_regroup':True},
+            'repair:'+VERSION+':body',None,lambda:roots.closed(topic),self.binding.config.get('language','ko'))
