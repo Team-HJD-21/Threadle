@@ -219,6 +219,25 @@ class ReviewConversationTests(unittest.TestCase):
         self.send()
         self.assertIn('Review #70',self.posts()[0]['embeds'][0]['description'])
 
+    def test_review_author_does_not_require_a_linked_discord_account_or_sender(self):
+        for event,obj in [('pull_request_review',{'id':70,'state':'commented','user':{'login':'unlinked-reviewer'}}),
+                          ('issue_comment',{'id':10,'user':{'login':'unlinked-commenter'}}),
+                          ('discussion_comment',{'id':11,'author':{'login':'discussion-author'}})]:
+            key='review' if event=='pull_request_review' else 'comment'
+            embed=make_embed(self.topic,event,{'action':'submitted' if key=='review' else 'created',key:obj})
+            self.assertEqual(embed['author']['name'],(obj.get('user') or obj['author'])['login'])
+
+    def test_existing_synthetic_parent_author_is_repaired_without_reposting(self):
+        self.send();row=self.all_posts()[0];identity=row['id']
+        row['embeds'][0]['author']['name']='GitHub'
+        with self.queue.connect() as db:
+            db.execute('DELETE FROM review_parent_authors')
+            db.execute('UPDATE message_sources SET revision=revision+86400')
+        self.send(key='fix-existing-author')
+        self.assertEqual(self.all_posts()[0]['id'],identity)
+        self.assertEqual(self.all_posts()[0]['embeds'][0]['author']['name'],'reviewer')
+        self.assertEqual(len(self.all_posts()),2)
+
     def test_all_three_parent_review_types_precede_children_when_child_webhook_arrives_first(self):
         states={'COMMENTED':'Review comment','APPROVED':'Approved','CHANGES_REQUESTED':'Changes requested'}
         for index,(state,label) in enumerate(states.items(),1):
@@ -231,6 +250,7 @@ class ReviewConversationTests(unittest.TestCase):
                 self.assertEqual(len(rows),2)
                 self.assertEqual(rows[0]['embeds'][0]['title'],f'PR #{index} · {label}')
                 self.assertIn('Overall '+label,rows[0]['embeds'][0]['description'])
+                self.assertEqual(rows[0]['embeds'][0]['author']['name'],'reviewer')
                 self.assertEqual(rows[1]['embeds'][0]['title'],f'PR #{index} · Review thread')
                 before=[row['id'] for row in rows]
                 deliver_events(self.threads,self.topic,'pull_request_review',{'action':'submitted','review':{

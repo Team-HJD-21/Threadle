@@ -16,6 +16,21 @@ webhook later reuses the same review source rather than posting another message.
 Failed parent delivery retries before publishing the child. Existing historical
 cards are not deleted/reposted to reorder Discord history.
 
+Review summaries and comments display the original GitHub author's login even
+when that person has not linked a Discord account. Synthetic parent reviews use
+the author's identity from the GraphQL snapshot, not a missing webhook sender.
+The one-off repair also corrects existing synthetic summary authors in place.
+
+Line-review cards include a compact code excerpt from the root comment's original
+`diffHunk`, with line numbers and addition/deletion markers. It is anchored to the
+original review line and diff side, not the latest branch contents. The short file
+name replaces the long path when code is available. Outdated snippets are labeled;
+file-level, binary, missing, or unmatched snippets retain location and GitHub links.
+Previews are bounded to 12 rows and 200 characters per source line with visible
+omission markers; comments and replies retain lossless pagination. The existing
+PR-scoped GraphQL read supplies this context without another Contents permission
+or recurring repository scan. Existing tracked cards refresh once after deployment.
+
 New conversations from the same submitted review are sent in root-comment
 creation order (numeric comment ID breaks ties), even when webhooks arrive in
 reverse order. The existing paginated snapshot includes the parent review's

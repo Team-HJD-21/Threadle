@@ -6,13 +6,15 @@ from discord_threads import ApiError,Topic,nonce
 from review_conversations import ReviewConversations,snapshot,source_kind
 
 LOG=logging.getLogger('review-repair')
-VERSION='review-deletions-v1'
+VERSION='review-authors-context-v2'
 
 
 class ReviewRepair:
     def __init__(self,service,binding,threads,clock=time.time):
         self.service,self.binding,self.threads,self.clock=service,binding,threads,clock
         self.queue=threads.queue
+        self.next_check=0
+        self.complete=False
         # Initialize mappings on installations that have never received a review.
         ReviewConversations(threads,None)
         from message_edits import MutableMessages
@@ -25,8 +27,13 @@ class ReviewRepair:
                 db.execute('INSERT INTO review_repair_flags VALUES(?)',(VERSION,))
 
     def tick(self):
+        if self.complete or self.clock()<self.next_check:return False
         with self.queue.connect() as db:
             row=db.execute('SELECT topic,attempts FROM review_repair_jobs WHERE version=? AND done=0 AND next<=? ORDER BY rowid LIMIT 1',(VERSION,self.clock())).fetchone()
+            if not row:
+                future=db.execute('SELECT min(next) FROM review_repair_jobs WHERE version=? AND done=0',(VERSION,)).fetchone()[0]
+                if future is None:self.complete=True
+                else:self.next_check=future
         if not row:return False
         key,attempts=row
         try:

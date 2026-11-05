@@ -1,5 +1,5 @@
 {
-  "version": "v1.0.0-beta.33",
+  "version": "v1.0.0-beta.34",
   "baseline": "2026.11.02.8",
   "files": {
     "demo_web.py": {
@@ -42,7 +42,7 @@
     },
     "connect_web.py": {
       "before": "a10a26dc8a437897a74a705d18b2eed378b2ec30b7b95f9298d833ba91b81db9",
-      "after": "8762ba681b14f55a82f08f0b61095e8eab216acf785702b07b0924c10a9b3a27",
+      "after": "5fc1fd8d1497b8fbd0a266402f65d5b031d717782281a572d596bb7fac424db1",
       "previous": [
         "039da5474270896cb0d94cff9d8fbc012749be2cba8d41af02c9c38a98df280b",
         "c71b37f392a2f9bb79cbe8c361c5e7f45ea94591c0199f198598a1d360930c39",
@@ -88,12 +88,13 @@
         "c10b1a2d9c7a9d9e25021ef5ddf6b5bacf244c49bed9933cebd0b71261fd5d57",
         "74f94df2fc364846bc194a98feed69d4905d26f7e87132b872f63daceb3d8fd8",
         "17c389dbc1288f9e8f7ae73c2684287f34c4b3c2186461376814087ef7b7a793",
-        "7971a71528a5d8a0685d63c28d86cc96f4710d785011dfb27de7384bc196b485"
+        "7971a71528a5d8a0685d63c28d86cc96f4710d785011dfb27de7384bc196b485",
+        "8762ba681b14f55a82f08f0b61095e8eab216acf785702b07b0924c10a9b3a27"
       ]
     },
     "changelog.py": {
       "before": "261336f2f039d63348697c8fb4f9f7ec8f25c959ad6f0e2ccd74230f8c208e28",
-      "after": "0bafa2764e4159aae02d77dbaf6a9e4d9297fbd200b44ac8c22ed7fdd48d122a",
+      "after": "6249574b2664f45aa6647e76da6ab0f50b870c9af8675637f42bc7e1d2f27d82",
       "previous": [
         "ce59507c70872a51ef2bbd42a7ee232a5bd4e2692a6b0c8903887594a1e59b90",
         "70c46b09eeacc09189050699f22f47224d0f1b157c741d0f25f9f51bd23af677",
@@ -146,7 +147,8 @@
         "25a5ae028a7e04f2b1b8b77ffb17fd9654eb3d29d9f824d5cb85fcf34048a0ec",
         "7f030555c2ac02c5936a8263cd0b04561d3ba094c2fc26033c668384bc6362d9",
         "70f3670c052f7f9f895346974f19c11773d22a9c8aab4056422bf1f00abb9fd2",
-        "6881177ea7b61a2e5b2fe72ece181b8c715d7358e0070542b88ac9073a5d58d7"
+        "6881177ea7b61a2e5b2fe72ece181b8c715d7358e0070542b88ac9073a5d58d7",
+        "0bafa2764e4159aae02d77dbaf6a9e4d9297fbd200b44ac8c22ed7fdd48d122a"
       ]
     },
     "web_assets/preview.js": {
@@ -180,7 +182,7 @@
     },
     "service.py": {
       "before": "8ef021eb91f276ae424209884b25cd423995d41e1455bbb6bfd63a0ab0206d1e",
-      "after": "6f864f291220aefc70b7a4ae2a4d16aa5f56050821f4564e912f1b6578734412",
+      "after": "98a35ba8a6e492a2c3145408c563bbd777c333070d55886f03eee338fd851a54",
       "previous": [
         "2b39caa084daa3eaa290f3bf3573d907c4d36513a97abf24be24bc9458e3f397",
         "a687e18707282836bb64ec6159556183889032368eacccaaacf86ba8116a1588",
@@ -207,7 +209,8 @@
         "d912cacd009a9cc4071d22796f3fcbfb00ac4edd4e674c6ebb6021abebddc0f9",
         "e45b3ec93a304c1019ffd7b11ee35ea45b7839543af9b4323a9f74ba2194e95d",
         "b84415564e189a91548c1075cf18e93d33e055dfaa521d4afdb5d6d4fe98ab65",
-        "e83b87af9454601bf3f20af92b47482d3b7499331ff542b84cae07e49954ce1d"
+        "e83b87af9454601bf3f20af92b47482d3b7499331ff542b84cae07e49954ce1d",
+        "6f864f291220aefc70b7a4ae2a4d16aa5f56050821f4564e912f1b6578734412"
       ]
     },
     "auth.py": {
@@ -216,7 +219,7 @@
     },
     "discord_threads.py": {
       "before": "0b353710016c6563fda1178e599cacca7ab802854803040f0866ef940dcbec94",
-      "after": "140566e7a80c9575e36c05cee6af8c9c13f759d53d3a935df4d0f1d0294009bd",
+      "after": "e98bd9f388c0406edc207df785d538b021dd5dcef5483ee760d261ce2700356e",
       "previous": [
         "7db8a83427bc41833c8673eb12f23da21cad41888357873706070557c0d50cd5",
         "11914c2dee5b538656765b97ba424055a2ed686dd6e543be11390b0c20dcd7a5",
@@ -236,7 +239,8 @@
         "d15edd0132a6cb42968eb280ffe62417d130a2f5e8858ed5588634c2105392ed",
         "067024b5e4c5428b0b0ed6f3e52aaa0f5f2c76fb3c875c0e80983a1613c468e4",
         "73a4b189b06b10855734929ada1d5f97e643027b56a099f4ca7c64b1e609dc4e",
-        "6dacbeb946c824bb319bc8cf5caeb17f9bcb0628ab37b1c0c8d25e216d83cf17"
+        "6dacbeb946c824bb319bc8cf5caeb17f9bcb0628ab37b1c0c8d25e216d83cf17",
+        "140566e7a80c9575e36c05cee6af8c9c13f759d53d3a935df4d0f1d0294009bd"
       ]
     },
     "notification_media.py": {
@@ -288,7 +292,7 @@
     },
     "registry.py": {
       "before": "adfa9743b40023f8e23159262a0e478894d6c7e05a1e24e80348d47bc616b503",
-      "after": "32ff1c91267a5cbb720f215b51138610b3d0a9b82192ce76448538ab2e007bd2",
+      "after": "61b7480dd4fe0ffa9fd942fb8062d8cf4b23f57930c69528d7af2aa12272f98f",
       "previous": [
         "58e3fe261ed4bfb98d927677fa42d139218317c3a037309ccf385c17fba009e6",
         "9f95d3e12f87375c3231487fc7457c95dbd70e922f1eef50232564f6b9d8b63a",
@@ -296,7 +300,8 @@
         "095a1c75e8667544272ed31082962af5d771ac9078d90b16015bd7d0dc39b31e",
         "455f7e8775fb9bf6089c98336f4f8414356996c6205b7246cf0950b6eae31af9",
         "34da97abb0710333d4b26488d84313c69a674ec584c6d291e70ed814e3645c95",
-        "07b59a90cbe38f267f9f4864cf3d991bf13245570a6117fce7e081c1c1b2fb8e"
+        "07b59a90cbe38f267f9f4864cf3d991bf13245570a6117fce7e081c1c1b2fb8e",
+        "32ff1c91267a5cbb720f215b51138610b3d0a9b82192ce76448538ab2e007bd2"
       ]
     },
     "workflow_notifications.py": {
@@ -514,13 +519,14 @@
     },
     "delivery.py": {
       "before": "a25bc5076e93ad49abc4a0d552f8d000f94c8a48b5041d151e463a28d880cb8f",
-      "after": "e75193c5ccdc91dfaf82443ebcb74b9f377b0f1496465e83e35b0cc74328c960",
+      "after": "65d9220e3d8add4a400a7107ca5dd2ef6f302a0657f03dbe9c6caaa863b06fe3",
       "previous": [
         "b53c78ccd42f68d99f0bba55c1384fcd66d2f0ab50c23d912600debfee8fdf35",
         "54ada684cebd0899c3e7fe74d09ee0368f72c6b0c5adb59539e27bb4bbea8ec9",
         "f9fd931f20bee24ca906868b6b29c7f974e096612969f7b66bba755923586cde",
         "70db8c2203de012b843730e058db608cf8c9b2926bb1856e269e1a848d5d131d",
-        "69199a517408540081ab7ddb55d0123caec36dab65bd0f185a4f47b13e10234e"
+        "69199a517408540081ab7ddb55d0123caec36dab65bd0f185a4f47b13e10234e",
+        "e75193c5ccdc91dfaf82443ebcb74b9f377b0f1496465e83e35b0cc74328c960"
       ]
     },
     "deferred_threads.py": {
@@ -659,11 +665,12 @@
     },
     "review_conversations.py": {
       "before": null,
-      "after": "c72ef791325eef07fe932899f6c490b600adf75d45f34166593d271707a1e934",
+      "after": "a9fc5e81bccbf41f2eb007063e71e4a6d5289152157bb6f5420e100d7a3226fd",
       "previous": [
         "548193f4f5619fc4140b143a8b56ffe21ad96abef9aafc01df26239745ca3a79",
         "fa2b03f702cb0b35985823bfb47fa108bf4eb4f3dbd3bd237bd3cbf7d6861cc9",
-        "3e264f7f053d862838033610aa6c883eb185b312435b761038ff2af046f824b9"
+        "3e264f7f053d862838033610aa6c883eb185b312435b761038ff2af046f824b9",
+        "c72ef791325eef07fe932899f6c490b600adf75d45f34166593d271707a1e934"
       ]
     },
     "restart_notices.py": {
@@ -717,7 +724,14 @@
     },
     "review_repair.py": {
       "before": null,
-      "after": "f0dd64f41e7f173c97252296528a7d674d9f3863e42baedee2623ecf16f9bc68"
+      "after": "f30d6d6d0ddd8678e93bfedff478cc7570f6504fa5c1512ab54322e94e718403",
+      "previous": [
+        "f0dd64f41e7f173c97252296528a7d674d9f3863e42baedee2623ecf16f9bc68"
+      ]
+    },
+    "review_code.py": {
+      "before": null,
+      "after": "6f1f633ca7f6bb65eaa176654d3e0d75de4955aab2945733d3a90af81152c04e"
     }
   },
   "state_encryption": true

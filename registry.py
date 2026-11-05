@@ -196,8 +196,12 @@ class Registry:
 
     def active(self, include_paused=False):
         with self.db() as db:
-            ids = [row[0] for row in db.execute('SELECT id FROM bindings')]
-        return [binding for identity in ids if (binding := self.get(identity, include_paused)) is not None]
+            rows=db.execute('SELECT b.id,b.tenant,b.repo_id,b.repo,b.installation,b.auth,b.config,b.legacy_state '
+                            'FROM bindings b JOIN installations i ON b.installation=i.id '
+                            'WHERE b.enabled=1 AND i.enabled=1 AND (? OR NOT EXISTS '
+                            '(SELECT 1 FROM admin_paused p WHERE p.id=b.id)) ORDER BY b.rowid',
+                            (int(include_paused),)).fetchall()
+        return [Binding(*row[:6],json.loads(row[6]),bool(row[7])) for row in rows]
 
     def disable(self, identity):
         with self.db() as db:
