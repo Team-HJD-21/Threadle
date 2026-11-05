@@ -261,3 +261,33 @@ button.preview-channel{width:100%;border:0;background:transparent;text-align:lef
 @media(max-width:600px){.feature-showcase .feature-grid{gap:10px}.product-page .feature-showcase button.feature-item{padding:16px}.feature-title{font-size:15px}.feature-copy{font-size:12px}.security-note{padding:22px}.feature-scene .preview-window{height:clamp(340px,90vw,420px)}.feature-scene-note{font-size:11px}}
 @media(prefers-reduced-motion:reduce){.feature-scene,.feature-scene [data-feature-step]{animation:none!important}}
 .product-page .feature-showcase button.feature-item[data-feature]:hover:not(:disabled){background:#25352f;color:var(--text);transform:none;box-shadow:none}
+
+/* Account-linked collaboration is explained separately from notification playback. */
+.hero-collaboration-link{display:inline-block;margin-top:20px;font-size:13px;color:var(--accent)}
+.collaboration-section{margin:72px 0;padding-top:24px;scroll-margin-top:28px}
+.collaboration-section .section-heading{max-width:760px}
+.collaboration-section .section-heading h2{font-size:clamp(25px,3.2vw,36px);letter-spacing:-.035em}
+.collaboration-section .section-heading>p:last-child{max-width:680px}
+.collaboration-example{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.collaboration-sample{min-width:0;border:1px solid var(--line);border-radius:14px;background:#222b2d;overflow:hidden}
+.collaboration-sample-header{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:14px 20px;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)}
+.collaboration-platform{font-weight:700;color:var(--text);font-size:14px}
+.collaboration-message{display:flex;align-items:flex-start;gap:12px;padding:24px 20px;line-height:1.7;font-size:14px}
+.collaboration-message>div{min-width:0;max-width:420px;overflow-wrap:anywhere}
+.collaboration-message b{font-size:14px}.collaboration-message p{margin:5px 0 0}
+.collaboration-avatar{display:flex;align-items:center;justify-content:center;flex:0 0 34px;height:34px;border-radius:50%;background:#3f5350;color:#e7edcf;font-size:15px;font-weight:650}
+.collaboration-mention{padding:2px 4px;border-radius:4px;background:#3d4365;color:#d1d7ff;white-space:nowrap}
+.collaboration-caption{font-size:12px;line-height:1.8;color:var(--muted);margin:14px 0 26px;max-width:840px}
+.collaboration-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.collaboration-card{min-width:0;padding:24px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.collaboration-number{color:var(--accent);font-size:12px;letter-spacing:.08em}
+.collaboration-card h3{font-size:17px;line-height:1.6;margin:12px 0 10px;letter-spacing:-.025em}
+.collaboration-card p{font-size:14px;line-height:1.85;color:var(--muted);margin:0;overflow-wrap:anywhere;text-wrap:pretty}
+.collaboration-actions{display:flex;align-items:center;gap:24px;flex-wrap:wrap;margin-top:26px}
+.collaboration-actions .button{margin:0}.collaboration-actions p{max-width:460px;margin:0;color:var(--muted);font-size:12px;line-height:1.8}
+.account-setup{margin:48px 0 0;padding:clamp(22px,3vw,36px);background:var(--surface);border:1px solid var(--line);border-radius:16px;scroll-margin-top:28px}
+.account-setup h2{margin:8px 0 18px}.account-setup p,.account-setup li{font-size:14px;line-height:1.9;overflow-wrap:anywhere}
+.account-setup ol{padding-left:22px;margin:22px 0}.account-setup li{padding-left:5px;margin:10px 0}
+.account-command-list{border-top:1px solid var(--line);padding-top:10px}.account-command-list code{font-size:13px}
+.beta-collaboration-note{font-size:14px;color:var(--muted);line-height:1.8;margin-bottom:32px}
+@media(max-width:760px){.collaboration-section{margin:46px 0}.collaboration-example,.collaboration-grid{grid-template-columns:minmax(0,1fr)}.collaboration-card{padding:22px}.collaboration-sample-header{padding:12px 16px;gap:12px}.collaboration-message{padding:20px 16px}.collaboration-actions{gap:16px}.collaboration-actions .button{width:100%;text-align:center;box-sizing:border-box}}
