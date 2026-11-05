@@ -94,6 +94,8 @@ class Service:
         from api_usage import ApiUsage
         self.api_usage = ApiUsage(self.root)
         self.queues = {}
+        from chat_events import ChatEvents
+        self.chat_events = ChatEvents(self)
         self.file_index = FileIndex(self.root / 'repository-files.sqlite3')
         from connect_web import Onboarding
         self.web = Onboarding.create(self)
@@ -127,6 +129,7 @@ class Service:
     def discord(self):
         client = self.api_factory('Discord', 'https://discord.com/api/v10', self.env['DISCORD_BOT_TOKEN'], 'Bot')
         client.usage_observer = self.api_usage.observe
+        client.chat_events = self.chat_events
         return client
 
     def receive(self, path, signature, event, delivery, body):

@@ -46,6 +46,7 @@ class Api:
             except Exception: pass  # Telemetry must never interrupt notification delivery.
 
     def call(self, method, path, data=None):
+        events = getattr(self, 'chat_events', None) if self.service == 'Discord' else None
         mention_policy = getattr(self, 'mention_policy', None) if self.service == 'Discord' else None
         mention_operation = None
         if mention_policy is not None:
@@ -75,6 +76,8 @@ class Api:
                 headers.update({"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2026-03-10" if "/issue-field-values" in path else "2022-11-28"})
             request = Request(self.base + path, data=encoded,
                               headers=headers, method=method)
+            if events is not None:
+                events.before_api(method, path)
             try:
                 with urlopen(request, timeout=30) as response:
                     if mention_policy is not None:
@@ -96,6 +99,9 @@ class Api:
                     if self.service=='Discord':
                         from delivery_metrics import discord_write
                         discord_write(method,path)
+                    if events is not None:
+                        try: events.after_api(method, path, result)
+                        except Exception: pass  # A successful write must not be retried for telemetry.
                     return result
             except HTTPError as error:
                 try:
@@ -103,6 +109,8 @@ class Api:
                 except (ValueError, UnicodeError):
                     detail = {}
                 if not isinstance(detail,dict):detail={}
+                if events is not None:
+                    events.failed_api(method,path,error.code)
                 self.observe_usage(method, path, error.headers, error.code, detail)
                 explicit,wait=retry_delay(error.headers,detail,attempt)
                 limited=error.code==429 or error.code==403 and (explicit is not None or error.headers.get('X-RateLimit-Remaining')=='0')

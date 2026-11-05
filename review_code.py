@@ -40,13 +40,19 @@ def preview(thread):
     excerpt=rows[beginning:selected[-1]+1]
     # Remove only indentation shared by the excerpt, retaining relative indentation.
     code=textwrap.dedent('\n'.join(row[3] if row else '' for row in excerpt)).split('\n')
-    if len(code)>12:code=code[:5]+['…']+code[-6:]
+    numbered=list(zip(excerpt,code))
+    if len(numbered)>12:numbered=numbered[:5]+[(None,'…')]+numbered[-6:]
+    width=max(len(str(row[column])) for row,line in numbered if row)
     lines=[]
-    for line in code:
+    for row,line in numbered:
+        if row is None:
+            lines.append(' '*(width+1)+'…')
+            continue
         # Bound the optional preview, never the review comments below it.
         if len(line)>200:line=line[:199]+'…'
         # A backtick run in source must not close the enclosing Discord code block.
-        lines.append(line.replace('```','``\u200b`'))
+        prefix=str(row[column]).rjust(width)
+        lines.append(prefix+(' '+line.replace('```','``\u200b`') if line else ''))
     path=thread.get('path') or ''
     label=path.rsplit('/',1)[-1].replace('`','ˋ')
     label+=':'+str(start)+'–'+str(target) if start!=target else ':'+str(target)

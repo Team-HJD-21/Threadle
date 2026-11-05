@@ -94,17 +94,19 @@ class ExistingReviewRepairTests(unittest.TestCase):
         self.assertIn('public void Method()',self.posts()[0]['embeds'][0]['description'])
         self.assertIn('```csharp\n',self.posts()[0]['embeds'][0]['description'])
 
-    def test_readability_upgrade_refreshes_previously_repaired_cards_once(self):
+    def test_line_number_upgrade_refreshes_previously_repaired_cards_once(self):
         self.send();ids=[row['id'] for row in self.all_posts()]
+        self.current[0]['comments']['nodes'][0].update(diffHunk='@@ -7 +7 @@\n+        Run();',originalLine=7)
         worker=self.worker()
         from review_repair import VERSION
         with self.queue.connect() as db:
-            db.execute('INSERT OR IGNORE INTO review_repair_flags VALUES(?)',('review-authors-context-v2',))
+            db.execute('INSERT OR IGNORE INTO review_repair_flags VALUES(?)',('review-readable-context-v3',))
             db.execute('DELETE FROM review_repair_jobs WHERE version=?',(VERSION,))
             db.execute('DELETE FROM review_repair_flags WHERE version=?',(VERSION,))
         worker=ReviewRepair(worker.service,self.binding,self.threads,lambda:1000)
         self.assertTrue(self.tick(worker));self.assertFalse(self.tick(worker))
         self.assertEqual([row['id'] for row in self.all_posts()],ids)
+        self.assertIn('\n7 Run();\n',self.posts()[0]['embeds'][0]['description'])
 
     def test_one_off_regroups_an_existing_pr_body_split_around_review_messages(self):
         from message_edits import MutableMessages

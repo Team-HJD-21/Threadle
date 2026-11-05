@@ -314,7 +314,14 @@ class Replies:
                     with self.accounts.db() as db:
                         db.execute('UPDATE bridge_replies SET cleaned=1,deleted_body=NULL WHERE operation=?', (job['operation'],))
                     return
-                self.service.discord().call('DELETE', f"/channels/{job['thread']}/messages/{job['id']}")
+                self.service.chat_events.intent(job['thread'], job['id'], 'review-reply' if job['mode']=='review' else 'github-deletion')
+                try:
+                    self.service.discord().call('DELETE', f"/channels/{job['thread']}/messages/{job['id']}")
+                except ApiError as problem:
+                    if problem.status in (400,401,403,429):
+                        self.service.chat_events.finish(job['thread'],job['id'],'failed')
+                    raise
+                self.service.chat_events.finish(job['thread'],job['id'],'done')
                 with self.accounts.db() as db:
                     db.execute('UPDATE bridge_replies SET cleaned=1,deleted_body=NULL WHERE operation=?', (job['operation'],))
         except ApiError as error:
