@@ -13,6 +13,15 @@ PRs run regression checks on a GitHub-hosted Windows runner. After main is updat
 
 The deployment checks installed file identities, backs up only listed files, applies changes, and verifies `/health` and `/connect`. Failed application or health checks restore the backed-up files. A passing health check does not prove live Discord notification delivery.
 
+PR checks also compare the deployment manifest against the destination branch.
+Every previously supported runtime checksum must remain accepted, including the
+previous release's current checksum. Removing one fails CI before deployment.
+A captured beta.31 production manifest independently checks the upgrade path from
+the last successful release before the beta.32 baseline-list fix. Unknown server
+modifications still stop deployment before files are changed.
+
 ## Local checks
 
 Use Python 3.12. Install `requirements-app.txt` and Pillow, then run `python -B deploy/ci.py`.
+To check an upgrade from a specific predecessor, also run
+`python -B deploy/ci.py --checks-only --baseline-ref <commit-or-ref>`.

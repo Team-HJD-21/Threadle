@@ -10,6 +10,28 @@ from deploy import ci
 
 
 class RunnerTests(unittest.TestCase):
+    def test_current_manifest_upgrades_the_last_successful_production_release(self):
+        root = Path(__file__).parent
+        previous = json.loads((root/'deploy/fixtures/beta31-upgrade-baseline.json').read_text())
+        current = ci.read_manifest(root)
+        ci.check_upgrade(current, previous)
+
+    def test_losing_a_predecessor_or_an_older_supported_version_fails_before_deployment(self):
+        previous = {'files': {'runtime.py': {'before': 'oldest', 'after': 'installed', 'previous': ['older']}}}
+        for current in (
+            {'files': {}},
+            {'files': {'runtime.py': {'before': 'oldest', 'after': 'new', 'previous': ['older']}}},
+            {'files': {'runtime.py': {'before': 'oldest', 'after': 'new', 'previous': ['installed']}}},
+        ):
+            with self.assertRaisesRegex(ValueError, 'runtime.py'):
+                ci.check_upgrade(current, previous)
+        ci.check_upgrade({'files': {'runtime.py': {'before': 'oldest', 'after': 'new', 'previous': ['older', 'installed']}}}, previous)
+
+    def test_checks_receive_the_explicit_baseline_ref(self):
+        with patch.object(ci, 'checks') as checks:
+            self.assertEqual(ci.main(['--checks-only', '--baseline-ref', 'HEAD^1']), 0)
+            checks.assert_called_once_with('HEAD^1')
+
     def test_four_partitions_cover_every_regression_exactly_once_in_original_order(self):
         loader = unittest.TestLoader()
         suite = loader.loadTestsFromNames(ci.TEST_TARGETS)
