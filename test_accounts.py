@@ -104,6 +104,102 @@ class AccountTests(unittest.TestCase):
         payload.update(values)
         return payload
 
+    def deletion_case(self,kind='pr'):
+        if kind=='discussion':
+            with self.service.queue(self.binding).connect() as db:
+                db.execute('DELETE FROM links')
+                db.execute('INSERT INTO links VALUES(?,?,?)',('github-thread:one/repo:discussion:7','1002','7777'))
+        self.link();self.bridge.ingest(self.message);self.bridge.tick()
+        self.deleted_inputs=[]
+        def call(method,path,data=None):
+            if method=='DELETE':self.deleted_inputs.append(path);return None
+            value=self.discord_call(method,path,data)
+            if method=='GET' and path=='/channels/7777/messages/8000':
+                value.update(content=self.message['content'],attachments=self.message['attachments'])
+            return value
+        self.api.call.side_effect=call
+        body=(self.writes[0]['variables']['input']['body'] if kind=='discussion' else self.writes[0]['body'])
+        value=self.echo(body,action='deleted')
+        if kind=='discussion':value.pop('issue');value['discussion']={'number':7}
+        return value
+
+    def test_github_deletion_removes_the_forwarded_discord_input_once(self):
+        payload=self.deletion_case()
+        self.assertTrue(self.bridge.echo(self.binding,'issue_comment',payload))
+        self.bridge.tick();self.bridge.tick()
+        self.assertEqual(self.deleted_inputs,['/channels/7777/messages/8000'])
+        self.assertEqual(len(self.writes),1)
+        self.assertTrue(self.bridge.echo(self.binding,'issue_comment',self.echo(self.writes[0]['body'],action='deleted')))
+        self.bridge.tick();self.assertEqual(len(self.deleted_inputs),1)
+
+    def test_deletion_uses_known_remote_identity_even_if_marker_was_removed(self):
+        payload=self.deletion_case();payload['comment']['body']='Edited on GitHub, without a marker'
+        self.assertTrue(self.bridge.echo(self.binding,'issue_comment',payload));self.bridge.tick()
+        self.assertEqual(len(self.deleted_inputs),1)
+
+    def test_deletion_never_removes_a_locally_edited_discord_input(self):
+        payload=self.deletion_case();self.message['content']='New Discord-only content'
+        self.assertTrue(self.bridge.echo(self.binding,'issue_comment',payload));self.bridge.tick()
+        self.assertEqual(self.deleted_inputs,[])
+
+    def test_legacy_deletion_requires_matching_content_and_keeps_body_encrypted(self):
+        payload=self.deletion_case()
+        with self.accounts.db() as db:db.execute('UPDATE bridge_replies SET input_hash=NULL')
+        self.service.github=lambda _:self.github
+        self.bridge.echo(self.binding,'issue_comment',payload)
+        with self.accounts.db() as db:
+            raw=db.execute('SELECT deleted_body FROM bridge_replies').fetchone()[0]
+            self.assertNotIn(b'Hello from Discord',bytes(raw))
+        self.bridge.tick();self.assertEqual(len(self.deleted_inputs),1)
+        with self.accounts.db() as db:self.assertIsNone(db.execute('SELECT deleted_body FROM bridge_replies').fetchone()[0])
+
+    def test_deletion_rejects_other_repository_topic_and_author(self):
+        payload=self.deletion_case()
+        for change in ({'issue':{'number':8,'pull_request':{}}},{'issue':{'number':7}},
+                       {'comment':dict(payload['comment'],user={'id':92})}):
+            value=copy.deepcopy(payload);value.update(change)
+            self.assertFalse(self.bridge.echo(self.binding,'issue_comment',value))
+        self.bridge.tick();self.assertEqual(self.deleted_inputs,[])
+
+    def test_missing_manage_messages_permission_retries_without_reposting(self):
+        payload=self.deletion_case();call=self.api.call.side_effect
+        failed=[True]
+        def deny(method,path,data=None):
+            if method=='DELETE' and failed[0]:raise ApiError('Discord',403,50013)
+            return call(method,path,data)
+        self.api.call.side_effect=deny
+        self.bridge.echo(self.binding,'issue_comment',payload);self.bridge.tick()
+        self.assertEqual(self.deleted_inputs,[])
+        failed[0]=False;self.clock.return_value+=61
+        self.bridge.tick()
+        self.assertEqual(len(self.deleted_inputs),1);self.assertEqual(len(self.writes),1)
+
+    def test_discussion_deletion_is_durable_across_worker_restart(self):
+        payload=self.deletion_case('discussion')
+        self.assertTrue(self.bridge.echo(self.binding,'discussion_comment',payload))
+        restarted=CommentBridge(self.service,self.accounts,self.clock,lambda service,token:self.github)
+        restarted.tick()
+        self.assertEqual(self.deleted_inputs,['/channels/7777/messages/8000'])
+
+    def test_other_server_does_not_schedule_deletion_of_the_original_input(self):
+        payload=self.deletion_case()
+        other=self.service.registry.get(self.service.registry.add('other',11,'one/repo',101,'app',config(2000)))
+        self.assertFalse(self.bridge.echo(other,'issue_comment',copy.deepcopy(payload)))
+        self.bridge.tick();self.assertEqual(self.deleted_inputs,[])
+        self.assertTrue(self.bridge.echo(self.binding,'issue_comment',payload));self.bridge.tick()
+        self.assertEqual(len(self.deleted_inputs),1)
+
+    def test_already_deleted_discord_input_finishes_without_retry(self):
+        payload=self.deletion_case();call=self.api.call.side_effect
+        def missing(method,path,data=None):
+            if method=='GET' and path=='/channels/7777/messages/8000':raise ApiError('Discord',404,10008)
+            return call(method,path,data)
+        self.api.call.side_effect=missing
+        self.bridge.echo(self.binding,'issue_comment',payload);self.bridge.tick()
+        with self.accounts.db() as db:
+            row=db.execute('SELECT cleaned,deleted_body FROM bridge_replies').fetchone()
+        self.assertEqual(row,(1,None))
+
     def test_tokens_and_pending_bodies_are_encrypted_in_the_backed_up_database(self):
         self.link()
         self.bridge.ingest(self.message)

@@ -39,6 +39,8 @@ class Replies:
             db.execute('CREATE TABLE IF NOT EXISTS bridge_replies(operation TEXT PRIMARY KEY,mode TEXT NOT NULL,reference TEXT NOT NULL,root TEXT,node TEXT,applied INTEGER NOT NULL DEFAULT 0,cleaned INTEGER NOT NULL DEFAULT 0,next REAL NOT NULL DEFAULT 0,attempts INTEGER NOT NULL DEFAULT 0)')
             if 'input_hash' not in {row[1] for row in db.execute('PRAGMA table_info(bridge_replies)')}:
                 db.execute('ALTER TABLE bridge_replies ADD COLUMN input_hash TEXT')
+            if 'deleted_body' not in {row[1] for row in db.execute('PRAGMA table_info(bridge_replies)')}:
+                db.execute('ALTER TABLE bridge_replies ADD COLUMN deleted_body BLOB')
 
     def fingerprint(self, value):
         files = []
@@ -202,7 +204,9 @@ class Replies:
     def prepare(self, api, binding, job, payload):
         ref = payload.get('reference')
         if not ref:
-            return {'mode': 'comment'}, None
+            plan={'mode':'comment','reference':'','input_hash':self.fingerprint(payload)}
+            self.save(job,plan)
+            return plan, None
         # Do not trust message_reference snapshots or displayed embed text supplied by a client.
         value = self.service.discord().call('GET', f"/channels/{job['thread']}/messages/{ref['message_id']}")
         if str(value.get('id')) != ref['message_id']:
@@ -279,7 +283,7 @@ class Replies:
     def cleanup(self):
         with self.accounts.db() as db:
             db.row_factory = __import__('state_db').Row
-            row = db.execute("SELECT o.*,r.node,r.root,r.input_hash,r.attempts AS cleanup_attempts FROM bridge_replies r JOIN comment_outbox o USING(operation) WHERE r.mode='review' AND r.applied=1 AND r.cleaned=0 AND o.state='done' AND r.next<=? ORDER BY o.created LIMIT 1", (self.bridge.clock(),)).fetchone()
+            row = db.execute("SELECT o.*,r.node,r.root,r.mode,r.input_hash,r.deleted_body,r.attempts AS cleanup_attempts FROM bridge_replies r JOIN comment_outbox o USING(operation) WHERE r.mode IN ('review','deleted') AND r.applied=1 AND r.cleaned=0 AND o.state='done' AND r.next<=? ORDER BY o.created LIMIT 1", (self.bridge.clock(),)).fetchone()
             job = dict(row) if row else None
         if not job:
             return
@@ -289,30 +293,41 @@ class Replies:
                 account = self.accounts.get(job['discord'], job['guild'])
                 target = self.bridge.destination(job['guild'], job['thread'])
                 if (not binding or not account or account['generation'] != job['generation'] or not account['comments'] or
-                        not target or target[0].id != binding.id or target[1] != job['topic'] or self.bridge.clock() - job['created'] > 86400):
+                        not target or target[0].id != binding.id or target[1] != job['topic'] or self.bridge.clock() - job['created'] > (30*86400 if job['mode']=='deleted' else 86400)):
                     with self.accounts.db() as db:
-                        db.execute('UPDATE bridge_replies SET cleaned=1 WHERE operation=?', (job['operation'],))
+                        db.execute('UPDATE bridge_replies SET cleaned=1,deleted_body=NULL WHERE operation=?', (job['operation'],))
                     return
                 self.bridge.check_discord(job, binding, target[2])
                 current = self.service.discord().call('GET', f"/channels/{job['thread']}/messages/{job['id']}")
-                if (str(current.get('author', {}).get('id')) != job['discord'] or not job['input_hash'] or
-                        not hmac.compare_digest(self.fingerprint(current), job['input_hash'])):
+                matches=bool(job['input_hash'] and hmac.compare_digest(self.fingerprint(current),job['input_hash']))
+                if not job['input_hash'] and job['mode']=='deleted' and job['deleted_body']:
+                    # Legacy successful inputs have no fingerprint. Only remove
+                    # them if today's Discord content still matches the deleted body.
+                    payload={'content':current.get('content',''),'attachments':current.get('attachments',[]),'embeds':current.get('embeds',[])}
+                    expected=self.accounts.decode(job['deleted_body'])['body']
+                    actual=self.bridge.body(job,payload,self.service.github(binding))
+                    from comment_bridge import MARKER
+                    actual=MARKER.sub('',actual).strip()
+                    matches=bool(expected) and hmac.compare_digest(actual.encode(),expected.encode())
+                if str(current.get('author', {}).get('id')) != job['discord'] or not matches:
                     # Never delete an edited input that has not been mirrored to GitHub.
                     with self.accounts.db() as db:
-                        db.execute('UPDATE bridge_replies SET cleaned=1 WHERE operation=?', (job['operation'],))
+                        db.execute('UPDATE bridge_replies SET cleaned=1,deleted_body=NULL WHERE operation=?', (job['operation'],))
                     return
                 self.service.discord().call('DELETE', f"/channels/{job['thread']}/messages/{job['id']}")
                 with self.accounts.db() as db:
-                    db.execute('UPDATE bridge_replies SET cleaned=1 WHERE operation=?', (job['operation'],))
+                    db.execute('UPDATE bridge_replies SET cleaned=1,deleted_body=NULL WHERE operation=?', (job['operation'],))
         except ApiError as error:
             with self.accounts.db() as db:
-                db.execute('UPDATE bridge_replies SET cleaned=?,next=?,attempts=attempts+1 WHERE operation=?',
-                           (int(error.status == 404), self.bridge.clock() + 60, job['operation']))
+                db.execute('UPDATE bridge_replies SET cleaned=?,next=?,attempts=attempts+1,deleted_body=CASE WHEN ? THEN NULL ELSE deleted_body END WHERE operation=?',
+                           (int(error.status == 404), self.bridge.clock() + 60, int(error.status == 404), job['operation']))
             if error.status == 403 and job['cleanup_attempts'] == 0:
                 binding = self.service.registry.get(job['binding'])
                 english = binding is not None and binding.config.get('language') == 'en'
-                text = ('Your review reply is reflected in the card. Grant Threadle Manage Messages to remove this input automatically.' if english else
-                        '리뷰 답글을 카드에 반영했어요. 입력 메시지를 자동 정리하려면 Threadle에 메시지 관리 권한을 허용해 주세요.')
+                text = (('The GitHub comment was deleted. Grant Threadle Manage Messages to remove this Discord message too.' if english else
+                         'GitHub 댓글이 삭제됐어요. 원본 Discord 메시지도 정리하려면 Threadle에 메시지 관리 권한을 허용해 주세요.') if job['mode']=='deleted' else
+                        ('Your review reply is reflected in the card. Grant Threadle Manage Messages to remove this input automatically.' if english else
+                         '리뷰 답글을 카드에 반영했어요. 입력 메시지를 자동 정리하려면 Threadle에 메시지 관리 권한을 허용해 주세요.'))
                 try:
                     self.service.discord().call('POST', '/channels/' + job['thread'] + '/messages', {
                         'content': text, 'allowed_mentions': {'parse': [], 'replied_user': False}, 'flags': 4096,
