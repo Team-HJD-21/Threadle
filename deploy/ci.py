@@ -80,8 +80,28 @@ def regressions(shard=1, shards=1, timings=None):
     return result.wasSuccessful()
 
 
-def checks():
-    read_manifest(ROOT)
+def check_upgrade(manifest, baseline):
+    """An update must still accept every known installed predecessor checksum."""
+    def supported(rule):
+        # An explicit null means the file may be absent on an older installation.
+        # Snapshot fixtures that specify only `after` make no such assertion.
+        return {rule['after'], *rule.get('previous', []), *([rule['before']] if 'before' in rule else [])}
+    incompatible = []
+    for name, previous in baseline['files'].items():
+        current = manifest['files'].get(name)
+        if current is None or not supported(previous).issubset(supported(current)):
+            incompatible.append(name)
+    if incompatible:
+        raise ValueError('Deployment loses supported installed baselines: ' + ', '.join(incompatible))
+
+
+def checks(baseline_ref=None):
+    manifest = read_manifest(ROOT)
+    if baseline_ref:
+        baseline = json.loads(subprocess.check_output(
+            ['git', 'show', baseline_ref + ':deploy/changes.json'], cwd=ROOT))
+        check_upgrade(manifest, baseline)
+        print('Installed baseline compatibility verified: ' + baseline_ref)
     for path in ROOT.glob('*.py'):
         ast.parse(path.read_bytes(), filename=path.name)
     if sys.platform == 'win32':
@@ -100,11 +120,12 @@ def main(argv=None):
     parser.add_argument('--shard', type=int, default=1)
     parser.add_argument('--shards', type=int, default=1)
     parser.add_argument('--timings', help='Write per-test durations as JSON, including on test failure')
+    parser.add_argument('--baseline-ref', help='Git predecessor whose supported runtime checksums must remain accepted')
     args = parser.parse_args(argv)
     if args.shards < 1 or not 1 <= args.shard <= args.shards:
         parser.error('--shard must be between 1 and --shards')
     if not args.tests_only:
-        checks()
+        checks(args.baseline_ref)
     if not args.checks_only and not regressions(args.shard, args.shards, args.timings):
         return 1
     return 0

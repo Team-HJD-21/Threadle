@@ -50,11 +50,14 @@ jobs:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
+          fetch-depth: 2
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - name: Validate deployment files and Windows recovery
-        run: python -B deploy/ci.py --checks-only
+        # PR checkouts are merge commits: first parent is the destination branch.
+        # Main pushes likewise retain the immediately preceding installed versions.
+        run: python -B deploy/ci.py --checks-only --baseline-ref HEAD^1
       - name: Check runner shell under a restricted execution policy
         run: python -B deploy/test_runner_shell.py
       - name: Check preview playback
