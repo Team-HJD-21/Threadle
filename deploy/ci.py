@@ -11,7 +11,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from deploy.patch_runtime import read_manifest
+from deploy.patch_runtime import digest, read_manifest
 
 TEST_TARGETS = [
     'test_accounts',
@@ -95,12 +95,23 @@ def check_upgrade(manifest, baseline):
         raise ValueError('Deployment loses supported installed baselines: ' + ', '.join(incompatible))
 
 
+def read_baseline(source, baseline_ref, targets):
+    baseline = json.loads(subprocess.check_output(
+        ['git', 'show', baseline_ref + ':deploy/changes.json'], cwd=source))
+    tracked = set(subprocess.check_output(
+        ['git', 'ls-tree', '-r', '-z', '--name-only', baseline_ref], cwd=source).decode('utf-8').split('\0'))
+    for name in targets:
+        # First becoming managed is not the same as first existing on the server.
+        if name not in baseline['files'] and name in tracked:
+            previous = subprocess.check_output(['git', 'show', baseline_ref + ':' + name], cwd=source)
+            baseline['files'][name] = {'after': digest(previous)}
+    return baseline
+
+
 def checks(baseline_ref=None):
     manifest = read_manifest(ROOT)
     if baseline_ref:
-        baseline = json.loads(subprocess.check_output(
-            ['git', 'show', baseline_ref + ':deploy/changes.json'], cwd=ROOT))
-        check_upgrade(manifest, baseline)
+        check_upgrade(manifest, read_baseline(ROOT, baseline_ref, manifest['files']))
         print('Installed baseline compatibility verified: ' + baseline_ref)
     for path in ROOT.glob('*.py'):
         ast.parse(path.read_bytes(), filename=path.name)

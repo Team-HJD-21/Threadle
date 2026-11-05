@@ -199,6 +199,9 @@
     },
     "restart_notices.py": {
       "after": "01ea28a15e5619073e78b83437985c213f91520fe3f1d7906fa3492cfd75ce84"
+    },
+    "connect_auth.py": {
+      "after": "4a5e14fb22546471bbb329efabfa87e244bb569520c13f554a21fce1eb063634"
     }
   }
 }

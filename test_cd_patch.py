@@ -53,6 +53,17 @@ class DeploymentTests(unittest.TestCase):
         self.assertFalse(self.job.exists())
         self.assertEqual(target.read_text(), 'custom_server_change = True\n')
 
+    def test_preflight_reports_all_unrecognized_files_without_changes(self):
+        names = ['connect_auth.py', 'webhook_recovery.py']
+        for name in names:
+            (self.root/name).write_bytes(b'unknown_local_change = True\n')
+        with self.assertRaises(ValueError) as raised:
+            prepare(self.root, self.source, self.job)
+        for name in names:
+            self.assertIn(name + ' (installed sha256=', str(raised.exception))
+            self.assertEqual((self.root/name).read_bytes(), b'unknown_local_change = True\n')
+        self.assertFalse(self.job.exists())
+
     def test_changed_target_after_prepare_is_rejected_before_first_write(self):
         with patch('deploy.patch_runtime.subprocess.run'):
             prepare(self.root, self.source, self.job)
