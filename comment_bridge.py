@@ -69,6 +69,8 @@ class CommentBridge:
         self.service, self.accounts, self.clock, self.user_api = service, accounts, clock, user_api
         self.worker_lock = threading.Lock()
         self.content_enabled = False
+        from comment_replies import Replies
+        self.replies = Replies(self)
 
     def discover_intent(self):
         """Only request the privileged intent when the application actually has it."""
@@ -121,7 +123,13 @@ class CommentBridge:
             files.append({'url': url, 'filename': str(item.get('filename', 'attachment'))[:200]})
         if not content.strip() and not files:
             return False
-        payload = {'content': content, 'attachments': files}
+        from comment_replies import reference
+        payload = {'content': content, 'attachments': files, 'reference': reference(message)}
+        if 'mentions' in message:
+            mentions = message['mentions']
+            if not isinstance(mentions, list) or len(mentions) > 100 or not all(snowflake(v) for v in mentions):
+                return False
+            payload['mentions'] = [str(v) for v in mentions]
         with self.accounts.lock, self.accounts.db() as db:
             # Recheck after acquiring the disconnect lock.
             current = db.execute('SELECT generation FROM personal_accounts WHERE discord=? AND credential IS NOT NULL', (author,)).fetchone()
@@ -142,12 +150,24 @@ class CommentBridge:
         return '\n<!-- threadle-comment:' + operation + ':' + self.signature(operation) + ' -->'
 
     def echo(self, binding, event, payload):
-        if event not in ('issue_comment', 'discussion_comment'):
+        payload.pop('_bridge_review_echo', None)
+        if event not in ('issue_comment', 'discussion_comment', 'pull_request_review_comment'):
             return False
         comment = payload.get('comment', {})
         body = comment.get('body', '')
         match = MARKER.search(body) if isinstance(body, str) else None
         if not match or not hmac.compare_digest(match[2], self.signature(match[1])):
+            return False
+        if event == 'pull_request_review_comment':
+            number = (payload.get('pull_request') or {}).get('number', 0)
+            identity = self.review_receipt(binding, number, None, comment, match, webhook=True)
+            if identity:
+                comment['body'] = MARKER.sub('', body)
+                payload['_bridge_review_operation'] = identity
+                with self.accounts.db() as db:
+                    origin = db.execute('SELECT binding FROM comment_outbox WHERE operation=?', (identity,)).fetchone()
+                payload['_bridge_review_echo'] = bool(origin and origin[0] == binding.id)
+            # Review replies must reach the aggregate card instead of being swallowed as echoes.
             return False
         with self.accounts.db() as db:
             row = db.execute('SELECT binding,github,topic,state,remote FROM comment_outbox WHERE operation=?', (match[1],)).fetchone()
@@ -171,12 +191,28 @@ class CommentBridge:
                        (identity, comment.get('html_url', ''), match[1]))
         return row[0] == binding.id
 
-    def body(self, job, payload):
-        # A Discord ping can map back to a GitHub login only after that user opted in here.
-        def mention(match):
-            linked = self.accounts.get(match[1], job['guild'])
-            return '@' + linked['login'] if linked and linked['mentions'] else match[0].replace('<', '&lt;').replace('>', '&gt;')
-        content = re.sub(r'<@!?([0-9]+)>', mention, payload['content'])
+    def review_receipt(self, binding, number, node, comment, match, webhook=False):
+        if not hmac.compare_digest(match[2], self.signature(match[1])):
+            return None
+        with self.accounts.db() as db:
+            row = db.execute('SELECT o.binding,o.github,o.topic,o.remote,r.root,r.node FROM comment_outbox o JOIN bridge_replies r USING(operation) WHERE o.operation=? AND r.mode=\'review\'', (match[1],)).fetchone()
+        original = self.service.registry.get(row[0]) if row else None
+        actor = str((comment.get('user') or {}).get('id')) if webhook else str((comment.get('author') or {}).get('databaseId'))
+        identity = str(comment.get('id') if webhook else comment.get('databaseId'))
+        topic = TOPIC.fullmatch(row[2]) if row else None
+        if (not row or not original or original.repo_id != binding.repo_id or not topic or topic[2] != 'pr' or
+                int(topic[3]) != int(number or 0) or actor != row[1] or not identity.isdigit() or
+                row[3] is not None and row[3] != identity or
+                webhook and str(comment.get('in_reply_to_id')) != row[4] or
+                not webhook and node != row[5]):
+            return None
+        with self.accounts.db() as db:
+            db.execute("UPDATE comment_outbox SET state='done',remote=?,url=COALESCE(?,url),payload=NULL,error=NULL WHERE operation=?",
+                       (identity, comment.get('html_url') if webhook else comment.get('url'), match[1]))
+        return match[1]
+
+    def body(self, job, payload, api=None):
+        content = self.replies.mentions(api, job, payload) if api is not None else payload['content']
         content = content.replace('@everyone', '@\u200beveryone').replace('@here', '@\u200bhere')
         # Never accept a user-supplied receipt, even a copied legitimate one.
         content = MARKER.sub('', content)
@@ -218,6 +254,7 @@ class CommentBridge:
 
     def reconcile(self, api, binding, job, kind, number):
         marker = self.marker(job['operation']).strip()
+        plan = self.replies.plan(job)
         if kind == 'discussion':
             cursor = None
             for _ in range(20):
@@ -232,9 +269,11 @@ class CommentBridge:
         else:
             since = dt.datetime.fromtimestamp(job['created'] - 300, dt.timezone.utc).isoformat().replace('+00:00', 'Z')
             for page in range(1, 21):
-                comments = api.call('GET', '/repos/' + binding.repo + f'/issues/{number}/comments?' + urlencode({'since': since, 'per_page': 100, 'page': page}))
+                section = 'pulls' if plan['mode'] == 'review' else 'issues'
+                comments = api.call('GET', '/repos/' + binding.repo + f'/{section}/{number}/comments?' + urlencode({'since': since, 'per_page': 100, 'page': page}))
                 for comment in comments:
-                    if marker in comment.get('body', '') and str(comment.get('user', {}).get('id')) == job['github']:
+                    if (marker in comment.get('body', '') and str(comment.get('user', {}).get('id')) == job['github'] and
+                            (plan['mode'] != 'review' or str(comment.get('in_reply_to_id')) == plan['root'])):
                         return str(comment['id']), comment['html_url']
                 if len(comments) < 100:
                     return None
@@ -249,7 +288,9 @@ class CommentBridge:
         if not self.worker_lock.acquire(blocking=False):
             return False
         try:
-            return self._tick()
+            result = self._tick()
+            self.replies.cleanup()
+            return result
         finally:
             self.worker_lock.release()
 
@@ -287,13 +328,15 @@ class CommentBridge:
                     else:
                         self.update(job, 'failed' if job['attempts'] >= 5 else 'uncertain', 'delivery-uncertain')
                     return True
+                self.check_discord(job, binding, parent)
+                saved = self.accounts.decode(job['payload'])
+                plan, quoted = self.replies.prepare(api, binding, job, saved)
                 # A restored backup can contain a pre-send row for an already posted comment.
                 found = self.reconcile(api, binding, job, kind, number)
                 if found:
                     self.update(job, 'done', remote=found[0], url=found[1])
                     return True
-                self.check_discord(job, binding, parent)
-                body = self.body(job, self.accounts.decode(job['payload']))
+                body = self.replies.quoted(self.body(job, saved, api), quoted)
                 discussion = self.discussion(api, binding, number) if kind == 'discussion' else None
                 if discussion is not None and discussion.get('locked'):
                     raise ConnectError('This discussion is locked.', 403)
@@ -314,6 +357,9 @@ class CommentBridge:
                         raise ApiError('GitHub', 'network')
                     comment = result['data']['addDiscussionComment']['comment']
                     remote, url = str(comment['databaseId']), comment['url']
+                elif plan['mode'] == 'review':
+                    comment = api.call('POST', f'/repos/{binding.repo}/pulls/{number}/comments/{plan["root"]}/replies', {'body': body})
+                    remote, url = str(comment['id']), comment['html_url']
                 else:
                     comment = api.call('POST', f'/repos/{binding.repo}/issues/{number}/comments', {'body': body})
                     remote, url = str(comment['id']), comment['html_url']
@@ -392,6 +438,7 @@ class CommentBridge:
                     # Keep successful echo receipts for recovery; discard message bodies promptly.
                     db.execute("UPDATE comment_outbox SET payload=NULL,state='failed',error='expired' WHERE created<? AND state IN ('queued','sending','uncertain')", (self.clock() - 86400,))
                     db.execute("DELETE FROM comment_outbox WHERE state IN ('done','failed') AND created<?", (self.clock() - 30 * 86400,))
+                    db.execute('DELETE FROM bridge_replies WHERE NOT EXISTS(SELECT 1 FROM comment_outbox o WHERE o.operation=bridge_replies.operation)')
             except Exception as error:
                 LOG.warning('Comment worker retry error=%s', type(error).__name__)
             stop.wait(.5)

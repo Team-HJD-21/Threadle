@@ -36,6 +36,10 @@ Repository setup remains restricted to server administrators.
    channel permissions remain present. Command synchronization publishes
    `/account` on startup automatically. The bot needs View Channel, Read Message
    History, Send Messages, Send Messages in Threads, and Add Reactions for receipts.
+   Give its existing role **Manage Messages** to remove a review-reply input after
+   the review card reflects it. Without this permission the input remains and a
+   quiet warning explains why; notification delivery still works. Reinviting the
+   bot is not required to change its existing role permissions.
 
 GitHub `github_app_authorization` revocation webhooks are signature-verified and
 cancel personal credentials; no new periodic repository scan is introduced.
@@ -44,15 +48,20 @@ cancel personal credentials; no new periodic repository scan is introduced.
 
 - Human **new** messages in a uniquely mapped, active, Threadle-managed public
   PR, Issue, or Discussion thread, from an opted-in member of that server.
-- PR comments are conversation comments, not code-line review submissions.
+- Ordinary PR messages are conversation comments, not new code-line reviews.
+- Discord **Reply** to a Threadle notification or an already-forwarded comment
+  quotes its GitHub original. Discord-only messages are not copied to GitHub.
+- Reply to a code/file review card instead posts in that exact GitHub review
+  conversation. Replies to continuation cards use the same conversation root.
+  The webhook updates the existing card before the unchanged Discord input is
+  deleted. Failed or delayed updates preserve the input; edited inputs are kept.
 - Repository, thread parent, message ownership, current Discord membership and
   channel access are checked again before a write. GitHub checks the member's
   current authority with their user token; no installation-token fallback exists.
 - Bots, webhooks, DMs, unrelated channels, unknown threads, locked threads, and
   unlinked members are excluded. Existing Discord history is not imported.
 - Attachments become Discord CDN links; Threadle does not upload those files to
-  GitHub. Such links can expire. Later Discord edits/deletions and code-review
-  reply targeting are not synchronized by this version.
+  GitHub. Such links can expire. Later Discord edits/deletions are not synchronized.
 - A ✅ reaction confirms a GitHub write. A ⚠️ reaction and quiet reply explain a
   failure; after an ambiguous result, check GitHub before manually reposting.
 
@@ -63,6 +72,12 @@ comments, and escaped mentions do not become pings. Explicit `allowed_mentions`
 allows only those users; never roles or everyone. DND/silent messages and edits
 render the link without adding a ping. A delivery pings once across its topic
 and alert messages.
+
+In the other direction, native Discord user mentions (`<@id>`) become the linked
+person's current GitHub `@login`. Stable account IDs and current server membership
+are checked; this works for members who opted into mentions or comment forwarding
+in that server. Code snippets and plain typed nicknames are not guessed. Unlinked
+mentions remain non-pinging text. Discord's native mention picker is unchanged.
 
 ## Encryption, retries, and echo prevention
 
@@ -80,6 +95,10 @@ An echo must match a recorded operation, GitHub author ID, repository ID, item
 number/type, and the resulting comment ID. It is suppressed only in the originating
 Discord connection; another connected server still receives it normally. No
 visible tracking code is added to Discord. Other people's replies are forwarded.
+Review replies are an exception to suppressing the webhook: their authenticated
+receipt refreshes the aggregate card in the originating connection, without an
+extra standalone reply. Only that connection's successful card update authorizes
+input cleanup. Cleanup expires after 24 hours and stops after account disconnect.
 
 Comment writes have no automatic HTTP POST retry. On a lost response or process
 restart, the worker searches for its signed receipt. If the result stays unknown,
@@ -93,5 +112,7 @@ tokens immediately; historical backup copies follow the existing retention perio
 
 References: [GitHub user tokens](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app),
 [issue/PR comments](https://docs.github.com/en/rest/issues/comments#create-an-issue-comment),
+[review replies](https://docs.github.com/en/rest/pulls/comments#create-a-reply-for-a-review-comment),
+[Discord message deletion](https://docs.discord.com/developers/resources/message#delete-message),
 [Discussion mutations](https://docs.github.com/en/graphql/reference/discussions#adddiscussioncomment),
 [Discord intents](https://docs.discord.com/developers/events/gateway#privileged-intents).

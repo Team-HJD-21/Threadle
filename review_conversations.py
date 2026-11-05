@@ -4,7 +4,7 @@ import datetime as dt
 from discord_threads import nonce
 from topic_state import RED,GREEN
 
-COMMENT_FIELDS='''id databaseId body url createdAt updatedAt author{login}
+COMMENT_FIELDS='''id databaseId body url createdAt updatedAt author{login ... on User{databaseId}}
   replyTo{databaseId} review:pullRequestReview{databaseId state body submittedAt url author{login}}'''
 QUERY='''query($owner:String!,$name:String!,$number:Int!,$cursor:String){
   repository(owner:$owner,name:$name){pullRequest(number:$number){id
@@ -140,6 +140,8 @@ class ReviewConversations:
     def deliver(self,topic,entries,event_key,closed,language):
         from message_edits import MutableMessages
         current=snapshot(self.github,topic)
+        reply_context=getattr(self.threads,'review_replies',None)
+        if reply_context is not None:reply_context.expect(topic,entries,current)
         mutable=MutableMessages(self.threads)
         with self.queue.connect() as db:
             roots=dict(db.execute('SELECT node,root FROM review_conversations WHERE topic=?',(topic.key,)))
@@ -177,6 +179,8 @@ class ReviewConversations:
             if not thread or not thread['comments']:
                 mutable.delete(topic,kind,{})
                 continue
+            reply_context=getattr(self.threads,'review_replies',None)
+            if reply_context is not None:thread=reply_context.clean(topic,thread)
             # Adopt the original root-comment source so existing users keep their card.
             # Always render current GitHub state: old webhook retries cannot undo resolve.
             source='github-source:'+nonce(topic.key+':'+kind)
@@ -192,6 +196,7 @@ class ReviewConversations:
             fingerprint=nonce(rendered['description']+str(rendered['color']))
             delivered=mutable.update(topic,kind,obj,'threadle_review_conversation',{'action':'snapshot' if node in new_targets else 'edited'},
                                      event_key+':conversation:'+node+':'+fingerprint,rendered,closed,language)
+            if delivered is not None and reply_context is not None:reply_context.applied(topic,thread,delivered)
             # Older versions sent replies separately. Remove only those owned reply cards.
             for comment in thread['comments']:
                 identity=str(comment['databaseId'])

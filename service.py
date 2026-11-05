@@ -265,6 +265,8 @@ class Service:
                     routed.bot = threads.bot
                     routed.media_fetcher = getattr(github, "fetch_media", None)
                 routed.silent_notifications=lambda:bool(delivery_mode(queue,delivery,event,binding.config.get('team_notifications',{}),time.time()))
+                if self.comment_bridge is not None:
+                    routed.review_replies = self.comment_bridge.replies.context(binding)
                 LOG.info('Routing topic binding=%s event=%s kind=%s number=%s channel=%s',
                          binding.id,event,topic.kind,topic.number,destination)
                 roots.threads=routed

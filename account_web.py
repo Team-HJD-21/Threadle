@@ -43,6 +43,8 @@ class AccountWeb:
                 'Forward my new messages in Threadle PR, Issue, and Discussion threads as comments from my GitHub account') + '</label><p>' + say(
                 '댓글 전송을 켜면 이 서버의 연결된 저장소에서 적용됩니다. 다른 채널·봇 메시지는 보내지 않습니다. 파일은 링크로 전달됩니다. Discord에서 수정하거나 삭제한 메시지는 GitHub에 자동 반영되지 않습니다. /account disconnect로 언제든 연결을 해제할 수 있습니다.',
                 'Comment forwarding applies to connected repositories in this server. Other channels and bot messages are excluded. Attachments are sent as links. Later Discord edits and deletions are not synchronized. Disconnect at any time with /account disconnect.') + '</p><p>' + say(
+                '일반 알림에 답장하면 GitHub 원문을 인용합니다. 코드 리뷰 카드에 답장하면 해당 리뷰 대화에 등록하고, 카드 반영 후 수정되지 않은 Discord 입력 메시지를 삭제합니다. 삭제 권한이 없거나 반영에 실패하면 입력은 남습니다. 연결된 사람의 Discord 멘션은 GitHub 아이디로 바꿉니다.',
+                'Reply to a notification to quote its GitHub original. Reply to a code-review card to join that review conversation; after the card updates, the unchanged Discord input is removed. Missing deletion permission or failed updates leave the input in place. Discord mentions of linked members become their GitHub usernames.') + '</p><p>' + say(
                 '댓글 작성용 토큰은 암호화해서 보관합니다. 작성 권한은 본인과 GitHub App 모두 접근할 수 있는 저장소로 제한됩니다.',
                 'Comment credentials are encrypted at rest. Access is limited to repositories available to both you and the GitHub App.') + '</p>'
                 '<p><a href="/connect/terms" target="_blank" rel="noopener">' + say('이용약관', 'Terms') + '</a> · '

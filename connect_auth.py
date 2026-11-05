@@ -66,13 +66,13 @@ class Settings:
             'code_challenge': challenge, 'code_challenge_method': 'S256'})
 
     def invite(self, guild):
-        permissions = sum(1 << bit for bit in (4, 10, 11, 14, 16, 34, 35, 38))
+        permissions = sum(1 << bit for bit in (4, 10, 11, 13, 14, 16, 34, 35, 38))
         return 'https://discord.com/oauth2/authorize?' + urlencode({
             'client_id': self.discord_id, 'scope': 'bot applications.commands', 'permissions': permissions,
             'guild_id': guild, 'disable_guild_select': 'true', 'integration_type': '0'})
 
     def install(self, guild, state):
-        permissions = sum(1 << bit for bit in (4, 10, 11, 14, 16, 34, 35, 38))
+        permissions = sum(1 << bit for bit in (4, 10, 11, 13, 14, 16, 34, 35, 38))
         return 'https://discord.com/oauth2/authorize?' + urlencode({
             'client_id': self.discord_id, 'response_type': 'code',
             'scope': 'identify guilds bot applications.commands',

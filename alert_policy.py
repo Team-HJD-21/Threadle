@@ -8,6 +8,8 @@ COMMENT_EVENTS = {'issue_comment', 'discussion_comment', 'pull_request_review_co
 
 
 def should_alert(event, payload):
+    if event == 'pull_request_review_comment' and payload.get('_bridge_review_echo'):
+        return False
     if event == 'threadle_bundle':
         return any(should_alert(row.get('event'), row.get('payload') or {})
                    for row in payload.get('_events', []) if isinstance(row, dict))

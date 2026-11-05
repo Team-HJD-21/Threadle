@@ -36,6 +36,16 @@ checks and repository-scoped credentials are reused. Old root comment cards reta
 their source identity; mapped old reply messages are cleaned after the aggregate
 card has been delivered. No global historical backfill runs on startup.
 
+Members who enable comment forwarding through `/account connect` can use Discord
+Reply on a review card (including continuation pages) to reply in that GitHub
+review conversation using their own account. This needs Pull requests write
+permission in addition to the read-only notification setup above. The webhook
+refreshes the existing conversation card first; only then can the bot remove the
+unchanged Discord input, with Manage Messages permission. Delayed snapshots,
+failed updates, changed inputs, and disconnected accounts preserve the input.
+An uncertain GitHub response is reconciled using the signed receipt, never by
+blindly repeating the comment write. No recurring PR scan is added.
+
 Verification includes fake Discord delivery/edit/delete/retry tests and a read-only
 query against PR #616 (four conversations, seven comments). This does not substitute
 for post-deployment delivery verification using the production installation token.

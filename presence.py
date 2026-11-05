@@ -84,6 +84,11 @@ class Presence:
                     'channel_id': str(message.channel.id), 'author_id': str(message.author.id),
                     'author': {'bot': message.author.bot}, 'webhook_id': message.webhook_id,
                     'type': message.type.value, 'content': message.content,
+                    'reference': ({'message_id': str(message.reference.message_id),
+                                   'channel_id': str(message.reference.channel_id or message.channel.id),
+                                   'guild_id': str(message.reference.guild_id or message.guild.id),
+                                   'type': getattr(message.reference.type, 'value', 0)} if message.reference else None),
+                    'mentions': [str(member.id) for member in message.mentions],
                     'attachments': [{'url': a.url, 'filename': a.filename} for a in message.attachments]})
             except Exception as error:
                 log_exception(LOG, 'Comment intake failed error=%s', type(error).__name__, level=logging.WARNING)
