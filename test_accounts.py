@@ -262,6 +262,23 @@ class AccountTests(unittest.TestCase):
                         self.echo(body, action='edited')):
             self.assertFalse(self.bridge.echo(self.binding, 'issue_comment', payload))
 
+    def test_late_echo_after_disconnect_does_not_duplicate_or_reauthorize_the_account(self):
+        self.link()
+        self.bridge.ingest(self.message)
+        original = self.github_call
+        def call(method, path, data=None):
+            if method == 'POST' and path.endswith('/comments'):
+                self.writes.append(data)
+                raise ApiError('GitHub', 'network')
+            return original(method, path, data)
+        self.github.call.side_effect = call
+        self.bridge.tick()
+        self.accounts.disconnect(discord='55')
+        self.assertEqual(self.job()['state'], 'failed')
+        self.assertTrue(self.bridge.echo(self.binding, 'issue_comment', self.echo(self.writes[0]['body'])))
+        self.assertEqual(self.job()['state'], 'done')
+        self.assertIsNone(self.accounts.get('55'))
+
     def test_ambiguous_write_recovers_receipt_without_posting_again(self):
         self.link()
         self.bridge.ingest(self.message)

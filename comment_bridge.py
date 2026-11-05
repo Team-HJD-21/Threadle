@@ -162,10 +162,12 @@ class CommentBridge:
             return False
         # Remove only our authenticated marker before normal forwarding to OTHER servers.
         comment['body'] = MARKER.sub('', body)
-        if payload.get('action') != 'created' or row[3] not in ('sending', 'uncertain', 'done'):
+        if payload.get('action') != 'created':
             return False
+        # A valid receipt can arrive after disconnect canceled an uncertain row,
+        # or after a backup restored its pre-send state. Never echo those either.
         with self.accounts.db() as db:
-            db.execute("UPDATE comment_outbox SET state='done',remote=?,url=?,payload=NULL,error=NULL WHERE operation=? AND state IN ('sending','uncertain')",
+            db.execute("UPDATE comment_outbox SET state='done',remote=?,url=?,payload=NULL,error=NULL WHERE operation=? AND state<>'done'",
                        (identity, comment.get('html_url', ''), match[1]))
         return row[0] == binding.id
 
