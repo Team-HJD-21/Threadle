@@ -36,6 +36,19 @@ class Structure(HTMLParser):
 
 
 class ProductPageTests(WebFixture):
+    def test_collaboration_examples_are_native_selectable_and_describe_real_boundaries(self):
+        for language in ('ko','en'):
+            body=self.browser.request('GET','/connect/features?lang='+language)[2]
+            structure=Structure(body)
+            self.assertEqual(len(structure.ids),len(set(structure.ids)))
+            choices=[i for i in structure.inputs if i.get('name')=='collaboration-example']
+            self.assertEqual(len(choices),3)
+            self.assertEqual(sum('checked' in value for value in choices),1)
+            for value in choices:self.assertIn('for="'+value['id']+'"',body)
+            for text in ('Settings.cs:42','Review thread','Resolved','main','Merged','/account connect'):
+                self.assertIn(text,body)
+            self.assertIn('선택 사항' if language=='ko' else 'optional',body)
+
     def test_feature_examples_have_one_default_panel_and_clear_security_scope(self):
         for lang in ('ko','en'):
             body=self.browser.request('GET','/connect/features?lang='+lang)[2]
@@ -75,7 +88,10 @@ class ProductPageTests(WebFixture):
         self.assertTrue(all(f['method'].lower() == 'post' for f in markup.forms))
         self.assertTrue(all(i['value'] == self.session().data['csrf'] for i in markup.inputs if i.get('name') == 'csrf'))
         self.assertIn('작동 예시입니다.', body)
-        self.assertEqual(len([i for i in markup.inputs if i.get('type') == 'radio']), 5)
+        self.assertEqual(len([i for i in markup.inputs if i.get('type') == 'radio' and i.get('name') != 'collaboration-example']), 5)
+        choices=[i for i in markup.inputs if i.get('name') == 'collaboration-example']
+        self.assertEqual([i['value'] for i in choices],['reply','review','update'])
+        self.assertEqual(sum('checked' in i for i in choices),1)
         self.assertIn('preview-detail', body)
         self.assertNotIn('href="#preview"', body)
         self.assertEqual(body.count('class="site-footer"'), 1)
