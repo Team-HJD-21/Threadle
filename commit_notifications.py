@@ -6,6 +6,35 @@ from discord_threads import ApiError,clip
 from runtime_logging import log_exception
 
 
+def transition(event,payload):
+    if event not in ('pull_request','pull_request_target') or payload.get('action')!='synchronize':return None
+    number=(payload.get('pull_request') or {}).get('number')
+    before,after=(str(payload.get(key,'')).lower() for key in ('before','after'))
+    if type(number) is not int or number<1 or not all(re.fullmatch(r'[a-f0-9]{40,64}',sha) for sha in (before,after)):return None
+    return number,before,after
+
+
+def completed(queue,event,payload):
+    key=transition(event,payload)
+    if key is None:return False
+    with queue.connect() as db:
+        db.execute('CREATE TABLE IF NOT EXISTS commit_notifications(pr INTEGER,before_sha TEXT,after_sha TEXT,PRIMARY KEY(pr,before_sha,after_sha))')
+        return db.execute('SELECT 1 FROM commit_notifications WHERE pr=? AND before_sha=? AND after_sha=?',key).fetchone() is not None
+
+
+def remember(queue,event,payload):
+    key=transition(event,payload)
+    if key is None:return
+    with queue.connect() as db:
+        db.execute('CREATE TABLE IF NOT EXISTS commit_notifications(pr INTEGER,before_sha TEXT,after_sha TEXT,PRIMARY KEY(pr,before_sha,after_sha))')
+        db.execute('INSERT OR IGNORE INTO commit_notifications VALUES(?,?,?)',key)
+
+
+def event_key(event,payload,fallback):
+    key=transition(event,payload)
+    return 'pr-commits:'+':'.join(map(str,key)) if key else fallback
+
+
 def enrich_commits(github,repo,event,payload):
     result=copy.deepcopy(payload)
     entries=result.get('_events') if event=='threadle_bundle' else [{'event':event,'payload':result}]

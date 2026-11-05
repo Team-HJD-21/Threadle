@@ -14,6 +14,10 @@ FOLDED={'assigned','unassigned','labeled','unlabeled','milestoned','demilestoned
 
 def identity(event,payload):
     action=payload.get('action')
+    from commit_notifications import transition
+    change=transition(event,payload)
+    if change is not None:
+        return 'commits:'+change[1]+':'+change[2],payload['pull_request']
     from metadata_notifications import FAMILIES
     if event in CREATION and action in set(FAMILIES)|{'field_added','field_removed','converted_to_draft','ready_for_review'}:
         return 'body',payload.get('pull_request') or payload.get('issue') or payload.get('discussion') or {}
@@ -58,7 +62,7 @@ class MutableMessages:
                             if tag.startswith(source+':revision:'):
                                 try:latest_version=max(latest_version,float(tag.rsplit(':',1)[1]))
                                 except ValueError:pass
-            if kind.startswith('metadata:'):continue
+            if kind.startswith(('metadata:','commits:')):continue
             # Old mixed-message/image groups are deliberately not adopted: editing them could erase another source.
             if kind!='body' and not obj.get('html_url'):continue
             url=obj.get('html_url') or topic.url
@@ -162,7 +166,7 @@ class MutableMessages:
             db.execute('INSERT OR IGNORE INTO source_revisions VALUES(?,?)',(source,event_key))
             db.execute('INSERT INTO message_sources VALUES(?,?,?,?) ON CONFLICT(source) DO UPDATE SET thread=excluded.thread,revision=excluded.revision,event=excluded.event',(source,thread_id,version,event_key))
             mapped=db.execute('SELECT 1 FROM source_pages WHERE source=?',(source,)).fetchone()
-        if not mapped and (not kind.startswith('metadata:') or current):
+        if not mapped and (not kind.startswith(('metadata:','commits:')) or current):
             recovered_version=self.recover(topic,source,thread_id,kind,obj)
             if recovered_version>version:
                 with self.queue.connect() as db:db.execute('UPDATE message_sources SET revision=? WHERE source=?',(recovered_version,source))
@@ -350,7 +354,11 @@ def deliver_events(threads,topic,event,payload,event_key,closed,language,github=
                 value[{'pr':'pull_request','issue':'issue','discussion':'discussion'}[topic.kind]]=obj
         else:
             rendered=make_embed(topic,kind,value,language)
-        thread=mutable.update(topic,source,obj,kind,value,event_key+':'+source,rendered,closed,language=language)
+        key=event_key+':'+source
+        if source.startswith('commits:'):
+            from commit_notifications import event_key as commit_event_key
+            key=commit_event_key(kind,value,key)
+        thread=mutable.update(topic,source,obj,kind,value,key,rendered,closed,language=language)
         if source=='body' and not created:description_notice(threads,topic,entries,event_key,closed,language)
     if remaining:
         rest=dict(payload,_events=remaining,_created=False)
