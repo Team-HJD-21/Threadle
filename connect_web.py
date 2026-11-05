@@ -671,6 +671,8 @@ class Onboarding:
                 '/connect/save': '/connect/channels', '/connect/github/start': '/connect/server',
                 '/connect/bot/permissions': '/connect/channels',
             }.get(parsed.path, '/connect/team' if parsed.path.startswith('/connect/team/') else '/connect'))
+            if parsed.path == '/connect/account' or parsed.path.startswith('/connect/account/'):
+                PAGE_PATH.set('/connect/account')
             if request.headers.get('Host', '').lower() != urlsplit(self.settings.base).netloc.lower():
                 raise ConnectError('올바른 서비스 주소로 접속해 주세요.', 400)
             if parsed.path == '/connect/admin' or parsed.path.startswith('/connect/admin/'):

@@ -608,6 +608,7 @@ class AccountWebTests(unittest.TestCase):
         self.assertIn('noindex,nofollow', body)
         self.assertIn('no-store', response.getheader('Cache-Control'))
         self.assertIn('name="comments"', body)
+        self.assertIn('href="/connect/account?lang=en"', body)
         self.assertNotIn('access-secret', body)
         headers.update({'Origin': self.settings.base, 'Content-Type': 'application/x-www-form-urlencoded'})
         connection.request('POST', '/connect/account/github', urlencode({'csrf': 'wrong', 'comments': '1', 'terms': '1', 'age': '1'}), headers)
