@@ -60,8 +60,17 @@ cancel personal credentials; no new periodic repository scan is introduced.
   current authority with their user token; no installation-token fallback exists.
 - Bots, webhooks, DMs, unrelated channels, unknown threads, locked threads, and
   unlinked members are excluded. Existing Discord history is not imported.
-- Attachments become Discord CDN links; Threadle does not upload those files to
-  GitHub. Such links can expire. Later Discord edits/deletions are not synchronized.
+- Image/GIF uploads use inline image Markdown; other attachments remain links.
+  The current Discord message refreshes signed CDN URLs for the original file
+  paths, without importing newly added attachments. CDN links can still expire;
+  Threadle does not upload these files to GitHub or promise permanent hosting.
+- GIF-picker Tenor/Giphy links use the actual GIF from Discord's preview metadata
+  or a bounded, unauthenticated read of the public provider page. The GIF remains
+  in its original text position. Missing/blocked previews retain the source link;
+  MP4/PNG addresses are never guessed into GIF addresses. Code spans are unchanged.
+  Provider redirects are limited to the provider allowlist. GitHub credentials
+  are never sent to Discord or GIF providers. Later Discord edits/deletions are
+  not synchronized to GitHub.
 - A ✅ reaction confirms a GitHub write. A ⚠️ reaction and quiet reply explain a
   failure; after an ambiguous result, check GitHub before manually reposting.
 

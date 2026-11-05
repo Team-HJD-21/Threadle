@@ -1,5 +1,5 @@
 {
-  "version": "v1.0.0-beta.32",
+  "version": "v1.0.0-beta.33",
   "baseline": "2026.11.02.8",
   "files": {
     "demo_web.py": {
@@ -42,7 +42,7 @@
     },
     "connect_web.py": {
       "before": "a10a26dc8a437897a74a705d18b2eed378b2ec30b7b95f9298d833ba91b81db9",
-      "after": "7971a71528a5d8a0685d63c28d86cc96f4710d785011dfb27de7384bc196b485",
+      "after": "8762ba681b14f55a82f08f0b61095e8eab216acf785702b07b0924c10a9b3a27",
       "previous": [
         "039da5474270896cb0d94cff9d8fbc012749be2cba8d41af02c9c38a98df280b",
         "c71b37f392a2f9bb79cbe8c361c5e7f45ea94591c0199f198598a1d360930c39",
@@ -87,12 +87,13 @@
         "22521b606528222950ed06ad91dfb454bc895f72fa3d47647480f7d144fa896f",
         "c10b1a2d9c7a9d9e25021ef5ddf6b5bacf244c49bed9933cebd0b71261fd5d57",
         "74f94df2fc364846bc194a98feed69d4905d26f7e87132b872f63daceb3d8fd8",
-        "17c389dbc1288f9e8f7ae73c2684287f34c4b3c2186461376814087ef7b7a793"
+        "17c389dbc1288f9e8f7ae73c2684287f34c4b3c2186461376814087ef7b7a793",
+        "7971a71528a5d8a0685d63c28d86cc96f4710d785011dfb27de7384bc196b485"
       ]
     },
     "changelog.py": {
       "before": "261336f2f039d63348697c8fb4f9f7ec8f25c959ad6f0e2ccd74230f8c208e28",
-      "after": "6881177ea7b61a2e5b2fe72ece181b8c715d7358e0070542b88ac9073a5d58d7",
+      "after": "0bafa2764e4159aae02d77dbaf6a9e4d9297fbd200b44ac8c22ed7fdd48d122a",
       "previous": [
         "ce59507c70872a51ef2bbd42a7ee232a5bd4e2692a6b0c8903887594a1e59b90",
         "70c46b09eeacc09189050699f22f47224d0f1b157c741d0f25f9f51bd23af677",
@@ -144,7 +145,8 @@
         "ce793594c5b30b23c70b2dc9f7ce16fac832386e8623006cf15544b03ae8bdd3",
         "25a5ae028a7e04f2b1b8b77ffb17fd9654eb3d29d9f824d5cb85fcf34048a0ec",
         "7f030555c2ac02c5936a8263cd0b04561d3ba094c2fc26033c668384bc6362d9",
-        "70f3670c052f7f9f895346974f19c11773d22a9c8aab4056422bf1f00abb9fd2"
+        "70f3670c052f7f9f895346974f19c11773d22a9c8aab4056422bf1f00abb9fd2",
+        "6881177ea7b61a2e5b2fe72ece181b8c715d7358e0070542b88ac9073a5d58d7"
       ]
     },
     "web_assets/preview.js": {
@@ -168,16 +170,17 @@
     },
     "presence.py": {
       "before": "279304f830e3ec011c0b95ea4764cef0132593252c7e9ea88b0506d6771c0bf4",
-      "after": "b9ecc65bae6c9afb40903a82692dfa6165ae60bdbc5a402f4e8b8a8d817f89b5",
+      "after": "ff1599b2a134fd4a8b4a8de750fb5376e83259d41834aac700065b3f8c2b11d2",
       "previous": [
         "78e99f719ed87d8df3431c0e7147fb42ec26c8f5d93e43149a5c7d88447fa7c5",
         "13b54ba50d2c2573a7193a1ba8885e1001ca4181f1285a9c8238993a2a88c4da",
-        "df2730688c0915a3a22b7081ea9841a6cda792af5a54738a11e87d843f52717c"
+        "df2730688c0915a3a22b7081ea9841a6cda792af5a54738a11e87d843f52717c",
+        "b9ecc65bae6c9afb40903a82692dfa6165ae60bdbc5a402f4e8b8a8d817f89b5"
       ]
     },
     "service.py": {
       "before": "8ef021eb91f276ae424209884b25cd423995d41e1455bbb6bfd63a0ab0206d1e",
-      "after": "e83b87af9454601bf3f20af92b47482d3b7499331ff542b84cae07e49954ce1d",
+      "after": "6f864f291220aefc70b7a4ae2a4d16aa5f56050821f4564e912f1b6578734412",
       "previous": [
         "2b39caa084daa3eaa290f3bf3573d907c4d36513a97abf24be24bc9458e3f397",
         "a687e18707282836bb64ec6159556183889032368eacccaaacf86ba8116a1588",
@@ -203,7 +206,8 @@
         "a8d9925339667d70b2a979589875b39839a6cf6b4a3aa8cf2c2fa93cf754abf5",
         "d912cacd009a9cc4071d22796f3fcbfb00ac4edd4e674c6ebb6021abebddc0f9",
         "e45b3ec93a304c1019ffd7b11ee35ea45b7839543af9b4323a9f74ba2194e95d",
-        "b84415564e189a91548c1075cf18e93d33e055dfaa521d4afdb5d6d4fe98ab65"
+        "b84415564e189a91548c1075cf18e93d33e055dfaa521d4afdb5d6d4fe98ab65",
+        "e83b87af9454601bf3f20af92b47482d3b7499331ff542b84cae07e49954ce1d"
       ]
     },
     "auth.py": {
@@ -655,10 +659,11 @@
     },
     "review_conversations.py": {
       "before": null,
-      "after": "3e264f7f053d862838033610aa6c883eb185b312435b761038ff2af046f824b9",
+      "after": "c72ef791325eef07fe932899f6c490b600adf75d45f34166593d271707a1e934",
       "previous": [
         "548193f4f5619fc4140b143a8b56ffe21ad96abef9aafc01df26239745ca3a79",
-        "fa2b03f702cb0b35985823bfb47fa108bf4eb4f3dbd3bd237bd3cbf7d6861cc9"
+        "fa2b03f702cb0b35985823bfb47fa108bf4eb4f3dbd3bd237bd3cbf7d6861cc9",
+        "3e264f7f053d862838033610aa6c883eb185b312435b761038ff2af046f824b9"
       ]
     },
     "restart_notices.py": {
@@ -682,14 +687,18 @@
     },
     "comment_bridge.py": {
       "before": null,
-      "after": "7637e88ccc8b90a5937507d10affcc317c17d5c34daccfac2e9ac08bf4d63dad",
+      "after": "0e774687f43eb60d82cd1f816dd2647559b485da3506de81f33d23dab29569c0",
       "previous": [
-        "c2e00f7d6ae336f6b9e8e12dc0658e2c706d5343d192f5bf46ed7565a8ce2035"
+        "c2e00f7d6ae336f6b9e8e12dc0658e2c706d5343d192f5bf46ed7565a8ce2035",
+        "7637e88ccc8b90a5937507d10affcc317c17d5c34daccfac2e9ac08bf4d63dad"
       ]
     },
     "comment_replies.py": {
       "before": null,
-      "after": "346a9fcde0a378135952cb9450ec013757efad86b6c36d0b1b1228f5cee44ac0"
+      "after": "bfab038d62bd2de5ed13dbbf7bc42fd394913de1b6baca21eeb11c4565e51b4c",
+      "previous": [
+        "346a9fcde0a378135952cb9450ec013757efad86b6c36d0b1b1228f5cee44ac0"
+      ]
     },
     "connect_auth.py": {
       "before": null,
@@ -701,6 +710,14 @@
     "product_collaboration.py": {
       "before": null,
       "after": "f941f5fef1e61a3982fba6bc77be6df37749f7b6f64718a0172c5bf3cc676380"
+    },
+    "comment_media.py": {
+      "before": null,
+      "after": "8acb8b32a78381c74340bc2dde70ee144a34c1231b56031325428d606dfa88f8"
+    },
+    "review_repair.py": {
+      "before": null,
+      "after": "f0dd64f41e7f173c97252296528a7d674d9f3863e42baedee2623ecf16f9bc68"
     }
   },
   "state_encryption": true

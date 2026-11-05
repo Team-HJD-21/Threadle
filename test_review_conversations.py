@@ -30,11 +30,63 @@ def conversation(identity='T1',comments=None,resolved=False):
 
 
 def response(threads,more=False,cursor=None):
+    threads=copy.deepcopy(threads)
+    counts={}
+    for thread in threads:
+        for value in thread['comments']['nodes']:
+            identity=(value.get('review') or {}).get('databaseId')
+            counts.setdefault(identity,set()).add(value['databaseId'])
+    for thread in threads:
+        for value in thread['comments']['nodes']:
+            review=value.get('review') or {}
+            review['comments']={'totalCount':len(counts.get(review.get('databaseId'),[]))}
     return {'data':{'repository':{'pullRequest':{'id':'PR1','reviewThreads':{
-        'nodes':copy.deepcopy(threads),'pageInfo':{'hasNextPage':more,'endCursor':cursor}}}}}}
+        'nodes':threads,'pageInfo':{'hasNextPage':more,'endCursor':cursor}}}}}}
 
 
 class ReviewConversationTests(unittest.TestCase):
+    def test_newest_root_webhook_first_still_posts_same_review_in_creation_order(self):
+        self.current=[conversation(node,[comment(n,body='Review point '+str(n))])
+                      for n,node in [(4,'A'),(2,'Z'),(5,'C'),(1,'Y'),(3,'B')]]
+        self.send(5)
+        self.assertEqual([p['embeds'][0]['url'].rsplit('r',1)[-1] for p in self.posts()],['1','2','3','4','5'])
+        original=[p['id'] for p in self.posts()]
+        for n in (3,2,1,4):self.send(n,key='late-'+str(n))
+        self.assertEqual([p['id'] for p in self.posts()],original)
+        self.assertIn('Changes requested',self.all_posts()[0]['embeds'][0]['title'])
+
+    def test_incomplete_submitted_review_retries_before_any_new_card(self):
+        partial=response(self.current)
+        partial['data']['repository']['pullRequest']['reviewThreads']['nodes'][0]['comments']['nodes'][0]['review']['comments']['totalCount']=3
+        self.github.call.side_effect=None;self.github.call.return_value=partial
+        with self.assertRaisesRegex(RuntimeError,'complete'):
+            self.send()
+        self.assertEqual(self.api.posts,{})
+        self.current=[conversation('Z',[comment(1)]),conversation('A',[comment(2)]),conversation('B',[comment(3)])]
+        self.github.call.side_effect=lambda *args:response(self.current)
+        self.send()
+        self.assertEqual(len(self.posts()),3)
+
+    def test_deleted_reply_stays_removed_even_in_stale_snapshots_and_late_creates(self):
+        self.send();self.current[0]['comments']['nodes'].append(comment(2,'REMOVE THIS REPLY'))
+        self.send(2)
+        self.send(2,'deleted')
+        self.assertNotIn('REMOVE THIS REPLY',self.posts()[0]['embeds'][0]['description'])
+        self.send(2,key='late-deleted-create')
+        self.assertNotIn('REMOVE THIS REPLY',self.posts()[0]['embeds'][0]['description'])
+        self.current[0]['comments']['nodes'].pop()
+        self.send(2,'deleted')
+        self.assertNotIn('REMOVE THIS REPLY',self.posts()[0]['embeds'][0]['description'])
+
+    def test_stale_edited_snapshot_retries_and_later_edit_wins_over_older_event(self):
+        self.send()
+        payload={'action':'edited','comment':{'id':1,'body':'New text','updated_at':'2026-11-05T01:01:00Z'}}
+        def deliver():return deliver_events(self.threads,self.topic,'pull_request_review_comment',payload,'edit',lambda:False,'ko',github=self.github)
+        with self.assertRaises(RuntimeError):deliver()
+        self.current[0]['comments']['nodes'][0].update(body='Even newer text',updatedAt='2026-11-05T01:02:00Z')
+        deliver()
+        self.assertIn('Even newer text',self.posts()[0]['embeds'][0]['description'])
+
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.queue=Queue(Path(self.temp.name)/'q.db')
         self.api=EditingDiscord();self.threads=CachedThreads(self.api,'g',{'pr':'c'},self.queue)
@@ -246,14 +298,12 @@ class ReviewConversationTests(unittest.TestCase):
         self.send(2)
         self.assertEqual(len([c for c in self.api.calls if c[0]=='POST' and c[1].endswith('/messages')]),sent)
 
-    def test_changed_root_deleted_with_replies_keeps_stable_message(self):
+    def test_deleted_first_comment_removes_entire_card_even_with_remaining_replies(self):
         self.send();identity=self.posts()[0]['id']
         self.current[0]['comments']['nodes']=[comment(2,'Remaining reply')]
         self.send(1,'deleted')
-        self.assertEqual(len(self.posts()),1)
-        self.assertEqual(self.posts()[0]['id'],identity)
-        self.assertNotIn('Please clarify',self.posts()[0]['embeds'][0]['description'])
-        self.assertIn('Remaining reply',self.posts()[0]['embeds'][0]['description'])
+        self.assertEqual(self.posts(),[])
+        self.assertIn('Changes requested',self.all_posts()[0]['embeds'][0]['title'])
 
     def test_different_reviews_are_not_grouped_by_reviewer_or_filename(self):
         self.current=[conversation('T1',[comment(1,review=70)]),conversation('T2',[comment(2,review=71)])]

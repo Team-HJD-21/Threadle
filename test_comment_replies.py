@@ -134,14 +134,14 @@ class ReplyTests(TestCase):
         self.current[0]['id'] = node
         self.current[0]['comments']['nodes'].append(reply)
 
-    def webhook(self, actor=91, feed=None):
+    def webhook(self, actor=91, feed=None, action='created', delivery=None):
         value = copy.deepcopy(self.reply_comments[-1])
         value['user']['id'] = actor
-        payload = {'action': 'created', 'repository': {'id': 11, 'full_name': 'one/repo'},
+        payload = {'action': action, 'repository': {'id': 11, 'full_name': 'one/repo'},
                    'installation': {'id': 101}, 'pull_request': self.topic_obj.metadata, 'comment': value}
         body = json.dumps(payload).encode()
         signature = 'sha256=' + hmac.new(b'app', body, hashlib.sha256).hexdigest()
-        self.assertEqual(self.service.receive('/github/app-webhook', signature, 'pull_request_review_comment', 'b' * 32, body), 202)
+        self.assertEqual(self.service.receive('/github/app-webhook', signature, 'pull_request_review_comment', delivery or 'b' * 32, body), 202)
         self.service.dispatch()
         self.assertTrue(self.service.process(self.binding, self.threads, feed))
 
@@ -184,6 +184,15 @@ class ReplyTests(TestCase):
         self.bridge.tick()
         self.assertFalse(self.deleted)
         self.assertIn(('7777', '8000'), self.messages)
+
+    def test_github_deleting_a_forwarded_review_reply_removes_it_from_the_card(self):
+        self.send();self.reflect();self.webhook()
+        self.assertIn('My reply',self.messages[('7777','9001')]['embeds'][0]['description'])
+        self.current[0]['comments']['nodes'].pop()
+        self.webhook(action='deleted',delivery='c'*32)
+        with self.service.queue(self.binding).connect() as db:
+            self.assertEqual(db.execute('SELECT done FROM jobs WHERE id=?',('c'*32,)).fetchone()[0],1)
+        self.assertNotIn('My reply',self.messages[('7777','9001')]['embeds'][0]['description'])
 
     def test_unknown_review_post_result_reconciles_without_a_second_write(self):
         original = self.github_call

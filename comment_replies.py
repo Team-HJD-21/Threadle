@@ -332,7 +332,7 @@ class ReviewReplies:
     def expect(self, topic, entries, current):
         for event, payload in entries:
             operation = payload.get('_bridge_review_operation')
-            if event != 'pull_request_review_comment' or not operation:
+            if event != 'pull_request_review_comment' or not operation or payload.get('action')=='deleted':
                 continue
             with self.replies.accounts.db() as db:
                 row = db.execute('SELECT o.created,o.remote,r.node FROM comment_outbox o JOIN bridge_replies r USING(operation) WHERE o.operation=? AND r.mode=\'review\'', (operation,)).fetchone()

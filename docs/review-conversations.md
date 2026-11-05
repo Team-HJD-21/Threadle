@@ -16,6 +16,12 @@ webhook later reuses the same review source rather than posting another message.
 Failed parent delivery retries before publishing the child. Existing historical
 cards are not deleted/reposted to reorder Discord history.
 
+New conversations from the same submitted review are sent in root-comment
+creation order (numeric comment ID breaks ties), even when webhooks arrive in
+reverse order. The existing paginated snapshot includes the parent review's
+comment count; an incomplete batch retries before sending its first card. No
+fixed buffering delay or recurring scan is introduced.
+
 Dates beside comment authors use Discord's short date-and-time timestamp (`s`),
 which displays an actual date and time in each reader's local time zone and locale,
 instead of long month names or a relative Yesterday/Today label.
@@ -34,7 +40,19 @@ feature. Bodies are not cached in a new table. Existing encrypted queue storage,
 message ownership checks, hidden source markers, retry receipts, media permission
 checks and repository-scoped credentials are reused. Old root comment cards retain
 their source identity; mapped old reply messages are cleaned after the aggregate
-card has been delivered. No global historical backfill runs on startup.
+card has been delivered. Authenticated deletion tombstones prevent stale reads or
+late create events from resurrecting removed comments. Deleting a reply removes
+only that reply; deleting a code/file conversation's first comment removes its
+entire card and continuation pages, while preserving other reviews and the PR
+thread. Deleted forwarded replies no longer wait for an impossible snapshot that
+still contains them.
+
+The next deployment performs a one-off reconciliation of already tracked review
+cards, one PR at a time during idle worker turns. It updates stale text and removes
+previously missed deletions, confirming missing comments through the GitHub API.
+Read errors preserve cards. Progress and retry state survive restarts; completed
+topics are not rescanned on later restarts. Only identity/progress metadata is
+stored, using the existing encrypted per-connection queue.
 
 Members who enable comment forwarding through `/account connect` can use Discord
 Reply on a review card (including continuation pages) to reply in that GitHub
