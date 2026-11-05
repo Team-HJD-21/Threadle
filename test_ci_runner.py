@@ -26,6 +26,9 @@ class RunnerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'runtime.py'):
                 ci.check_upgrade(current, previous)
         ci.check_upgrade({'files': {'runtime.py': {'before': 'oldest', 'after': 'new', 'previous': ['older', 'installed']}}}, previous)
+        with self.assertRaisesRegex(ValueError, 'runtime.py'):
+            ci.check_upgrade({'files': {'runtime.py': {'before': 'installed', 'after': 'new'}}},
+                             {'files': {'runtime.py': {'before': None, 'after': 'installed'}}})
 
     def test_checks_receive_the_explicit_baseline_ref(self):
         with patch.object(ci, 'checks') as checks:

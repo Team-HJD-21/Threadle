@@ -83,7 +83,9 @@ def regressions(shard=1, shards=1, timings=None):
 def check_upgrade(manifest, baseline):
     """An update must still accept every known installed predecessor checksum."""
     def supported(rule):
-        return {value for value in (rule.get('before'), rule['after'], *rule.get('previous', [])) if value is not None}
+        # An explicit null means the file may be absent on an older installation.
+        # Snapshot fixtures that specify only `after` make no such assertion.
+        return {rule['after'], *rule.get('previous', []), *([rule['before']] if 'before' in rule else [])}
     incompatible = []
     for name, previous in baseline['files'].items():
         current = manifest['files'].get(name)
