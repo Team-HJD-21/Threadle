@@ -33,4 +33,12 @@ if ($script:stopped.Count -ne 1 -or $script:stopped[0] -ne 991) { throw 'Verifie
 $script:stopped=@();$script:recycled=$true
 Stop-RemainingReceiverProcesses $TemporaryRoot $python
 if ($script:stopped.Count -ne 0) { throw 'Recycled process ID was stopped' }
-Write-Host 'RECEIVER_PROCESS_PASS: exact runtime/entry/state scope and recycled PID rejection; no real process stopped.'
+$listener=New-Object Net.Sockets.TcpListener([Net.IPAddress]::Loopback,0)
+try {
+    $listener.Start()
+    $probePort=$listener.LocalEndpoint.Port
+    if (-not (Test-ReceiverListening -Port $probePort)) { throw 'Real listening endpoint was missed' }
+    $listener.Stop()
+    if (Test-ReceiverListening -Port $probePort) { throw 'Closed endpoint was reported as listening' }
+} finally { $listener.Stop() }
+Write-Host 'RECEIVER_PROCESS_PASS: exact runtime/entry/state scope, recycled PID rejection and actual TCP open/closed probes; no real process stopped.'

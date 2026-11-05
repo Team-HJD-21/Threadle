@@ -159,6 +159,9 @@ class CommentBridge:
 
     def echo(self, binding, event, payload):
         payload.pop('_bridge_review_echo', None)
+        if event in ('issue_comment','discussion_comment') and payload.get('action')=='deleted':
+            deleted=self.deleted(binding,event,payload)
+            if deleted is not None:return deleted
         if event not in ('issue_comment', 'discussion_comment', 'pull_request_review_comment'):
             return False
         comment = payload.get('comment', {})
@@ -198,6 +201,32 @@ class CommentBridge:
             db.execute("UPDATE comment_outbox SET state='done',remote=?,url=?,payload=NULL,error=NULL WHERE operation=? AND state<>'done'",
                        (identity, comment.get('html_url', ''), match[1]))
         return row[0] == binding.id
+
+    def deleted(self,binding,event,payload):
+        """Queue only the original, authenticated Discord input for deletion."""
+        comment=payload.get('comment') or {};identity=str(comment.get('id',''))
+        if not identity:return None
+        body=comment.get('body') or '';match=MARKER.search(body)
+        operation=match[1] if match and hmac.compare_digest(match[2],self.signature(match[1])) else None
+        with self.accounts.db() as db:
+            db.row_factory=__import__('state_db').Row
+            rows=db.execute('SELECT * FROM comment_outbox WHERE remote=? OR (remote IS NULL AND operation=?)',(identity,operation)).fetchall()
+        obj=payload.get('issue') or payload.get('discussion') or {}
+        kind='discussion' if event=='discussion_comment' else 'pr' if 'pull_request' in obj else 'issue'
+        found=[]
+        for record in rows:
+            job=dict(record);topic=TOPIC.fullmatch(job['topic']);original=self.service.registry.get(job['binding'])
+            if (original and original.repo_id==binding.repo_id and topic and topic[2]==kind and
+                    int(topic[3])==int(obj.get('number') or 0) and str(comment.get('user',{}).get('id'))==job['github']):found.append(job)
+        if len(found)!=1:return None
+        job=found[0]
+        comment['body']=MARKER.sub('',body)
+        if job['binding']!=binding.id:return False  # Other servers retain normal delete handling.
+        with self.accounts.db() as db:
+            db.execute("UPDATE comment_outbox SET state='done',remote=?,payload=NULL,error=NULL,notified=1 WHERE operation=?",(identity,job['operation']))
+            db.execute("INSERT OR IGNORE INTO bridge_replies(operation,mode,reference) VALUES(?,'deleted','')",(job['operation'],))
+            db.execute("UPDATE bridge_replies SET mode='deleted',applied=1,next=0,deleted_body=COALESCE(deleted_body,?) WHERE operation=? AND cleaned=0",(self.accounts.encode({'body':comment['body'].strip()}),job['operation']))
+        return True
 
     def review_receipt(self, binding, number, node, comment, match, webhook=False):
         if not hmac.compare_digest(match[2], self.signature(match[1])):

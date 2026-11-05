@@ -30,16 +30,15 @@ function Stop-Receiver {
     $task.Enabled = $false
     if ($task.State -in @(2,4)) { $task.Stop(0) }
     $forceAfter = [DateTime]::UtcNow.AddSeconds(5)
-    $forced = $false
     $deadline = [DateTime]::UtcNow.AddSeconds(40)
     do {
         $task = $folder.GetTask($taskName)
-        $listening = ([Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpListeners()).Port -contains 8787
+        $listening = Test-ReceiverListening
         $remaining = @(Get-ReceiverProcesses -Root $Root -Python $runtime.python)
         if ($task.State -notin @(2,4) -and -not $listening -and $remaining.Count -eq 0) { return }
-        if (-not $forced -and [DateTime]::UtcNow -ge $forceAfter) {
+        if ([DateTime]::UtcNow -ge $forceAfter) {
             Stop-RemainingReceiverProcesses -Root $Root -Python $runtime.python
-            $forced = $true
+            $forceAfter = [DateTime]::UtcNow.AddSeconds(2)
         }
         Start-Sleep -Milliseconds 400
     } while ([DateTime]::UtcNow -lt $deadline)

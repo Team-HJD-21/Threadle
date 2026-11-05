@@ -25,6 +25,26 @@ function Get-ReceiverProcesses {
     @(Get-CimInstance Win32_Process -Filter "Name='python.exe' OR Name='pythonw.exe'" | Where-Object { Test-ReceiverProcess -Process $_ -Root $Root -Python $Python })
 }
 
+function Test-ReceiverListening {
+    param([ValidateRange(1,65535)][int]$Port=8787)
+    # Inspect the actual endpoint, not Windows' occasionally inconsistent TCP
+    # inventory/WMI classes. Only a refused connection proves it is closed.
+    $client=New-Object Net.Sockets.TcpClient
+    $pending=$null
+    try {
+        $pending=$client.BeginConnect([Net.IPAddress]::Loopback,$Port,$null,$null)
+        if (-not $pending.AsyncWaitHandle.WaitOne(2500)) { throw 'Receiver TCP stop probe timed out; closure is unconfirmed.' }
+        $client.EndConnect($pending)
+        return $true
+    } catch [Net.Sockets.SocketException] {
+        if ($_.Exception.SocketErrorCode -eq [Net.Sockets.SocketError]::ConnectionRefused) { return $false }
+        throw
+    } finally {
+        if ($pending) { $pending.AsyncWaitHandle.Close() }
+        $client.Close()
+    }
+}
+
 function Stop-RemainingReceiverProcesses {
     param([string]$Root,[string]$Python)
     foreach ($candidate in @(Get-ReceiverProcesses -Root $Root -Python $Python)) {

@@ -15,60 +15,6 @@ concurrency:
   group: threadle-${{ github.event_name == 'pull_request' && github.ref || 'production' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
-  receiver-diagnostics:
-    if: github.event_name == 'workflow_dispatch' && inputs.preflight_only && github.ref != 'refs/heads/main'
-    runs-on: [self-hosted, Windows, X64, threadle-production]
-    timeout-minutes: 2
-    steps:
-      - name: Read receiver identity without stopping or changing the service
-        shell: powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "{0}"
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $threadleRoot = 'C:\ProgramData\TeamHJD\GitHubDiscord'
-          $threadleRuntime = Get-Content -LiteralPath (Join-Path $threadleRoot 'runtime.json') -Raw | ConvertFrom-Json
-          Write-Host ('Identity=' + [Security.Principal.WindowsIdentity]::GetCurrent().Name)
-          Write-Host ('ExpectedPython=' + $threadleRuntime.python)
-          foreach ($endpoint in [Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpListeners()) {
-            if ($endpoint.Port -eq 8787) { Write-Host ('Listener=' + $endpoint.ToString()) }
-          }
-          foreach ($candidate in @(Get-CimInstance Win32_Process -Filter "Name='python.exe' OR Name='pythonw.exe'")) {
-            Write-Host ('Python pid=' + $candidate.ProcessId + ' path=' + $candidate.ExecutablePath + ' commandVisible=' + [bool]$candidate.CommandLine)
-            if ($candidate.CommandLine -match 'service\.py') { Write-Host ('ReceiverCommand=' + $candidate.CommandLine) }
-          }
-          $scheduler = New-Object -ComObject 'Schedule.Service'
-          $scheduler.Connect()
-          $task = $scheduler.GetFolder('\').GetTask('TeamHJD-GitHubDiscord-Receiver')
-          Write-Host ('TaskState=' + $task.State + ' enabled=' + $task.Enabled)
-          function Test-ReceiverProcess {
-              param($Process,[string]$Root,[string]$Python)
-              if (-not $Process.ExecutablePath -or -not $Process.CommandLine) { return $false }
-              $expectedPython=[IO.Path]::GetFullPath($Python)
-              if (-not ([IO.Path]::GetFullPath($Process.ExecutablePath)).Equals($expectedPython,[StringComparison]::OrdinalIgnoreCase)) { return $false }
-              $tokens=@([regex]::Matches($Process.CommandLine,'"([^"]*)"|(\S+)') | ForEach-Object { if ($_.Groups[1].Success) { $_.Groups[1].Value } else { $_.Groups[2].Value } })
-              $script=[IO.Path]::GetFullPath((Join-Path $Root 'service.py'))
-              $entryIndex=1
-              if ($tokens.Count -gt 1 -and $tokens[1] -eq '-B') { $entryIndex=2 }
-              if ($tokens.Count -le $entryIndex -or -not $tokens[$entryIndex].Equals($script,[StringComparison]::OrdinalIgnoreCase)) { return $false }
-              $state=[IO.Path]::GetFullPath($Root).TrimEnd('\')
-              $scriptFound=$false;$stateFound=$false
-              for ($index=1;$index -lt $tokens.Count;$index++) {
-                  if ($tokens[$index].Equals($script,[StringComparison]::OrdinalIgnoreCase)) { $scriptFound=$true }
-                  if ($tokens[$index] -eq '--state-dir' -and $index+1 -lt $tokens.Count) {
-                      $value=[IO.Path]::GetFullPath($tokens[$index+1]).TrimEnd('\')
-                      if ($value.Equals($state,[StringComparison]::OrdinalIgnoreCase)) { $stateFound=$true }
-                  }
-              }
-              return ($scriptFound -and $stateFound)
-          }
-          
-          function Get-ReceiverProcesses {
-              param([string]$Root,[string]$Python)
-              @(Get-CimInstance Win32_Process -Filter "Name='python.exe' OR Name='pythonw.exe'" | Where-Object { Test-ReceiverProcess -Process $_ -Root $Root -Python $Python })
-          }
-          Write-Host ('MatchedReceiverCount=' + @(Get-ReceiverProcesses -Root $threadleRoot -Python $threadleRuntime.python).Count)
-          foreach ($candidate in @(Get-CimInstance Win32_Process -Filter "Name='python.exe' OR Name='pythonw.exe'")) {
-            if ($candidate.CommandLine -match 'service\.py') { Write-Host ('ExactMatcher=' + (Test-ReceiverProcess -Process $candidate -Root $threadleRoot -Python $threadleRuntime.python)) }
-          }
   regression:
     name: Regression ${{ matrix.shard }}/4
     strategy:
