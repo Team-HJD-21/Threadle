@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 import threading
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from alert_feed import AlertFeed, activity, alert_channel_config
 from discord_threads import Topic
@@ -40,6 +40,9 @@ class FakeAlertApi:
 
 class AlertTests(unittest.TestCase):
     def setUp(self):
+        clock = patch('alert_feed.time.time', return_value=1793880000)
+        clock.start()
+        self.addCleanup(clock.stop)
         self.temp = tempfile.TemporaryDirectory(dir=Path(__file__).parent)
         self.path = Path(self.temp.name) / 'queue.sqlite3'
         self.queue = Queue(self.path)
@@ -58,10 +61,11 @@ class AlertTests(unittest.TestCase):
         self.feed.check()
         self.notify()
         message = self.api.posts[0]
-        self.assertIn('ISSUE #582', message['content'])
-        self.assertIn('New comment', message['content'])
+        self.assertEqual(message['content'], '')
+        self.assertIn('ISSUE #582', message['embeds'][0]['description'])
+        self.assertIn('New comment', message['embeds'][0]['description'])
         self.assertEqual(message['embeds'][0]['url'], 'https://discord.com/channels/guild/thread')
-        self.assertIn(self.topic.url, message['embeds'][0]['description'])
+        self.assertIn('https://discord.com/channels/guild/thread', message['embeds'][0]['description'])
         self.assertEqual(message['allowed_mentions'], {'parse': []})
         self.assertFalse(any('/threads' in path for _, path, _ in self.api.calls))
 
@@ -71,7 +75,7 @@ class AlertTests(unittest.TestCase):
         self.notify()
         self.assertEqual(len(self.api.posts), 1)
         self.notify('different-event')
-        self.assertEqual(len(self.api.posts), 2)
+        self.assertEqual(len(self.api.posts), 1)
 
     def test_ambiguous_send_recovery_finds_durable_receipt(self):
         self.api.accept_then_fail = True
@@ -90,9 +94,9 @@ class AlertTests(unittest.TestCase):
         for kind, thread in [('issue', 'issue-thread'), ('pr', 'pr-thread'), ('discussion', 'discussion-thread')]:
             topic = Topic(REPO, kind, 12, kind, 'https://github.com')
             self.feed.topic(topic, 'issue_comment', {'action': 'created'}, 'same-event', thread)
-        self.assertEqual([p['embeds'][0]['url'] for p in self.api.posts],
-                         ['https://discord.com/channels/guild/' + value
-                          for value in ('issue-thread', 'pr-thread', 'discussion-thread')])
+        self.assertEqual(len(self.api.posts), 1)
+        for value in ('issue-thread', 'pr-thread', 'discussion-thread'):
+            self.assertIn('https://discord.com/channels/guild/' + value, self.api.posts[0]['embeds'][0]['description'])
 
     def test_ci_failure_alert_deduplicates_run_across_deliveries(self):
         run = {'id': 123, 'name': 'PR CI', 'event': 'push', 'conclusion': 'failure',

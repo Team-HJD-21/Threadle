@@ -4,6 +4,7 @@ import unittest
 import test_service
 import test_operator_web
 import test_connect
+import test_operator_accounts
 from state_encryption import migrate, finalize
 
 
@@ -29,6 +30,13 @@ class EncryptedOperatorTests(test_operator_web.OperatorTests):
 
 @unittest.skipUnless(os.name == 'nt', 'Windows production key protection')
 class EncryptedConnectionFlowTests(test_connect.ConnectionFlowTests):
+    def setUp(self):
+        super().setUp()
+        enable(self.service)
+
+
+@unittest.skipUnless(os.name == 'nt', 'Windows production key protection')
+class EncryptedLinkedAccountAdminTests(test_operator_accounts.LinkedAccountAdminTests):
     def setUp(self):
         super().setUp()
         enable(self.service)

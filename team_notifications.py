@@ -51,6 +51,7 @@ class TeamNotifications:
         self.english = binding.config.get('language') == 'en'
         self.next_tick = 0
         self.next_flush = 0
+        self.feeds = {}
         with queue.connect() as db:
             db.executescript('''
                 CREATE TABLE IF NOT EXISTS notice_events(channel TEXT NOT NULL, event_key TEXT NOT NULL,
@@ -86,9 +87,13 @@ class TeamNotifications:
             return db.execute('SELECT 1 FROM notice_events WHERE sent=0 LIMIT 1').fetchone() is not None or self.dnd.has_pending()
 
     def feed(self, channel):
+        channel = str(channel)
+        if channel in self.feeds:
+            return self.feeds[channel]
         scope = str(channel) if str(channel) != str(self.binding.config.get('alert_channel')) else ''
         config = dict(self.binding.config, alert_channel=str(channel), alert_scope=scope)
-        return AlertFeed(self.api, config, self.queue)
+        self.feeds[channel] = AlertFeed(self.api, config, self.queue)
+        return self.feeds[channel]
 
     def schedule(self, key, title, description, link, event_key, channels, critical=False, color=0x8957E5, bypass_dnd=False):
         seconds = 0 if critical else self.options.get('batch_seconds', 0)
@@ -97,7 +102,11 @@ class TeamNotifications:
         if not bypass_dnd:due = allowed_time(due, self.options)
         for channel in set(channels):
             if due <= now:
-                self.feed(channel).send(key, event_key, ('🧵 Here’s your update: ' if self.english else '🧵 새 소식을 가져왔어요! ') + title, title, description, link, color)
+                if critical:
+                    self.feed(channel).send(key, event_key, '', title, description, link, color)
+                else:
+                    self.feed(channel).activity(self.binding.repo,
+                        [(event_key, key, title, description, link, color)], 'live:' + str(int(now // 60)))
             else:
                 bucket = str(int(due))
                 with self.queue.connect() as db:
@@ -144,23 +153,23 @@ class TeamNotifications:
     def flush(self):
         self.dnd.flush()
         with self.queue.connect() as db:
-            due = db.execute('SELECT channel,topic,bucket FROM notice_events WHERE sent=0 AND due<=? GROUP BY channel,topic,bucket LIMIT 20', (self.clock(),)).fetchall()
-        for channel, topic, bucket in due:
-            if allowed_time(self.clock(), self.options) > self.clock() and ':ci:' not in topic:
-                with self.queue.connect() as db:
-                    failure=db.execute("SELECT 1 FROM notice_events WHERE sent=0 AND channel=? AND topic=? AND bucket=? AND (title LIKE '%CI failed%' OR title LIKE '%CI 실패%') LIMIT 1",(channel,topic,bucket)).fetchone()
-                if not failure:continue
+            due = db.execute('SELECT channel,bucket FROM notice_events WHERE sent=0 AND due<=? GROUP BY channel,bucket ORDER BY MIN(due) LIMIT 20', (self.clock(),)).fetchall()
+        for channel, bucket in due:
+            # Normal activity is never flushed during Do Not Disturb. CI uses its
+            # independent immediate path; old queued CI rows can still be recovered.
+            quiet = allowed_time(self.clock(), self.options) > self.clock()
             with self.queue.connect() as db:
-                rows = db.execute('SELECT event_key,title,description,url,color FROM notice_events WHERE sent=0 AND channel=? AND topic=? AND bucket=? ORDER BY event_key',
-                                  (channel, topic, bucket)).fetchall()
-            key = 'batch:' + nonce(json.dumps([r[0] for r in rows]))
-            title = rows[0][1] if len(rows) == 1 else f'{len(rows)} updates' if self.english else f'알림 {len(rows)}건 모아보기'
-            description = '\n'.join('• ' + clip(row[1], 150) for row in rows[:15]) + '\n\n' + rows[-1][2]
-            if len(rows) > 15:
-                description += (f'\n{len(rows)-15} more updates. Open the thread for full activity.' if self.english else f'\n외 {len(rows)-15}건 · 전체 활동은 스레드에서 확인하세요.')
-            self.feed(channel).send(topic, key, ('🧵 Here’s your update: ' if self.english else '🧵 새 소식을 가져왔어요! ') + title, title, description, rows[-1][3], rows[-1][4])
+                rows = db.execute('SELECT event_key,topic,title,description,url,color FROM notice_events WHERE sent=0 AND channel=? AND bucket=? ORDER BY rowid',
+                                  (channel, bucket)).fetchall()
+            critical = [row for row in rows if ':ci:' in row[1]]
+            for event, topic, title, description, url, color in critical:
+                self.feed(channel).send(topic, event, '', title, description, url, color)
+            normal = [row for row in rows if ':ci:' not in row[1]] if not quiet else []
+            if normal:
+                self.feed(channel).activity(self.binding.repo, normal, 'batch:' + bucket)
             with self.queue.connect() as db:
-                db.executemany('UPDATE notice_events SET sent=1 WHERE channel=? AND event_key=? AND topic=?', [(channel, r[0], topic) for r in rows])
+                db.executemany('UPDATE notice_events SET sent=1 WHERE channel=? AND event_key=? AND topic=?',
+                               [(channel, row[0], row[1]) for row in critical + normal])
 
     def observe(self, topic, event, payload, event_key):
         if topic.kind != 'pr' or not self.options.get('review_hours'):

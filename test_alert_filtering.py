@@ -85,8 +85,8 @@ class NotificationFilteringTests(unittest.TestCase):
             {'event':'pull_request','payload':{'action':'assigned'}},
             {'event':'issue_comment','payload':{'action':'created'}}]},'bundle','777',['104'])
         self.assertEqual(len(self.api.messages),1)
-        title=self.api.messages[0][1]['embeds'][0]['title']
-        self.assertIn('New comment',title);self.assertNotIn('updates',title)
+        body=self.api.messages[0][1]['embeds'][0]['description']
+        self.assertIn('New comment',body);self.assertNotIn('updates',body)
 
     def test_base_alert_feed_also_filters_metadata_and_edited_comments(self):
         from alert_feed import AlertFeed

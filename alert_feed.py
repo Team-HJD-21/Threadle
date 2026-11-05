@@ -1,3 +1,5 @@
+import time
+
 from discord_threads import clip, marker, nonce
 
 
@@ -49,6 +51,7 @@ def english_activity(event, payload):
 class AlertFeed:
     def __init__(self, api, config, queue):
         self.api, self.config, self.queue = api, config, queue
+        self.activity_cards = {}
         from message_tracking import bind
         bind(api, queue)
         self.channel = config['alert_channel']
@@ -84,24 +87,32 @@ class AlertFeed:
             db.execute('BEGIN IMMEDIATE')
             row = db.execute('SELECT message FROM alerts WHERE receipt=?', (receipt,)).fetchone()
             if row and row[0]:
-                return
+                return row[0]
             if row is None:
                 db.execute('INSERT INTO alerts(receipt) VALUES(?)', (receipt,))
         if row is not None:
             for message in self.history():
                 if receipt in marker(message):
                     self.remember(receipt, message['id'])
-                    return
+                    return message['id']
         message = self.api.call('POST', '/channels/' + self.channel + '/messages', {
             'content': clip(content, 500), 'allowed_mentions': {'parse': []}, **({'flags':4096} if silent else {}),
             'nonce': nonce(self.channel+':'+receipt), 'enforce_nonce': True,
             'embeds': [{'title': clip(title, 230), 'description': description, 'url': url,
                         'color': color, 'footer': {'text': receipt}}] + (extra_embeds or [])})
         self.remember(receipt, message['id'])
+        return message['id']
 
     def remember(self, receipt, message):
         with self.queue.connect() as db:
             db.execute('UPDATE alerts SET message=? WHERE receipt=?', (message, receipt))
+
+    def activity(self, repo, items, window):
+        from alert_activity import ActivityCards
+        key = (repo, self.config.get('language') == 'en')
+        if key not in self.activity_cards:
+            self.activity_cards[key] = ActivityCards(self, *key)
+        self.activity_cards[key].update(items, window)
 
     def topic(self, topic, event, payload, event_key, thread):
         from alert_policy import filter_alert
@@ -116,6 +127,11 @@ class AlertFeed:
         link = f"https://discord.com/channels/{self.config['guild_id']}/{thread}"
         content = f'🧵 I brought you an update: {summary}.' if english else f'🧵 새 소식을 가져왔어요! {summary} — 스레드에서 확인해 주세요.'
         description = f'By {actor}\n[Open thread]({link}) · [View on GitHub]({topic.url})' if english else f'작성자: {actor}\n[스레드 확인하기]({link}) · [GitHub 원문]({topic.url})'
+        urgent = payload.get('action') == 'closed' or payload.get('review', {}).get('state', '').lower() == 'changes_requested'
+        if not urgent:
+            self.activity(topic.repo,
+                [(event_key, topic.key, summary, description, link, 0x0969DA)], 'live:' + str(int(time.time() // 60)))
+            return
         self.send(topic.key, event_key, content,
                   topic.title or summary, description,
                   link, {'issue': 0x2DA44E, 'pr': 0x8957E5, 'discussion': 0x0969DA}[topic.kind])
