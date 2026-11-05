@@ -4,12 +4,12 @@ import datetime as dt
 from discord_threads import nonce
 from topic_state import RED,GREEN
 
-COMMENT_FIELDS='''id databaseId body url createdAt updatedAt author{login ... on User{databaseId}}
+COMMENT_FIELDS='''id databaseId body url createdAt updatedAt diffHunk originalLine originalStartLine author{login ... on User{databaseId}}
   replyTo{databaseId} review:pullRequestReview{databaseId state body submittedAt url author{login} comments(first:1){totalCount}}'''
 QUERY='''query($owner:String!,$name:String!,$number:Int!,$cursor:String){
   repository(owner:$owner,name:$name){pullRequest(number:$number){id
     reviewThreads(first:50,after:$cursor){pageInfo{hasNextPage endCursor} nodes{
-      id isResolved path line startLine
+      id isResolved isOutdated path line startLine originalLine originalStartLine diffSide
       comments(first:100){pageInfo{hasNextPage endCursor} nodes{'''+COMMENT_FIELDS+'''}}
     }}}}}'''
 MORE='''query($owner:String!,$name:String!,$number:Int!,$thread:ID!,$cursor:String!){
@@ -108,7 +108,10 @@ def render(topic,thread):
     review=root.get('review') or {}
     header='**Review**\n'+review_label(review)+'\n\n' if review else ''
     header+='**Current Status**\n`'+('Resolved' if thread['isResolved'] else 'Unresolved')+'`'
-    if location:header+='\n\n`'+location.replace('`','ˋ')+'`'
+    from review_code import preview
+    code=preview(thread)
+    if code:header+='\n\n'+code
+    elif location:header+='\n\n`'+location.replace('`','ˋ')+'`'
     conversation=[]
     for comment in comments:
         author=(comment.get('author') or {}).get('login','GitHub').replace('*','\\*')
@@ -129,6 +132,7 @@ class ReviewConversations:
             db.execute('CREATE TABLE IF NOT EXISTS review_conversations(topic TEXT NOT NULL,node TEXT NOT NULL,root TEXT NOT NULL,PRIMARY KEY(topic,node))')
             db.execute('CREATE TABLE IF NOT EXISTS review_members(topic TEXT NOT NULL,comment TEXT NOT NULL,node TEXT NOT NULL,PRIMARY KEY(topic,comment))')
             db.execute('CREATE TABLE IF NOT EXISTS review_parent_ready(topic TEXT NOT NULL,review TEXT NOT NULL,PRIMARY KEY(topic,review))')
+            db.execute('CREATE TABLE IF NOT EXISTS review_parent_authors(topic TEXT NOT NULL,review TEXT NOT NULL,login TEXT NOT NULL,PRIMARY KEY(topic,review))')
             db.execute('CREATE TABLE IF NOT EXISTS review_batch_ready(topic TEXT NOT NULL,review TEXT NOT NULL,PRIMARY KEY(topic,review))')
             db.execute('CREATE TABLE IF NOT EXISTS review_deleted_comments(topic TEXT NOT NULL,comment TEXT NOT NULL,PRIMARY KEY(topic,comment))')
 
@@ -178,13 +182,15 @@ class ReviewConversations:
         identity=str(review.get('databaseId',''))
         if not identity.isdigit() or str(review.get('state','')).upper()=='PENDING' or 'body' not in review:
             raise RuntimeError('Submitted parent review is not yet available; retrying')
+        login=(review.get('author') or {}).get('login') or 'GitHub'
         with self.queue.connect() as db:
-            if db.execute('SELECT 1 FROM review_parent_ready WHERE topic=? AND review=?',(topic.key,identity)).fetchone():return
+            saved=db.execute('SELECT login FROM review_parent_authors WHERE topic=? AND review=?',(topic.key,identity)).fetchone()
+            if saved and saved[0]==login:return
             source='github-source:'+nonce(topic.key+':review:'+identity)
             current=db.execute('SELECT revision FROM message_sources WHERE source=?',(source,)).fetchone()
         value={'id':int(identity),'state':review['state'].lower(),'body':review['body'] or '',
                'submitted_at':review.get('submittedAt'),'html_url':review.get('url') or topic.url,
-               'user':{'login':(review.get('author') or {}).get('login','GitHub')}}
+               'user':{'login':login}}
         for event,payload in entries:
             candidate=payload.get('review') or {}
             if event=='pull_request_review' and str(candidate.get('id'))==identity and payload.get('action') in ('submitted','edited'):
@@ -196,10 +202,16 @@ class ReviewConversations:
         payload={'action':'edited' if current else 'submitted','review':value}
         # Render as a submitted review even when adopting/completing an existing card.
         rendered=make_embed(topic,'pull_request_review',dict(payload,action='submitted'),language)
+        if current:
+            # Adopt old synthetic cards even if a later webhook already changed
+            # their revision. Preserve their message IDs and update silently.
+            version=max(dt.datetime.now(dt.timezone.utc).timestamp(),current[0]+.001)
+            value=dict(value,updated_at=dt.datetime.fromtimestamp(version,dt.timezone.utc).isoformat())
         mutable.update(topic,'review:'+identity,value,'pull_request_review',payload,
-                       'review-parent:'+identity,rendered,closed,language)
+                       'review-parent:v2:'+identity+':'+nonce(login)+':'+nonce(event_key),rendered,closed,language)
         with self.queue.connect() as db:
             db.execute('INSERT OR IGNORE INTO review_parent_ready VALUES(?,?)',(topic.key,identity))
+            db.execute('INSERT OR REPLACE INTO review_parent_authors VALUES(?,?,?)',(topic.key,identity,login))
 
     def deliver(self,topic,entries,event_key,closed,language,current=None):
         from message_edits import MutableMessages
@@ -260,8 +272,7 @@ class ReviewConversations:
             source='github-source:'+nonce(topic.key+':'+kind)
             with self.queue.connect() as db:
                 previous=db.execute('SELECT revision FROM message_sources WHERE source=?',(source,)).fetchone()
-            if not previous:
-                self.parent(topic,thread['comments'][0].get('review') or {},entries,event_key,mutable,closed,language)
+            self.parent(topic,thread['comments'][0].get('review') or {},entries,event_key,mutable,closed,language)
             version=dt.datetime.now(dt.timezone.utc).timestamp()
             if previous:version=max(version,previous[0]+0.001)
             obj={'html_url':thread['comments'][0].get('url'),

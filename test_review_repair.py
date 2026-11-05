@@ -77,3 +77,18 @@ class ExistingReviewRepairTests(unittest.TestCase):
         self.tick(worker)
         self.assertEqual(self.api.posts,before)
         with self.queue.connect() as db:self.assertEqual(db.execute('SELECT done FROM review_repair_jobs').fetchone()[0],0)
+
+    def test_completed_repair_stops_opening_database_on_every_idle_turn(self):
+        self.send();worker=self.worker();self.tick(worker);self.tick(worker)
+        with patch.object(self.queue,'connect',side_effect=AssertionError('Completed repair must stay idle')):
+            self.assertFalse(self.tick(worker))
+
+    def test_one_off_updates_old_parent_author_and_adds_actual_code_in_place(self):
+        self.send();original=[row['id'] for row in self.all_posts()]
+        self.all_posts()[0]['embeds'][0]['author']['name']='GitHub'
+        with self.queue.connect() as db:db.execute('DELETE FROM review_parent_authors')
+        self.current[0]['comments']['nodes'][0].update(diffHunk='@@ -7 +7 @@\n+public void Method() {}',originalLine=7)
+        worker=self.worker();self.tick(worker)
+        self.assertEqual([row['id'] for row in self.all_posts()],original)
+        self.assertEqual(self.all_posts()[0]['embeds'][0]['author']['name'],'reviewer')
+        self.assertIn('public void Method()',self.posts()[0]['embeds'][0]['description'])

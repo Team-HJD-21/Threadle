@@ -355,9 +355,10 @@ class Service:
                     scheduler.start()
                 try:
                     while not stop.is_set() and self.registry.get(binding.id) == binding:
+                        self.queue(binding).wake.clear()
                         if not self.process(binding, threads, feed, notices, window_seconds=COALESCE_SECONDS):
                             review_repair.tick()
-                            stop.wait(.2)
+                            if not stop.is_set():self.queue(binding).wait_for_work()
                 finally:
                     scheduled_stop.set()
                     if scheduler:
@@ -403,6 +404,7 @@ class Service:
                 for identity, (binding, thread, signal) in list(workers.items()):
                     if bindings.get(identity) != binding:
                         signal.set()
+                        if identity in self.queues:self.queues[identity].wake.set()
                     if not thread.is_alive():
                         del workers[identity]
                 for identity, binding in bindings.items():
@@ -423,8 +425,9 @@ class Service:
         finally:
             if readiness is not None:readiness.clear()
             stop.set()
-            for _, thread, signal in workers.values():
+            for binding, thread, signal in workers.values():
                 signal.set()
+                if binding.id in self.queues:self.queues[binding.id].wake.set()
             presence_worker.join(timeout=5)
 
 

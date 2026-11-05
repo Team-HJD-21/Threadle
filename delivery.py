@@ -1,6 +1,7 @@
 import json
 import state_db as sqlite3
 import time
+import threading
 from contextlib import contextmanager
 from discord_threads import Threads, marker
 
@@ -10,6 +11,7 @@ COALESCE_SECONDS=0
 class Queue:
     def __init__(self, path):
         self.path = path
+        self.wake=threading.Event()
         with self.connect() as db:
             db.execute('PRAGMA journal_mode=WAL')
             db.execute('CREATE TABLE IF NOT EXISTS jobs (id TEXT PRIMARY KEY, event TEXT NOT NULL, '
@@ -48,6 +50,16 @@ class Queue:
             topic = topic_identity(event,payload)
             if topic:
                 db.execute('INSERT OR IGNORE INTO coalescing_jobs VALUES(?,?,?,NULL)',(delivery,topic,time.time()))
+        self.wake.set()
+
+    def wait_for_work(self,maximum=5):
+        # The worker clears the event BEFORE checking the queue, so a commit
+        # during/after that check cannot be lost. Durable jobs remain authoritative.
+        now=time.time()
+        with self.connect() as db:
+            deadline=db.execute('SELECT min(next) FROM jobs WHERE done=0 AND next>?',(now,)).fetchone()[0]
+        timeout=maximum if deadline is None else min(maximum,max(.01,deadline-now))
+        return self.wake.wait(timeout)
 
     def next(self, window_seconds=0):
         now=time.time()

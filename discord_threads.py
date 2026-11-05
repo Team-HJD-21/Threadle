@@ -464,6 +464,8 @@ def make_embed(topic, event, payload, language='ko'):
     if payload.get("pull_request", {}).get("merged") and action == "closed":
         action = "merged"
     actor = payload.get("sender", {}).get("login", "GitHub")
+    if event in ('issue_comment','discussion_comment','pull_request_review_comment','pull_request_review'):
+        actor=(obj.get('user') or obj.get('author') or {}).get('login') or actor
     body = obj.get("body") or ""
     if event in ('issues', 'discussion', 'pull_request', 'pull_request_target') and action in ('review_requested', 'review_request_removed', 'synchronize', 'assigned', 'unassigned', 'milestoned', 'demilestoned', 'labeled', 'unlabeled', 'converted_to_draft', 'typed', 'untyped', 'field_added', 'field_removed', 'closed', 'merged', 'reopened', 'deleted', 'answered', 'unanswered', 'locked', 'unlocked'):
         body = ''
