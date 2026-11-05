@@ -361,7 +361,7 @@ class AccountTests(unittest.TestCase):
         message = dict(self.message, content='', attachments=[{'url': 'https://cdn.discordapp.com/attachments/1/2/image.png', 'filename': 'screenshot.png'}])
         self.assertTrue(self.bridge.ingest(message))
         self.bridge.tick()
-        self.assertIn('[screenshot.png](https://cdn.discordapp.com/', self.writes[0]['body'])
+        self.assertIn('![screenshot.png](<https://cdn.discordapp.com/', self.writes[0]['body'])
 
     def test_revocation_requires_a_verified_webhook_and_cancels_pending_writes(self):
         self.link()

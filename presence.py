@@ -89,7 +89,8 @@ class Presence:
                                    'guild_id': str(message.reference.guild_id or message.guild.id),
                                    'type': getattr(message.reference.type, 'value', 0)} if message.reference else None),
                     'mentions': [str(member.id) for member in message.mentions],
-                    'attachments': [{'url': a.url, 'filename': a.filename} for a in message.attachments]})
+                    'embeds':[embed.to_dict() for embed in message.embeds],
+                    'attachments': [{'url': a.url, 'filename': a.filename,'content_type':a.content_type} for a in message.attachments]})
             except Exception as error:
                 log_exception(LOG, 'Comment intake failed error=%s', type(error).__name__, level=logging.WARNING)
 

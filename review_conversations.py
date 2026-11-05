@@ -5,7 +5,7 @@ from discord_threads import nonce
 from topic_state import RED,GREEN
 
 COMMENT_FIELDS='''id databaseId body url createdAt updatedAt author{login ... on User{databaseId}}
-  replyTo{databaseId} review:pullRequestReview{databaseId state body submittedAt url author{login}}'''
+  replyTo{databaseId} review:pullRequestReview{databaseId state body submittedAt url author{login} comments(first:1){totalCount}}'''
 QUERY='''query($owner:String!,$name:String!,$number:Int!,$cursor:String){
   repository(owner:$owner,name:$name){pullRequest(number:$number){id
     reviewThreads(first:50,after:$cursor){pageInfo{hasNextPage endCursor} nodes{
@@ -68,6 +68,28 @@ def snapshot(github,topic):
 def source_kind(root):return 'comment:pull_request_review_comment:'+str(root)
 
 
+def created_order(thread):
+    root=thread['comments'][0]
+    try:
+        return dt.datetime.fromisoformat(root['createdAt'].replace('Z','+00:00')).timestamp(),int(root['databaseId'])
+    except (KeyError,TypeError,ValueError,OverflowError):
+        raise RuntimeError('Review creation order unavailable; retrying') from None
+
+
+def expect_edits(entries,current):
+    visible={str(c[key]):c for thread in current for c in thread['comments'] for key in ('id','databaseId')}
+    for event,payload in entries:
+        if event!='pull_request_review_comment' or payload.get('action')!='edited':continue
+        value=payload.get('comment') or {}
+        actual=next((visible[str(value[key])] for key in ('id','node_id') if str(value.get(key)) in visible),None)
+        if actual is None:continue  # A later deletion may already have removed it.
+        try:
+            expected=dt.datetime.fromisoformat(value['updated_at'].replace('Z','+00:00'))
+            observed=dt.datetime.fromisoformat(actual['updatedAt'].replace('Z','+00:00'))
+        except (KeyError,TypeError,ValueError):continue
+        if observed<expected:raise RuntimeError('Review edit snapshot is stale; retrying')
+
+
 def review_label(review):
     state={'COMMENTED':'Commented','APPROVED':'Approved','CHANGES_REQUESTED':'Changes requested',
            'DISMISSED':'Dismissed'}.get(str(review.get('state','')).upper(),'Review')
@@ -107,6 +129,48 @@ class ReviewConversations:
             db.execute('CREATE TABLE IF NOT EXISTS review_conversations(topic TEXT NOT NULL,node TEXT NOT NULL,root TEXT NOT NULL,PRIMARY KEY(topic,node))')
             db.execute('CREATE TABLE IF NOT EXISTS review_members(topic TEXT NOT NULL,comment TEXT NOT NULL,node TEXT NOT NULL,PRIMARY KEY(topic,comment))')
             db.execute('CREATE TABLE IF NOT EXISTS review_parent_ready(topic TEXT NOT NULL,review TEXT NOT NULL,PRIMARY KEY(topic,review))')
+            db.execute('CREATE TABLE IF NOT EXISTS review_batch_ready(topic TEXT NOT NULL,review TEXT NOT NULL,PRIMARY KEY(topic,review))')
+            db.execute('CREATE TABLE IF NOT EXISTS review_deleted_comments(topic TEXT NOT NULL,comment TEXT NOT NULL,PRIMARY KEY(topic,comment))')
+
+    def reconcile_deletions(self,topic,entries,current):
+        # Comment IDs cannot be reused. Persist an authenticated deletion before
+        # rendering so stale snapshots or late create/edit webhooks cannot revive it.
+        with self.queue.connect() as db:
+            for event,payload in entries:
+                if event=='pull_request_review_comment' and payload.get('action')=='deleted':
+                    value=payload.get('comment') or {}
+                    identities=[str(value[key]) for key in ('id','node_id') if value.get(key)]
+                    if not identities:raise ValueError('Deleted review comment identity missing')
+                    db.executemany('INSERT OR IGNORE INTO review_deleted_comments VALUES(?,?)',[(topic.key,identity) for identity in identities])
+            retired={r[0] for r in db.execute('SELECT comment FROM review_deleted_comments WHERE topic=?',(topic.key,))}
+        current=[dict(thread,comments=[c for c in thread['comments'] if str(c['databaseId']) not in retired and str(c['id']) not in retired]) for thread in current]
+        entries=[(event,payload) for event,payload in entries if not (
+            event=='pull_request_review_comment' and payload.get('action') in ('created','edited') and
+            any(str((payload.get('comment') or {}).get(key)) in retired for key in ('id','node_id')))]
+        return entries,current,retired
+
+    def expand_review(self,topic,current,targets,new_targets,entries):
+        reviews=set()
+        for thread in current:
+            if thread['id'] not in new_targets or not thread['comments']:continue
+            root=thread['comments'][0]
+            if not any(event=='pull_request_review_comment' and payload.get('action')=='created' and
+                       str((payload.get('comment') or {}).get('id'))==str(root['databaseId']) for event,payload in entries):continue
+            identity=str((root.get('review') or {}).get('databaseId',''))
+            if not identity.isdigit():raise RuntimeError('Submitted review identity unavailable; retrying')
+            with self.queue.connect() as db:
+                ready=db.execute('SELECT 1 FROM review_batch_ready WHERE topic=? AND review=?',(topic.key,identity)).fetchone()
+            if not ready:reviews.add(identity)
+        for identity in reviews:
+            comments={str(c['databaseId']):c for thread in current for c in thread['comments']
+                      if str((c.get('review') or {}).get('databaseId'))==identity}
+            expected=[(c.get('review') or {}).get('comments',{}).get('totalCount') for c in comments.values()]
+            if not expected or any(type(count) is not int or count<1 or count>len(comments) for count in expected):
+                raise RuntimeError('Submitted review snapshot is not complete; retrying')
+            siblings={thread['id'] for thread in current if thread['comments'] and
+                      str((thread['comments'][0].get('review') or {}).get('databaseId'))==identity}
+            targets.update(siblings);new_targets.update(siblings)
+        return reviews
 
     def parent(self,topic,review,entries,event_key,mutable,closed,language):
         """A child webhook can beat review.submitted. Publish its actual parent first."""
@@ -137,9 +201,11 @@ class ReviewConversations:
         with self.queue.connect() as db:
             db.execute('INSERT OR IGNORE INTO review_parent_ready VALUES(?,?)',(topic.key,identity))
 
-    def deliver(self,topic,entries,event_key,closed,language):
+    def deliver(self,topic,entries,event_key,closed,language,current=None):
         from message_edits import MutableMessages
-        current=snapshot(self.github,topic)
+        if current is None:current=snapshot(self.github,topic)
+        entries,current,retired=self.reconcile_deletions(topic,entries,current)
+        expect_edits(entries,current)
         reply_context=getattr(self.threads,'review_replies',None)
         if reply_context is not None:reply_context.expect(topic,entries,current)
         mutable=MutableMessages(self.threads)
@@ -173,10 +239,18 @@ class ReviewConversations:
         with self.queue.connect() as db:
             db.executemany('INSERT OR IGNORE INTO review_conversations VALUES(?,?,?)',[(topic.key,node,root) for node,root in roots.items()])
             db.executemany('INSERT OR REPLACE INTO review_members VALUES(?,?,?)',[(topic.key,comment,node) for comment,node in members.items()])
+        batches=self.expand_review(topic,current,targets,new_targets,entries)
+        policy=getattr(self.threads.api,'mention_policy',None)
+        if policy is not None:
+            from account_mentions import names
+            for node in new_targets:
+                if node in by_id:
+                    for value in by_id[node]['comments']:policy.names.update(names(value.get('body') or ''))
         delivered=None
-        for node in sorted(targets):
+        order=lambda node:created_order(by_id[node]) if node in by_id and by_id[node]['comments'] else (float('-inf'),int(roots[node]))
+        for node in sorted(targets,key=order):
             root=roots[node];kind=source_kind(root);thread=by_id.get(node)
-            if not thread or not thread['comments']:
+            if root in retired or not thread or not thread['comments']:
                 mutable.delete(topic,kind,{})
                 continue
             reply_context=getattr(self.threads,'review_replies',None)
@@ -207,4 +281,6 @@ class ReviewConversations:
                 if legacy:mutable.delete(topic,source_kind(identity),{'html_url':comment.get('url')})
         for value in deleted:
             if value.get('id'):mutable.delete(topic,source_kind(value['id']),value)
+        with self.queue.connect() as db:
+            db.executemany('INSERT OR IGNORE INTO review_batch_ready VALUES(?,?)',[(topic.key,identity) for identity in batches])
         return delivered

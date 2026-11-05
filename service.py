@@ -321,6 +321,8 @@ class Service:
                 api = self.discord()
                 threads = CachedThreads(api, binding.config['guild_id'], binding.config['channels'], self.queue(binding), binding.config.get('language', 'ko'))
                 threads.check()
+                from review_repair import ReviewRepair
+                review_repair=ReviewRepair(self,binding,threads)
                 from deferred_threads import wake
                 wake(self.queue(binding))
                 feed = AlertFeed(api, binding.config, self.queue(binding)) if binding.config.get('alert_channel') else None
@@ -354,6 +356,7 @@ class Service:
                 try:
                     while not stop.is_set() and self.registry.get(binding.id) == binding:
                         if not self.process(binding, threads, feed, notices, window_seconds=COALESCE_SECONDS):
+                            review_repair.tick()
                             stop.wait(.2)
                 finally:
                     scheduled_stop.set()

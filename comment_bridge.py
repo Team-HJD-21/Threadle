@@ -118,13 +118,21 @@ class CommentBridge:
         for item in attachments:
             url = item.get('url', '')
             parsed = urlsplit(url)
-            if len(url) > 4096 or parsed.scheme != 'https' or parsed.hostname not in ('cdn.discordapp.com', 'media.discordapp.net') or parsed.username or parsed.password:
+            from comment_media import allowed,CDN
+            if not allowed(url,CDN):
                 return False
-            files.append({'url': url, 'filename': str(item.get('filename', 'attachment'))[:200]})
+            files.append({'url': url, 'filename': str(item.get('filename', 'attachment'))[:200],
+                          'content_type':str(item.get('content_type') or '')[:100]})
         if not content.strip() and not files:
             return False
         from comment_replies import reference
         payload = {'content': content, 'attachments': files, 'reference': reference(message)}
+        embeds=message.get('embeds',[])
+        if isinstance(embeds,list):
+            # Keep only bounded, relevant media metadata in the encrypted outbox.
+            payload['embeds']=[{key:item[key] for key in ('type','url','image','thumbnail') if key in item}
+                               for item in embeds[:10] if isinstance(item,dict) and item.get('type') in ('gifv','image','video')]
+            if len(json.dumps(payload['embeds']))>50000:return False
         if 'mentions' in message:
             mentions = message['mentions']
             if not isinstance(mentions, list) or len(mentions) > 100 or not all(snowflake(v) for v in mentions):
@@ -216,9 +224,8 @@ class CommentBridge:
         content = content.replace('@everyone', '@\u200beveryone').replace('@here', '@\u200bhere')
         # Never accept a user-supplied receipt, even a copied legitimate one.
         content = MARKER.sub('', content)
-        for attachment in payload['attachments']:
-            label = re.sub(r'[\[\]\\\r\n]', '', attachment['filename']) or 'attachment'
-            content += '\n\n[' + label + '](' + attachment['url'] + ')'
+        from comment_media import render
+        content=render(content,payload)
         return content.strip() + self.marker(job['operation'])
 
     def check_discord(self, job, binding, parent):
@@ -239,6 +246,7 @@ class CommentBridge:
         permissions = channel_permissions(job['guild'], member, roles, channel)
         if permissions & (1 << 10) == 0 or permissions & (1 << 38) == 0:
             raise ConnectError('You can no longer post in this thread.', 403)
+        return message
 
     def discussion(self, api, binding, number, after=None):
         owner, name = binding.repo.split('/')
@@ -328,7 +336,7 @@ class CommentBridge:
                     else:
                         self.update(job, 'failed' if job['attempts'] >= 5 else 'uncertain', 'delivery-uncertain')
                     return True
-                self.check_discord(job, binding, parent)
+                current_message=self.check_discord(job, binding, parent)
                 saved = self.accounts.decode(job['payload'])
                 plan, quoted = self.replies.prepare(api, binding, job, saved)
                 # A restored backup can contain a pre-send row for an already posted comment.
@@ -336,6 +344,8 @@ class CommentBridge:
                 if found:
                     self.update(job, 'done', remote=found[0], url=found[1])
                     return True
+                from comment_media import prepare
+                saved=prepare(saved,current_message)
                 body = self.replies.quoted(self.body(job, saved, api), quoted)
                 discussion = self.discussion(api, binding, number) if kind == 'discussion' else None
                 if discussion is not None and discussion.get('locked'):
