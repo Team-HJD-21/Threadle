@@ -6,7 +6,7 @@ from discord_threads import ApiError,Topic,nonce
 from review_conversations import ReviewConversations,snapshot,source_kind
 
 LOG=logging.getLogger('review-repair')
-VERSION='review-readable-context-v3'
+VERSION='review-numbered-context-v4'
 
 
 class ReviewRepair:
