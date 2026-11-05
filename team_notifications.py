@@ -65,6 +65,8 @@ class TeamNotifications:
                 CREATE TABLE IF NOT EXISTS open_pr_waits(number INTEGER PRIMARY KEY, due REAL NOT NULL);
                 CREATE TABLE IF NOT EXISTS open_pr_policy(id INTEGER PRIMARY KEY, hours INTEGER NOT NULL);
                 CREATE TABLE IF NOT EXISTS pr_reminder_batches(id TEXT PRIMARY KEY, payload TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS pr_reminder_cadence(id INTEGER PRIMARY KEY,hours INTEGER NOT NULL,
+                    setting REAL NOT NULL,anchor REAL NOT NULL,due REAL NOT NULL);
             ''')
             if not self.options.get('review_hours'):
                 db.execute('DELETE FROM review_waits')
@@ -79,6 +81,16 @@ class TeamNotifications:
             if not hours:
                 db.execute('DELETE FROM pr_reminder_batches')
             db.execute('INSERT OR REPLACE INTO open_pr_policy VALUES(1,?)', (hours,))
+            cadence=db.execute('SELECT hours,setting FROM pr_reminder_cadence WHERE id=1').fetchone()
+            setting=self.options.get('review_since') or self.options.get('enabled_at') or 0
+            if not hours:
+                db.execute('DELETE FROM pr_reminder_cadence')
+            elif not cadence or cadence!=(hours,setting):
+                anchor=setting if setting and (not cadence or cadence[1]!=setting) else self.clock()
+                db.execute('INSERT OR REPLACE INTO pr_reminder_cadence VALUES(1,?,?,?,?)',(hours,setting,anchor,anchor+hours*3600))
+                # Replace per-PR deadlines/pending groups once, without changing settings.
+                db.execute('DELETE FROM open_pr_waits')
+                db.execute('DELETE FROM pr_reminder_batches')
         from dnd_notifications import DndRoundup
         self.dnd=DndRoundup(self)
 
@@ -221,44 +233,26 @@ class TeamNotifications:
         now = self.clock()
         if not hours or allowed_time(now, self.options) > now:
             return
-        interval = hours * 3600
+        with self.queue.connect() as db:
+            due=db.execute('SELECT due FROM pr_reminder_cadence WHERE id=1').fetchone()[0]
+        if due>now:return
         prs = open_prs(github, self.binding.repo)
         numbers = {pr['number'] for pr in prs}
-        with self.queue.connect() as db:
-            for (number,) in db.execute('SELECT number FROM open_pr_waits').fetchall():
-                if number not in numbers:
-                    db.execute('DELETE FROM open_pr_waits WHERE number=?', (number,))
-            for pr in prs:
-                number = pr['number']
-                started = self.options.get('review_since', self.options.get('enabled_at', now))
-                try:
-                    created = dt.datetime.fromisoformat(pr['created_at'].replace('Z', '+00:00')).timestamp()
-                    started = max(started, created)
-                except (KeyError, ValueError, TypeError):
-                    pass
-                db.execute('INSERT OR IGNORE INTO open_pr_waits VALUES(?,?)', (number, started + interval))
         with self.queue.connect() as db:
             pending=db.execute('SELECT id,payload FROM pr_reminder_batches LIMIT 1').fetchone()
         if pending:
             self.send_reminder_batch(*pending,open_numbers=numbers)
             return
-        due_prs=[]
         destinations={}
         for pr in prs:
             number = pr['number']
-            with self.queue.connect() as db:
-                due = db.execute('SELECT due FROM open_pr_waits WHERE number=?', (number,)).fetchone()[0]
-            if due > now:
-                continue
-            due_prs.append((number,due))
             for channel in self.review_targets(number):
-                title=clip(pr.get('title',''),150).replace('\\','\\\\').replace('[','\\[').replace(']','\\]')
-                line=f'• [#{number} · {title}](https://github.com/{self.binding.repo}/pull/{number})'
-                if pr.get('draft'):line+=' · Draft' if self.english else ' · 초안'
-                destinations.setdefault(str(channel),[]).append(line)
-        if not due_prs:
+                destinations.setdefault(str(channel),[]).append({'number':number,'title':pr.get('title',''),
+                    'draft':bool(pr.get('draft')),'review':bool(not pr.get('draft') and (pr.get('requested_reviewers') or pr.get('requested_teams')))})
+        if not destinations:
+            self.advance_reminders(due,hours)
             return
-        batch={'due':due_prs,'channels':destinations,'hours':hours,'english':self.english}
+        batch={'due':due,'channels':destinations,'hours':hours,'english':self.english}
         raw=json.dumps(batch,sort_keys=True)
         identity=nonce(raw)
         with self.queue.connect() as db:
@@ -268,11 +262,15 @@ class TeamNotifications:
     def send_reminder_batch(self, identity, raw, open_numbers=None):
         batch=json.loads(raw)
         en=batch['english'];hours=batch['hours']
-        def still_open(line):
-            match=re.match(r'• \[#(\d+) · ',line)
-            return open_numbers is None or match is not None and int(match[1]) in open_numbers
-        for channel,lines in sorted(batch['channels'].items()):
-            count=sum(still_open(line) for line in lines)
+        for channel,items in sorted(batch['channels'].items()):
+            items=[pr for pr in items if open_numbers is None or pr['number'] in open_numbers]
+            count=len(items);drafts=sum(pr['draft'] for pr in items);review=sum(pr['review'] for pr in items)
+            summary=(f'{count} open PRs · {review} awaiting review · {drafts} drafts' if en else f'현재 열린 PR {count}개 · 리뷰 요청 대기 {review}개 · 초안 {drafts}개')
+            lines=[]
+            for pr in items:
+                title=clip(str(pr['title']).replace('\n',' ').replace('@','@\u200b'),85)
+                title=re.sub(r'([\\`*_\[\]<>~|])',r'\\\1',title)
+                lines.append(f'• [#{pr["number"]} {title}](https://github.com/{self.binding.repo}/pull/{pr["number"]})')
             pages=[];current=[];size=0
             for line in lines:
                 length=len(line.encode('utf-16-le'))//2+1
@@ -281,17 +279,20 @@ class TeamNotifications:
                 current.append(line);size+=length
             if current:pages.append(current)
             for index,page in enumerate(pages):
-                page=[line for line in page if still_open(line)]
                 if not page:continue
-                ending=(f'I’ll check again in {hours} hours.' if en else f'{hours}시간 뒤에도 열려 있으면 다시 알려드릴게요.')
                 self.feed(channel).send('open-pr-roundup:'+identity,str(index),
                     '🧵 Here are the PRs that are still open.' if en else '🧵 아직 열린 PR을 모아왔어요.',
-                    self.binding.repo+' · '+(f'{count} open PRs' if en else f'열린 PR {count}개'),
-                    '\n'.join(page)+'\n\n'+ending,'https://github.com/'+self.binding.repo+'/pulls',0xD29922)
+                    ('Open PR reminders' if en else '열린 PR 현황')+' · '+self.binding.repo,
+                    summary+'\n\n'+'\n'.join(page),'https://github.com/'+self.binding.repo+'/pulls',0xD29922)
+        self.advance_reminders(batch['due'],hours)
+
+    def advance_reminders(self,due,hours):
+        interval=hours*3600
+        upcoming=due+(max(0,math.floor((self.clock()-due)/interval))+1)*interval
         with self.queue.connect() as db:
-            for number,due in batch['due']:
-                db.execute('UPDATE open_pr_waits SET due=? WHERE number=? AND due=?',(self.clock()+hours*3600,number,due))
-            db.execute('DELETE FROM pr_reminder_batches WHERE id=?',(identity,))
+            db.execute('UPDATE pr_reminder_cadence SET due=? WHERE id=1 AND due=?',(upcoming,due))
+            # Commit the cadence with batch removal so a crash cannot strand a batch.
+            db.execute('DELETE FROM pr_reminder_batches')
 
     def digest(self, github, kind=None):
         from digest_settings import enabled

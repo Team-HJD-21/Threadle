@@ -11,6 +11,7 @@ PUBLIC_ORIGIN = ContextVar('public_origin', default='https://threadle.teamhjd.co
 COOKIE = '__Host-ghd-language'
 
 EN = {
+    '재알림을 켜거나 간격을 바꾼 시각부터, 초안을 포함한 열린 PR 전체를 같은 주기로 모아 알립니다. 방해금지 시간에는 보내지 않습니다.': 'All open PRs, including drafts, are grouped on one schedule starting when reminders are enabled or the interval is changed. Reminders wait until Do Not Disturb hours end.',
     '일일 요약':'Daily digest',
     '주간 요약':'Weekly digest',
     '일일 요약 사용':'Enable daily digest',
