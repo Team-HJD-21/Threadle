@@ -39,7 +39,7 @@ class UserApi:
             api.usage_observer = self.service.api_usage.observe
             return api.call(method, path, data)
         request = Request('https://api.github.com' + path, method=method,
-                          data=json.dumps(data).encode(), headers={
+                          data=None if data is None else json.dumps(data).encode(), headers={
             'Authorization': 'Bearer ' + self.token, 'User-Agent': 'Threadle/1.0',
             'Content-Type': 'application/json', 'Accept': 'application/vnd.github+json',
             'X-GitHub-Api-Version': '2022-11-28'})
@@ -49,7 +49,7 @@ class UserApi:
                 raw = response.read(2_000_001)
                 if len(raw) > 2_000_000:
                     raise ApiError('GitHub', 'network')
-                return json.loads(raw)
+                return json.loads(raw) if raw else None
         except HTTPError as error:
             self.service.api_usage.observe(method, path, error.headers, error.code)
             wait = error.headers.get('Retry-After')
@@ -71,6 +71,8 @@ class CommentBridge:
         self.content_enabled = False
         from comment_replies import Replies
         self.replies = Replies(self)
+        from comment_deletions import Deletions
+        self.deletions = Deletions(self)
 
     def discover_intent(self):
         """Only request the privileged intent when the application actually has it."""
@@ -325,6 +327,7 @@ class CommentBridge:
         if not self.worker_lock.acquire(blocking=False):
             return False
         try:
+            self.deletions.tick()
             result = self._tick()
             self.replies.cleanup()
             return result
@@ -476,7 +479,8 @@ class CommentBridge:
                     db.execute('DELETE FROM mention_receipts WHERE created<?', (self.clock() - 30 * 86400,))
                     # Keep successful echo receipts for recovery; discard message bodies promptly.
                     db.execute("UPDATE comment_outbox SET payload=NULL,state='failed',error='expired' WHERE created<? AND state IN ('queued','sending','uncertain')", (self.clock() - 86400,))
-                    db.execute("DELETE FROM comment_outbox WHERE state IN ('done','failed') AND created<?", (self.clock() - 30 * 86400,))
+                    db.execute("DELETE FROM comment_outbox WHERE state IN ('done','failed','deleted','delete-failed') AND created<?", (self.clock() - 30 * 86400,))
+                    db.execute('DELETE FROM comment_delete_jobs WHERE operation NOT IN (SELECT operation FROM comment_outbox)')
                     db.execute('DELETE FROM bridge_replies WHERE NOT EXISTS(SELECT 1 FROM comment_outbox o WHERE o.operation=bridge_replies.operation)')
             except Exception as error:
                 LOG.warning('Comment worker retry error=%s', type(error).__name__)

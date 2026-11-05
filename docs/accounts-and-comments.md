@@ -69,8 +69,8 @@ cancel personal credentials; no new periodic repository scan is introduced.
   in its original text position. Missing/blocked previews retain the source link;
   MP4/PNG addresses are never guessed into GIF addresses. Code spans are unchanged.
   Provider redirects are limited to the provider allowlist. GitHub credentials
-  are never sent to Discord or GIF providers. Later Discord edits/deletions are
-  not synchronized to GitHub.
+  are never sent to Discord or GIF providers. Later Discord edits are not
+  synchronized to GitHub. Deletion of a forwarded original is handled below.
 - A ✅ reaction confirms a GitHub write. A ⚠️ reaction and quiet reply explain a
   failure; after an ambiguous result, check GitHub before manually reposting.
 
@@ -118,6 +118,39 @@ at-least-once delivery; it is not a claim of exactly-once external API execution
 Bodies are removed on completion/cancellation; pending work expires after 24h.
 Receipts and terminal records expire after 30 days. Disconnecting removes active
 tokens immediately; historical backup copies follow the existing retention period.
+
+## Deletion and activity records
+
+Deleting an original Discord input forwarded by Threadle requests deletion of
+that exact GitHub comment, including ordinary PR/Issue comments, Discussion
+comments, and review replies. A server moderator's deletion has the same effect.
+This requires the retained receipt (30 days), the author's active account consent,
+and current GitHub access. It never deletes an unrelated GitHub comment or the
+review's first comment. Removing a bot notification card is not a deletion request
+for its GitHub source. Discord edits still do not change GitHub comments.
+
+Threadle records its own deletion intent **before** automatic input cleanup so
+the resulting Discord event cannot delete the newly posted GitHub review reply.
+The receipt and deletion queue survive receiver restarts. An uncertain write is
+looked up before retrying; deletion never reposts a comment. Already-missing
+comments are considered complete only after repository/topic access is verified.
+Failures are recorded in the `comment-deletions` / `chat-events` runtime logs.
+
+Gateway events, not a history polling loop, record message creation/edit/deletion,
+bulk deletions, thread changes, and reactions in managed channels/threads only.
+IDs, event type, source and outcome are stored in the encrypted registry database
+for 30 days; message bodies, attachments, titles and credentials are excluded.
+Corresponding metadata is also written to the existing rotating receiver log.
+Discord events during a non-resumable offline gap cannot be reconstructed without
+querying history; no new periodic history scan is introduced.
+
+Discord message-deletion events do **not** identify the deleting actor. The author
+is distinct from the actor and is never used as a substitute. With the bot's
+existing **View Audit Log** permission, the moderation gateway intent also saves
+audit entries' actor, target, channel and count. Without permission, normal
+deletion synchronization still works. Audit message-deletion entries can aggregate
+multiple messages and have no exact message ID: they remain separate evidence,
+not a guessed attribution to one message. No new bot invitation is required.
 
 References: [GitHub user tokens](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app),
 [issue/PR comments](https://docs.github.com/en/rest/issues/comments#create-an-issue-comment),

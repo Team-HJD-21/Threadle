@@ -15,6 +15,7 @@ from deploy.patch_runtime import digest, read_manifest
 
 TEST_TARGETS = [
     'test_accounts',
+    'test_comment_deletions', 'test_chat_events', 'test_presence',
     'test_alert_activity', 'test_source_package',
     'test_comment_replies',
     'test_comment_media', 'test_review_repair',

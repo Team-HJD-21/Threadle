@@ -43,10 +43,12 @@ class Presence:
     async def session(self, stop, discord, text, status):
         intents = discord.Intents.none()
         intents.guilds = True
+        intents.guild_messages = True
+        intents.guild_reactions = True
+        intents.moderation = True
         bridge = getattr(self.service, 'comment_bridge', None)
         if bridge is not None:
             enabled = await asyncio.to_thread(bridge.discover_intent)
-            intents.guild_messages = enabled
             intents.message_content = enabled
         client = discord.Client(intents=intents,
                                 activity=discord.CustomActivity(name=text),
@@ -55,6 +57,8 @@ class Presence:
         @client.event
         async def on_ready():
             self.state('connected')
+            if getattr(client,'user',None):
+                self.service.chat_events.bot_id = str(client.user.id)
             LOG.info('Discord presence connected')
 
         @client.event
@@ -76,9 +80,15 @@ class Presence:
 
         @client.event
         async def on_message(message):
-            if bridge is None or message.guild is None or message.author.bot or message.webhook_id:
+            if message.guild is None:
                 return
             try:
+                await asyncio.to_thread(self.service.chat_events.record,'message-create',
+                    str(message.guild.id),str(message.channel.id),str(message.id),
+                    author=str(message.author.id),actor=str(message.author.id),
+                    parent=getattr(message.channel,'parent_id',None))
+                if bridge is None or message.author.bot or message.webhook_id:
+                    return
                 await asyncio.to_thread(bridge.ingest, {
                     'id': str(message.id), 'guild_id': str(message.guild.id),
                     'channel_id': str(message.channel.id), 'author_id': str(message.author.id),
@@ -93,6 +103,100 @@ class Presence:
                     'attachments': [{'url': a.url, 'filename': a.filename,'content_type':a.content_type} for a in message.attachments]})
             except Exception as error:
                 log_exception(LOG, 'Comment intake failed error=%s', type(error).__name__, level=logging.WARNING)
+
+        async def metadata(kind, payload, author=None, actor=None):
+            if not payload.guild_id:
+                return
+            try:
+                await asyncio.to_thread(self.service.chat_events.record,kind,str(payload.guild_id),
+                    str(payload.channel_id),str(payload.message_id),author=author,actor=actor)
+            except Exception as error:
+                log_exception(LOG,'Chat event intake failed error=%s',type(error).__name__,level=logging.WARNING)
+
+        @client.event
+        async def on_raw_message_edit(payload):
+            author = payload.data.get('author',{}).get('id')
+            # A message's author is known; the actual editor is not in this event.
+            await metadata('message-edit',payload,author=author)
+
+        @client.event
+        async def on_raw_message_delete(payload):
+            if not payload.guild_id:
+                return
+            try:
+                if bridge is not None:
+                    await asyncio.to_thread(bridge.deletions.ingest,payload.guild_id,payload.channel_id,payload.message_id)
+                else:
+                    await metadata('message-delete',payload)
+            except Exception as error:
+                log_exception(LOG,'Comment deletion intake failed error=%s',type(error).__name__,level=logging.WARNING)
+
+        @client.event
+        async def on_raw_bulk_message_delete(payload):
+            for identity in sorted(payload.message_ids):
+                from types import SimpleNamespace
+                await on_raw_message_delete(SimpleNamespace(guild_id=payload.guild_id,
+                    channel_id=payload.channel_id,message_id=identity))
+
+        @client.event
+        async def on_raw_reaction_add(payload):
+            await metadata('reaction-add',payload,actor=str(payload.user_id))
+
+        @client.event
+        async def on_raw_reaction_remove(payload):
+            await metadata('reaction-remove',payload,author=str(payload.user_id))
+
+        @client.event
+        async def on_raw_reaction_clear(payload):
+            await metadata('reactions-clear',payload)
+
+        @client.event
+        async def on_raw_reaction_clear_emoji(payload):
+            await metadata('reaction-clear-emoji',payload)
+
+        async def thread_event(kind,thread):
+            if not thread.guild:
+                return
+            try:
+                await asyncio.to_thread(self.service.chat_events.record,kind,str(thread.guild.id),str(thread.id),
+                    parent=thread.parent_id)
+            except Exception as error:
+                log_exception(LOG,'Thread event intake failed error=%s',type(error).__name__,level=logging.WARNING)
+
+        @client.event
+        async def on_thread_create(thread):
+            await thread_event('thread-create',thread)
+
+        @client.event
+        async def on_raw_thread_update(payload):
+            try:
+                await asyncio.to_thread(self.service.chat_events.record,'thread-update',str(payload.guild_id),
+                    str(payload.thread_id),parent=payload.data.get('parent_id'))
+            except Exception as error:
+                log_exception(LOG,'Thread update intake failed error=%s',type(error).__name__,level=logging.WARNING)
+
+        @client.event
+        async def on_raw_thread_delete(payload):
+            try:
+                await asyncio.to_thread(self.service.chat_events.record,'thread-delete',str(payload.guild_id),
+                    str(payload.thread_id),parent=payload.parent_id)
+            except Exception as error:
+                log_exception(LOG,'Thread deletion intake failed error=%s',type(error).__name__,level=logging.WARNING)
+
+        @client.event
+        async def on_audit_log_entry_create(entry):
+            if entry.action.value not in (72,73):
+                return
+            try:
+                channel = getattr(entry.extra,'channel',None)
+                await asyncio.to_thread(self.service.chat_events.audit,{
+                    'id':str(entry.id),'guild':str(entry.guild.id),
+                    'channel':str(channel.id) if channel else None,
+                    'actor':str(entry.user_id) if entry.user_id else None,
+                    'target':str(entry.target.id) if entry.target else None,
+                    'action':entry.action.value,'count':getattr(entry.extra,'count',None)})
+            except Exception as error:
+                log_exception(LOG,'Audit event intake failed error=%s',type(error).__name__,level=logging.WARNING)
 
         task = asyncio.create_task(client.start(self.service.env['DISCORD_BOT_TOKEN'], reconnect=True))
         last_status = 0
