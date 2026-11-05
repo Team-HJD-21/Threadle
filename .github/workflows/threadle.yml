@@ -39,6 +39,16 @@ jobs:
           $scheduler.Connect()
           $task = $scheduler.GetFolder('\').GetTask('TeamHJD-GitHubDiscord-Receiver')
           Write-Host ('TaskState=' + $task.State + ' enabled=' + $task.Enabled)
+          $identityScript = 'C:\actions-runner-threadle\_work\_temp\threadle-deploy-42071648662-1\deploy\receiver_process.ps1'
+          if (Test-Path -LiteralPath $identityScript -PathType Leaf) {
+            . $identityScript
+            $identified = @(Get-ReceiverProcesses -Root $threadleRoot -Python $threadleRuntime.python)
+            Write-Host ('MatchedReceiverCount=' + $identified.Count)
+            foreach ($candidate in @(Get-CimInstance Win32_Process -Filter "Name='python.exe' OR Name='pythonw.exe'")) {
+              if ($candidate.CommandLine -notmatch 'service\.py') { continue }
+              Write-Host ('ExactMatcher=' + (Test-ReceiverProcess -Process $candidate -Root $threadleRoot -Python $threadleRuntime.python))
+            }
+          }
   regression:
     name: Regression ${{ matrix.shard }}/4
     strategy:
