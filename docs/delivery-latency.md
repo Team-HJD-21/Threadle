@@ -28,3 +28,19 @@ Local Windows comparison using a temporary encrypted database with ten bindings
 and twenty active-list reads: 0.520s before versus 0.054s after (process CPU time
 0.469s versus 0.047s). This measures that query path, not overall production CPU;
 the operator's notebook utilization must be compared after deployment.
+
+## Commit-transition deduplication
+
+PR synchronize notifications use the PR number plus full before/after commit
+identities rather than the transport delivery ID. Their existing mutable source
+and receipt recover uncertain Discord sends, even when a retry arrives with a
+different delivery ID. First attempts do not scan Discord thread history or adopt
+a PR description as a commit notification. Separate PRs and separate connections
+retain independent notifications, and later head transitions remain separate cards.
+
+The per-connection queue remembers a completed transition only after both its
+thread message and secondary alert processing succeed. Duplicate deliveries are
+then finished before another comparison request or alert. Failed processing stays
+retryable, with a stable semantic receipt for the thread and alert. Only numeric PR
+IDs and commit identities are retained; no new polling or message-body cache is
+introduced. Existing historical duplicate cards are not deleted by this change.

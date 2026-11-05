@@ -203,6 +203,12 @@ class Service:
             if int(payload['repository']['id']) != binding.repo_id or (
                 binding.auth == 'app' and int(payload.get('installation', {}).get('id', 0)) != binding.installation):
                 raise ValueError('Queued event connection scope mismatch')
+            from commit_notifications import completed as commit_completed,remember as remember_commits,event_key as commit_event_key
+            if commit_completed(queue,event,payload):
+                queue.finish_group(group_ids)
+                LOG.info('Duplicate PR commit transition skipped binding=%s delivery=%s',binding.id,delivery)
+                return True
+            notice_key=commit_event_key(event,payload,'webhook:'+delivery)
             if self.comment_bridge is not None and self.comment_bridge.echo(binding, event, payload):
                 queue.finish_group(group_ids)
                 return True
@@ -281,7 +287,7 @@ class Service:
                     return True
                 with queue.connect() as db:had_thread=db.execute('SELECT 1 FROM links WHERE topic=?',(topic.key,)).fetchone()
                 from message_edits import deliver_events
-                thread = deliver_events(routed,topic,event,payload,'webhook:'+delivery,
+                thread = deliver_events(routed,topic,event,payload,notice_key,
                                         lambda topic=topic: roots.closed(topic),binding.config.get('language','ko'),github=github)
                 if thread is None:continue
                 if topic.kind=='pr' and not had_thread:self.conflicts.signal(binding,delivery+':thread-ready','pull_request',{'action':'opened'})
@@ -290,14 +296,15 @@ class Service:
                         for index,item in enumerate(payload['_events']):
                             notices.observe(topic,item['event'],item['payload'],'webhook:'+delivery+':part:'+str(index))
                     else:
-                        notices.observe(topic, event, payload, 'webhook:' + delivery)
+                        notices.observe(topic, event, payload, notice_key)
                     channels = {g['channel'] for g in targets}
                     if not channels or destination == binding.config['channels']['pr']:
                         channels.add(binding.config['alert_channel'])
                     dnd_until=delivery_mode(queue,delivery,event,binding.config.get('team_notifications',{}),time.time())
-                    notices.topic(topic, event, payload, 'webhook:' + delivery, thread, channels, dnd_until=dnd_until)
+                    notices.topic(topic, event, payload, notice_key, thread, channels, dnd_until=dnd_until)
                 elif feed:
-                    feed.topic(topic, event, payload, 'webhook:' + delivery, thread)
+                    feed.topic(topic, event, payload, notice_key, thread)
+            remember_commits(queue,event,payload)
             queue.finish_group(group_ids)
             from deferred_threads import finish
             finish(queue,delivery)
