@@ -100,11 +100,11 @@ def page(title, body, landing=False):
     path = PAGE_PATH.get()
     public = landing and path in PUBLIC_PATHS
     title_text = 'TeamHJD - Threadle' + ((' | ' + text(title)) if title != 'TeamHJD - Threadle' else '')
-    description = ('GitHub updates, organized in Discord. Keep PRs, issues, discussions, reviews, and CI updates together in per-item threads.' if LANGUAGE.get() == 'en' else 'GitHub 소식을 Discord 스레드로 정리하세요. PR, 이슈, Discussion의 댓글·리뷰·새 커밋·CI 결과를 항목별로 모아줍니다.')
+    description = ('GitHub conversations, organized in Discord. Follow PRs, issues, discussions and code reviews in threads. Link your account to reply as yourself with connected mentions.' if LANGUAGE.get() == 'en' else 'GitHub 대화를 Discord 스레드에서 이어가세요. PR·Issue·Discussion과 코드 리뷰를 모으고, 계정을 연결해 내 이름으로 답장하고 팀원을 멘션하세요.')
     extra = '<link rel="icon" type="image/png" href="/connect/assets/threadle-avatar.png"><meta name="description" content="' + esc(description) + '">'
     extra += '<meta name="robots" content="' + ('index,follow' if public else 'noindex,nofollow') + '">'
     if landing:
-        extra += '<link rel="stylesheet" href="/connect/assets/landing.css?v=20261102-2"><link rel="stylesheet" href="/connect/assets/product.css?v=20261105-30"><script src="/connect/assets/preview.js?v=20261105-30" defer></script>'
+        extra += '<link rel="stylesheet" href="/connect/assets/landing.css?v=20261102-2"><link rel="stylesheet" href="/connect/assets/product.css?v=20261105-collaboration-1"><script src="/connect/assets/preview.js?v=20261105-30" defer></script>'
     extra += '<link rel="stylesheet" href="/connect/assets/controls.css?v=20261102-6"><script src="/connect/assets/controls.js?v=1" defer></script>'
     if public:
         preview_image = esc(base + '/connect/assets/threadle-banner.png?v=20261102-9')

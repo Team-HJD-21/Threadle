@@ -54,4 +54,5 @@ def showcase(t):
             'summary':t('재알림과 일일·주간 요약은 각각 설정합니다. /summary 결과도 채널에서 확인합니다.','Configure reminders and daily/weekly summaries independently. /summary results appear in the channel too.'),
         }
         out+='<p class="feature-scene-note">'+notes[key]+'</p></div>'
-    return out+'<p class="preview-disclaimer">'+t('작동 예시입니다. 네 가지 예시가 반복 재생되며, 항목 선택·일시정지·다시 보기가 가능합니다.','Illustrative examples cycle automatically. Choose a feature, pause, or replay at any time.')+'</p></div></section>'+security(t)
+    from product_collaboration import section as collaboration
+    return out+'<p class="preview-disclaimer">'+t('작동 예시입니다. 네 가지 예시가 반복 재생되며, 항목 선택·일시정지·다시 보기가 가능합니다.','Illustrative examples cycle automatically. Choose a feature, pause, or replay at any time.')+'</p></div></section>'+collaboration(t)+security(t)
