@@ -139,6 +139,8 @@ class OperatorWeb:
         body += self.service.operator_mail.panel(session,claims)
         body += '<form method="get" action="/connect/admin" class="admin-search"><label for="admin-query">저장소 또는 서버 ID 검색</label><input id="admin-query" name="q" maxlength="100" value="' + esc(query) + '"><button>검색</button><a class="button secondary" href="/connect/admin">전체 보기</a></form>'
         body += '<p class="muted">일시중지 중에도 새 웹후크는 대기열에 보관합니다. 재개하면 순서대로 처리합니다. 이미 전송 중인 요청 하나는 완료될 수 있습니다.</p>'
+        from operator_accounts import panel as accounts_panel
+        body += accounts_panel(self.service.registry,selected)
         for heading, group in [('현재 연결', [r for r in selected if r['enabled']]), ('연결 해제 기록', [r for r in selected if not r['enabled']])]:
             body += '<section class="admin-connection-group"><h2>' + heading + ' (' + str(len(group)) + ')</h2>'
             if len(group) > 50:
@@ -215,10 +217,18 @@ class OperatorWeb:
         path = urlsplit(request.path).path
         if path.startswith('/connect/admin/update/'):
             raise ConnectError('요청을 찾을 수 없습니다.',404)
-        if request.command == 'GET' and path in ('/connect/admin','/connect/admin/changelog'):
+        accounts_path=re.fullmatch(r'/connect/admin/accounts/([1-9][0-9]{0,24})',path)
+        if request.command == 'GET' and (path in ('/connect/admin','/connect/admin/changelog') or accounts_path):
             session = session or web.sessions.create({'admin_subject': claims['sub']})
             query = parse_qs(urlsplit(request.path).query, max_num_fields=2).get('q', [''])[0][:100]
-            if path.endswith('/changelog'):
+            if accounts_path:
+                values=parse_qs(urlsplit(request.path).query,max_num_fields=2,keep_blank_values=True)
+                if any(len(v)!=1 for v in values.values()):raise ConnectError('중복 입력은 허용하지 않습니다.',400)
+                from operator_accounts import members,say
+                from web_locale import PAGE_PATH
+                PAGE_PATH.set(path)
+                body=page(say('계정 연결 사용자','Linked accounts'),members(self.service.registry,accounts_path[1],values.get('page',['1'])[0]))
+            elif path.endswith('/changelog'):
                 from changelog import content
                 from product_web import t
                 body=page('사이트·관리자 패치노트',content(t,admin=True),landing=True)

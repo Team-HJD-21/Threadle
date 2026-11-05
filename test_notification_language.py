@@ -17,16 +17,16 @@ class NotificationLanguageTests(unittest.TestCase):
         self.queue = Queue(Path(self.temp.name) / 'queue.sqlite3')
         self.topic = Topic('team/repo', 'issue', 1, '한국어 제목', 'https://github.com/team/repo/issues/1')
 
-    def test_english_alert_preserves_original_title_and_does_not_repeat_after_language_change(self):
+    def test_english_activity_card_does_not_repeat_after_language_change(self):
         api = FakeAlertApi()
         config = {'guild_id': 'guild', 'alert_channel': 'alerts', 'language': 'en'}
         feed = AlertFeed(api, config, self.queue)
         payload = {'action': 'created', 'sender': {'login': 'author'}}
         feed.topic(self.topic, 'issue_comment', payload, 'event1', 'thread')
         message = api.posts[0]
-        self.assertIn('I brought you an update: ISSUE #1 · New comment', message['content'])
-        self.assertEqual(message['embeds'][0]['title'], '한국어 제목')
-        self.assertIn('[Open thread]', message['embeds'][0]['description'])
+        self.assertEqual(message['content'], '')
+        self.assertEqual(message['embeds'][0]['title'], 'team/repo · Recent activity')
+        self.assertIn('[ISSUE #1](https://discord.com/channels/guild/thread) · New comment', message['embeds'][0]['description'])
         AlertFeed(api, dict(config, language='ko'), self.queue).topic(self.topic, 'issue_comment', payload, 'event1', 'thread')
         self.assertEqual(len(api.posts), 1)
         self.assertEqual(message['allowed_mentions'], {'parse': []})

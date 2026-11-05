@@ -126,6 +126,10 @@ class MessageApi:
         self.messages = []
 
     def call(self, method, path, data=None):
+        if method == 'PATCH' and '/messages/' in path:
+            row = next(message for _, message in self.messages if message['id'] == path.rsplit('/', 1)[1])
+            row.update(data)
+            return row
         if method == 'POST':
             result = dict(data, id=str(len(self.messages)+1))
             self.messages.append((path, result))
@@ -160,14 +164,15 @@ class NotificationTests(unittest.TestCase):
     def test_batches_survive_restart_and_include_multiple_events_once(self):
         notices = self.notices(batch_seconds=60)
         notices.topic(self.topic, 'pull_request', {'action': 'synchronize'}, '1', 'thread', ['201'])
-        notices.topic(self.topic, 'issue_comment', {}, '2', 'thread', ['201'])
+        notices.topic(self.topic, 'issue_comment', {'action': 'created'}, '2', 'thread', ['201'])
         self.assertEqual(len(self.api.messages), 0)
         self.now[0] += 61
         restarted = self.notices(batch_seconds=60)
         restarted.flush()
         restarted.flush()
         self.assertEqual(len(self.api.messages), 1)
-        self.assertIn('2건', self.api.messages[0][1]['embeds'][0]['title'])
+        self.assertIn('최근 활동', self.api.messages[0][1]['embeds'][0]['title'])
+        self.assertIn('New commits, New comment', self.api.messages[0][1]['embeds'][0]['description'])
 
     def test_one_ci_event_can_notify_multiple_prs_in_the_same_channel(self):
         notices = self.notices(batch_seconds=60)
@@ -176,7 +181,9 @@ class NotificationTests(unittest.TestCase):
             notices.topic(topic, 'issue_comment', {}, 'same-event', 'thread', ['104'])
         self.now[0] += 61
         notices.flush()
-        self.assertEqual(len(self.api.messages), 2)
+        self.assertEqual(len(self.api.messages), 1)
+        self.assertIn('PR #7', self.api.messages[0][1]['embeds'][0]['description'])
+        self.assertIn('PR #8', self.api.messages[0][1]['embeds'][0]['description'])
 
     def test_non_pr_ci_failure_bypasses_dnd(self):
         self.now[0] += 23 * 3600
@@ -225,6 +232,28 @@ class NotificationTests(unittest.TestCase):
         disabled.flush()
         self.assertEqual(len(self.api.messages), 1)
         self.assertFalse(disabled.has_pending())
+
+    def test_pending_normal_batch_stays_silent_until_dnd_ends_but_ci_is_immediate(self):
+        self.now[0] += 21 * 3600 + 59 * 60
+        notices = self.notices(batch_seconds=60, quiet=True, quiet_start=22, quiet_end=8, utc_offset=0)
+        notices.topic(self.topic, 'issue_comment', {'action': 'created'}, 'comment', 'thread', ['104'])
+        self.now[0] += 120
+        notices.flush()
+        self.assertEqual(self.api.messages, [])
+        notices.ci('owner/repo', {'workflow_run': {'id': 42, 'conclusion': 'failure', 'event': 'push',
+                   'html_url': 'https://github.com/run', 'name': 'Build'}}, 'failure')
+        self.assertEqual(len(self.api.messages), 1)
+        self.now[0] += 10 * 3600
+        notices.flush()
+        self.assertEqual(len(self.api.messages), 2)
+
+    def test_changes_requested_is_separate_from_live_normal_activity_card(self):
+        notices = self.notices()
+        notices.topic(self.topic, 'issue_comment', {'action': 'created'}, 'comment', 'thread', ['104'])
+        notices.topic(self.topic, 'pull_request_review', {'action': 'submitted', 'review': {'state': 'changes_requested'}},
+                      'review', 'thread', ['104'])
+        self.assertEqual(len(self.api.messages), 2)
+        self.assertIn('Changes requested', self.api.messages[1][1]['embeds'][0]['title'])
 
     def test_turning_off_review_reminders_clears_old_requests(self):
         notices = self.notices(review_hours=4)
