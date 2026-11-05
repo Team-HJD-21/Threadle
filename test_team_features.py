@@ -282,6 +282,93 @@ class NotificationTests(unittest.TestCase):
         restarted.reminders(github)
         self.assertEqual(len(self.api.messages), 2)
 
+    def test_open_prs_share_the_setting_cadence_regardless_of_creation_time(self):
+        anchor=self.now[0]
+        notices=self.notices(review_hours=4,review_since=anchor)
+        github=Mock();github.pages.return_value=[
+            {'number':1,'title':'Old PR','created_at':'2020-01-01T00:00:00Z'},
+            {'number':2,'title':'New review','created_at':dt.datetime.fromtimestamp(anchor+3*3600,dt.timezone.utc).isoformat(),'requested_reviewers':[{'login':'reviewer'}]},
+            {'number':3,'title':'Draft','draft':True,'requested_reviewers':[{'login':'reviewer'}]}]
+        self.now[0]+=3*3600;notices.reminders(github)
+        github.pages.assert_not_called()
+        self.now[0]+=3600;notices.reminders(github)
+        self.assertEqual(len(self.api.messages),1)
+        text=str(self.api.messages)
+        self.assertIn('현재 열린 PR 3개 · 리뷰 요청 대기 1개 · 초안 1개',text)
+        for number in range(1,4):self.assertIn('/pull/'+str(number),text)
+        self.assertNotIn('4시간 뒤에도',text)
+        github.pages.return_value.append({'number':4,'title':'Just opened'})
+        self.now[0]+=3600;notices.reminders(github)
+        self.assertEqual(github.pages.call_count,1)
+        self.now[0]+=3*3600;notices.reminders(github)
+        self.assertEqual(len(self.api.messages),2)
+        self.assertIn('/pull/4',str(self.api.messages[-1]))
+
+    def test_late_tick_empty_period_and_restart_keep_the_original_cadence(self):
+        anchor=self.now[0];notices=self.notices(review_hours=4,review_since=anchor)
+        github=Mock();github.pages.return_value=[]
+        self.now[0]+=4*3600+27;notices.reminders(github)
+        self.assertEqual(self.api.messages,[])
+        restarted=self.notices(review_hours=4,review_since=anchor,batch_seconds=60)
+        github.pages.return_value=[{'number':1,'title':'Open'}]
+        self.now[0]=anchor+8*3600;restarted.reminders(github)
+        self.assertEqual(len(self.api.messages),1)
+        with self.queue.connect() as db:self.assertEqual(db.execute('SELECT due FROM pr_reminder_cadence').fetchone()[0],anchor+12*3600)
+
+    def test_reminder_english_summary_and_titles_are_safe(self):
+        notices=self.notices(review_hours=4,review_since=self.now[0]);notices.english=True
+        github=Mock();github.pages.return_value=[{'number':1,'title':'[link](bad) @everyone','draft':True}]
+        self.now[0]+=4*3600;notices.reminders(github)
+        text=str(self.api.messages)
+        self.assertIn('1 open PRs · 0 awaiting review · 1 drafts',text)
+        self.assertNotIn('@everyone',text)
+        self.assertIn('/pull/1',text)
+
+    def test_interval_change_and_reenable_start_a_new_schedule(self):
+        anchor=self.now[0];self.notices(review_hours=4,review_since=anchor)
+        self.now[0]+=2*3600
+        notices=self.notices(review_hours=12,review_since=self.now[0])
+        github=Mock();github.pages.return_value=[{'number':1,'title':'Open'}]
+        self.now[0]=anchor+4*3600;notices.reminders(github)
+        github.pages.assert_not_called()
+        self.now[0]=anchor+14*3600;notices.reminders(github)
+        self.assertEqual(len(self.api.messages),1)
+        self.notices(review_hours=0)
+        with self.queue.connect() as db:self.assertEqual(db.execute('SELECT count(*) FROM pr_reminder_cadence').fetchone()[0],0)
+        again=self.notices(review_hours=4,review_since=self.now[0])
+        again.reminders(github);self.assertEqual(len(self.api.messages),1)
+        self.now[0]+=4*3600;again.reminders(github)
+        self.assertEqual(len(self.api.messages),2)
+
+    def test_migration_discards_fragmented_legacy_groups_but_keeps_settings(self):
+        anchor=self.now[0]-8*3600
+        self.notices(review_hours=4,review_since=anchor)
+        with self.queue.connect() as db:
+            db.execute('DELETE FROM pr_reminder_cadence')
+            db.execute('INSERT INTO open_pr_waits VALUES(1,?)',(self.now[0]-3600,))
+            db.execute('INSERT INTO pr_reminder_batches VALUES(?,?)',('legacy','{"due":[]}'))
+        notices=self.notices(review_hours=4,review_since=anchor)
+        github=Mock();github.pages.return_value=[{'number':1,'title':'Old'},{'number':2,'title':'New'}]
+        notices.reminders(github);notices.reminders(github)
+        self.assertEqual(len(self.api.messages),1)
+        self.assertEqual(notices.options['review_since'],anchor)
+        with self.queue.connect() as db:
+            self.assertEqual(db.execute('SELECT count(*) FROM open_pr_waits').fetchone()[0],0)
+            self.assertEqual(db.execute('SELECT due FROM pr_reminder_cadence').fetchone()[0],anchor+12*3600)
+
+    def test_dnd_and_downtime_send_one_current_list_without_catchup_burst(self):
+        self.now[0]+=12*3600  # 21:00 UTC+9
+        anchor=self.now[0]
+        notices=self.notices(review_hours=4,review_since=anchor,quiet=True,quiet_start=22,quiet_end=8)
+        github=Mock();github.pages.return_value=[{'number':1,'title':'Open'}]
+        self.now[0]+=4*3600;notices.reminders(github)
+        github.pages.assert_not_called()
+        self.now[0]=anchor+11*3600;notices.reminders(github);notices.reminders(github)
+        self.assertEqual(len(self.api.messages),1)
+        with self.queue.connect() as db:self.assertEqual(db.execute('SELECT due FROM pr_reminder_cadence').fetchone()[0],anchor+12*3600)
+        self.now[0]=anchor+40*3600;notices.reminders(github);notices.reminders(github)
+        self.assertEqual(len(self.api.messages),2)
+
     def test_review_responses_and_drafts_cancel_waits(self):
         notices = self.notices(review_hours=4)
         payload = {'action': 'review_requested', 'requested_reviewer': {'login': 'reviewer'}}
@@ -437,6 +524,7 @@ class TeamWebTests(WebFixture):
         self.assertEqual(updated[1]['Location'], '/connect/done')
         self.assertIn('연결이 완료됐어요.', self.browser.request('GET', updated[1]['Location'])[2])
         self.assertEqual(self.service.registry.get(saved.id).config['team_notifications']['review_hours'], 24)
+        self.assertGreater(self.service.registry.get(saved.id).config['team_notifications']['review_since'],saved.config['team_notifications']['review_since'])
 
     def test_stale_settings_cannot_overwrite_a_newer_saved_configuration(self):
         self.configure()

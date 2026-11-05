@@ -92,3 +92,40 @@ class ExistingReviewRepairTests(unittest.TestCase):
         self.assertEqual([row['id'] for row in self.all_posts()],original)
         self.assertEqual(self.all_posts()[0]['embeds'][0]['author']['name'],'reviewer')
         self.assertIn('public void Method()',self.posts()[0]['embeds'][0]['description'])
+        self.assertIn('```csharp\n',self.posts()[0]['embeds'][0]['description'])
+
+    def test_readability_upgrade_refreshes_previously_repaired_cards_once(self):
+        self.send();ids=[row['id'] for row in self.all_posts()]
+        worker=self.worker()
+        from review_repair import VERSION
+        with self.queue.connect() as db:
+            db.execute('INSERT OR IGNORE INTO review_repair_flags VALUES(?)',('review-authors-context-v2',))
+            db.execute('DELETE FROM review_repair_jobs WHERE version=?',(VERSION,))
+            db.execute('DELETE FROM review_repair_flags WHERE version=?',(VERSION,))
+        worker=ReviewRepair(worker.service,self.binding,self.threads,lambda:1000)
+        self.assertTrue(self.tick(worker));self.assertFalse(self.tick(worker))
+        self.assertEqual([row['id'] for row in self.all_posts()],ids)
+
+    def test_one_off_regroups_an_existing_pr_body_split_around_review_messages(self):
+        from message_edits import MutableMessages
+        from discord_threads import nonce
+        self.topic.metadata.update(body='Description paragraph.\n'*550,updated_at='2026-11-05T00:00:00Z')
+        mutable=MutableMessages(self.threads)
+        thread=mutable.update(self.topic,'body',self.topic.metadata,'pull_request',{'action':'opened'},'opened',None,lambda:False)
+        source='github-source:'+nonce(self.topic.key+':body')
+        self.send()
+        with self.queue.connect() as db:pages=db.execute('SELECT page,message FROM source_pages WHERE source=? ORDER BY page',(source,)).fetchall()
+        reviews=[r['id'] for r in self.all_posts() if r['id'] not in {row[1] for row in pages}]
+        page,message=pages[-1]
+        # Reproduce the old placement: a continuation was appended after reviews.
+        old=next(r for r in self.api.posts[thread] if r['id']==message)
+        new=self.api.call('POST',f'/channels/{thread}/messages',dict(old,nonce='old-layout'))
+        self.api.call('DELETE',f'/channels/{thread}/messages/{message}')
+        with self.queue.connect() as db:db.execute('UPDATE source_pages SET message=? WHERE source=? AND page=?',(new['id'],source,page))
+        worker=self.worker();self.tick(worker)
+        with self.queue.connect() as db:current=[r[0] for r in db.execute('SELECT message FROM source_pages WHERE source=? ORDER BY page',(source,))]
+        ordered=[r['id'] for r in self.api.posts[thread]]
+        self.assertEqual(ordered[-len(current):],current)
+        self.assertFalse({r[1] for r in pages}&set(current))
+        self.assertTrue(set(reviews)<=set(ordered))
+        self.assertNotIn(new['id'],ordered)

@@ -46,6 +46,54 @@ class MutableMessages:
             db.execute('CREATE TABLE IF NOT EXISTS source_delete_pages(source TEXT NOT NULL,message TEXT NOT NULL,PRIMARY KEY(source,message))')
             db.execute('CREATE TABLE IF NOT EXISTS source_revisions(source TEXT NOT NULL,event TEXT NOT NULL,PRIMARY KEY(source,event))')
             db.execute('CREATE TABLE IF NOT EXISTS source_pages(source TEXT NOT NULL,page INTEGER NOT NULL,message TEXT NOT NULL,media TEXT,PRIMARY KEY(source,page))')
+            db.execute('CREATE TABLE IF NOT EXISTS source_replacements(source TEXT PRIMARY KEY,event TEXT NOT NULL,done INTEGER NOT NULL DEFAULT 0)')
+            db.execute('CREATE TABLE IF NOT EXISTS source_retired_pages(source TEXT NOT NULL,message TEXT NOT NULL,PRIMARY KEY(source,message))')
+
+    def body_group(self,source,event,pages,thread,regroup=False):
+        """Stage a new contiguous body group before touching any old messages."""
+        with self.queue.connect() as db:
+            pending=db.execute('SELECT event FROM source_replacements WHERE source=? AND done=0',(source,)).fetchone()
+        recovered=[]
+        if pending and pending[0]!=event:
+            # A newer edit can supersede a POST whose response was lost. Recover
+            # its source marker before retiring the incomplete generation.
+            for row in self.threads.messages(thread):
+                if row.get('author',{}).get('id')!=self.threads.bot['id']:continue
+                if any(line.startswith(source+':page:') for embed in row.get('embeds',[]) for line in embed.get('footer',{}).get('text','').splitlines()):
+                    recovered.append((source,row['id']))
+        with self.queue.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            plan=db.execute('SELECT event,done FROM source_replacements WHERE source=?',(source,)).fetchone()
+            if plan and plan[0]==event:return 'complete' if plan[1] else 'replace'
+            old=db.execute('SELECT page,message,media FROM source_pages WHERE source=? ORDER BY page',(source,)).fetchall()
+            media=[next((e['image']['url'] for e in items if e.get('image')),None) for items in pages]
+            changed=bool(old) and (regroup or [r[0] for r in old]!=list(range(len(pages))) or [r[2] for r in old]!=media)
+            if not changed and not (plan and not plan[1]):return None
+            # Keep the old group until every page of the new group is confirmed.
+            # Persist the plan so retries/restarts never edit or adopt those old pages.
+            db.execute('INSERT OR IGNORE INTO source_retired_pages SELECT source,message FROM source_pages WHERE source=?',(source,))
+            db.executemany('INSERT OR IGNORE INTO source_retired_pages VALUES(?,?)',recovered)
+            db.execute('DELETE FROM source_pages WHERE source=?',(source,))
+            db.execute('INSERT INTO source_replacements VALUES(?,?,0) ON CONFLICT(source) DO UPDATE SET event=excluded.event,done=0',(source,event))
+            return 'replace'
+
+    def finish_body_group(self,source,event,thread):
+        with self.queue.connect() as db:
+            old=db.execute('SELECT message FROM source_retired_pages WHERE source=?',(source,)).fetchall()
+        for (message,) in old:
+            with self.queue.connect() as db:
+                if db.execute('SELECT 1 FROM source_pages WHERE message=?',(message,)).fetchone():
+                    raise ValueError('Refusing to remove a current source page')
+            try:
+                row=self.threads.api.call('GET',f'/channels/{thread}/messages/{message}')
+                if row.get('author',{}).get('id')!=self.threads.bot['id']:raise ValueError('Refusing to remove another author body message')
+                tags=[line for embed in row.get('embeds',[]) for line in embed.get('footer',{}).get('text','').splitlines() if line.startswith('github-source:')]
+                if tags and not any(line.startswith(source+':page:') for line in tags):raise ValueError('Body message source mismatch')
+                self.threads.api.call('DELETE',f'/channels/{thread}/messages/{message}')
+            except ApiError as error:
+                if error.status!=404:raise
+            with self.queue.connect() as db:db.execute('DELETE FROM source_retired_pages WHERE source=? AND message=?',(source,message))
+        with self.queue.connect() as db:db.execute('UPDATE source_replacements SET done=1 WHERE source=? AND event=?',(source,event))
 
     def recover(self,topic,source,thread,kind,obj):
         found={};legacy=[];latest_version=0
@@ -166,7 +214,8 @@ class MutableMessages:
             db.execute('INSERT OR IGNORE INTO source_revisions VALUES(?,?)',(source,event_key))
             db.execute('INSERT INTO message_sources VALUES(?,?,?,?) ON CONFLICT(source) DO UPDATE SET thread=excluded.thread,revision=excluded.revision,event=excluded.event',(source,thread_id,version,event_key))
             mapped=db.execute('SELECT 1 FROM source_pages WHERE source=?',(source,)).fetchone()
-        if not mapped and (not kind.startswith(('metadata:','commits:')) or current):
+            replacing=db.execute('SELECT 1 FROM source_replacements WHERE source=? AND done=0',(source,)).fetchone() if kind=='body' else None
+        if not mapped and not replacing and (not kind.startswith(('metadata:','commits:')) or current):
             recovered_version=self.recover(topic,source,thread_id,kind,obj)
             if recovered_version>version:
                 with self.queue.connect() as db:db.execute('UPDATE message_sources SET revision=? WHERE source=?',(recovered_version,source))
@@ -179,8 +228,12 @@ class MutableMessages:
             from metadata_notifications import render
             embed=render(embed,obj,language=='en',self.queue,topic,version)
         pages=message_pages(embed)
+        group=self.body_group(source,event_key,pages,thread_id,payload.get('_regroup',False)) if kind=='body' else None
+        if group=='complete':
+            if closed():threads.api.call('PATCH','/channels/'+thread_id,{'archived':True})
+            return thread_id
         for index,items in enumerate(pages):
-            receipt='github-event:'+nonce(topic.key+':'+event_key+':'+source+':page:'+str(index))
+            receipt='github-event:'+nonce(topic.key+':'+event_key+':'+source+(':'+group if group else '')+':page:'+str(index))
             origin=next((e['image']['url'] for e in items if e.get('image')),None)
             if threads.delivered(thread_id,receipt):
                 with self.queue.connect() as db:
@@ -223,6 +276,7 @@ class MutableMessages:
             except ApiError as error:
                 if error.status!=404:raise
             with self.queue.connect() as db:db.execute('DELETE FROM source_pages WHERE source=? AND page=?',(source,page))
+        if group=='replace':self.finish_body_group(source,event_key,thread_id)
         if closed():threads.api.call('PATCH','/channels/'+thread_id,{'archived':True})
         return thread_id
 

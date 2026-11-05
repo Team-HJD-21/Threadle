@@ -131,7 +131,7 @@ class TeamWeb:
         body += '<p class="muted">사이트 언어와 별개로 이 저장소의 알림 언어를 설정합니다. 제목과 댓글 원문은 번역하지 않습니다.</p>'
         fields = select('notification_language','알림 언어',[('ko','한국어 (KR)'),('en','English (EN)')],draft.get('language','ko'))
         fields += select('review_hours', '열린 PR 반복 알림', [('0', '사용 안 함'), ('4', '4시간마다'), ('12', '12시간마다'), ('24', '24시간마다'), ('48', '48시간마다')], str(options.get('review_hours', 0)))
-        fields += '<p class="muted">담당자나 리뷰 요청이 없어도 초안을 포함한 열린 PR을 설정한 간격으로 다시 알립니다. 종료되면 중단하며, 방해금지 시간에는 보내지 않습니다.</p>'
+        fields += '<p class="muted">재알림을 켜거나 간격을 바꾼 시각부터, 초안을 포함한 열린 PR 전체를 같은 주기로 모아 알립니다. 방해금지 시간에는 보내지 않습니다.</p>'
         fields += select('batch_seconds', '일반 알림 묶기', [('0', '즉시 전달'), ('60', '1분마다'), ('300', '5분마다')], str(options.get('batch_seconds', 0)))
         fields += '<p class="muted">종료·병합·CI 실패·변경 요청은 묶지 않습니다. 방해금지 시간에는 새 항목의 시작 메시지만 무음으로 보내고, 스레드와 상세 알림은 종료 후 순차적으로 전달합니다. 기존 스레드는 무음으로 기록하며 CI/CD 상태와 실패 경고는 즉시 전달합니다.</p>'
         from digest_settings import enabled as digest_enabled
@@ -225,8 +225,8 @@ class TeamWeb:
             from digest_settings import apply
             options=apply(draft['options'],options,time.time())
             validate_options(options)
-            options['review_since'] = (draft['options'].get('review_since', 0) if draft['options'].get('review_hours')
-                                       else time.time()) if options['review_hours'] else time.time()
+            options['review_since'] = (time.time() if options['review_hours']!=draft['options'].get('review_hours',0)
+                                       else draft['options'].get('review_since',0))
             draft['options'] = options
             if fields.get('apply') == '1':
                 return self.post(request, '/connect/team/apply', session, guild, fields)

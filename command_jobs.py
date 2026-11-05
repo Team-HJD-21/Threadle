@@ -152,7 +152,7 @@ class CommandJobs:
             validate_options(current)
         except ValueError:
             raise ValueError('Invalid settings. Do Not Disturb hours must have different start and end times; use the listed option ranges.') from None
-        if updates.get('review_hours') and not binding.config.get('team_notifications', {}).get('review_hours'):
+        if 'review_hours' in updates and updates['review_hours']!=binding.config.get('team_notifications', {}).get('review_hours',0):
             current['review_since'] = time.time()
         config = dict(binding.config, team_notifications=current, language=language)
         if snapshot(binding.config)==snapshot(config):

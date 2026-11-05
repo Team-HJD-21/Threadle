@@ -4,7 +4,7 @@ import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock,patch
 
 from cryptography.fernet import Fernet
 from command_jobs import CommandJobs, command_definitions, register_extra_commands
@@ -61,6 +61,18 @@ class CommandTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.jobs.execute(self.payload(quiet_start=8, quiet_end=8))
         self.assertEqual(self.service.registry.get(self.identity), after)
+
+    def test_reminder_interval_change_resets_anchor_but_other_settings_do_not(self):
+        with patch('command_jobs.time.time',return_value=1700000000):
+            self.jobs.execute(self.payload(review_hours=4))
+        first=self.service.registry.get(self.identity).config['team_notifications']['review_since']
+        with patch('command_jobs.time.time',return_value=1700003600):
+            self.jobs.execute(self.payload(review_hours=12))
+        second=self.service.registry.get(self.identity).config['team_notifications']['review_since']
+        self.assertGreater(second,first)
+        with patch('command_jobs.time.time',return_value=1700007200):
+            self.jobs.execute(self.payload(batch_seconds=60))
+        self.assertEqual(self.service.registry.get(self.identity).config['team_notifications']['review_since'],second)
 
     def test_permission_revocation_and_other_guild_repository_cannot_modify(self):
         before = self.service.registry.get(self.identity)

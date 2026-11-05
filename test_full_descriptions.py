@@ -11,6 +11,24 @@ import test_message_edits as edits
 from changelog import RELEASES,ADMIN_RELEASES,content
 
 class FullTextTests(unittest.TestCase):
+    def test_hidden_html_comments_never_render_or_create_media(self):
+        body='Visible\n<!-- private marker\n![hidden](https://example.com/hidden.png)\n@everyone\n-->\nAfter'
+        pages=message_pages({'description':body})
+        self.assertEqual(pages[0][0]['description'],'Visible\n\nAfter')
+        self.assertFalse(any(e.get('image') for p in pages for e in p))
+        self.assertNotIn('everyone',str(pages))
+
+    def test_html_comment_examples_inside_code_remain_literal(self):
+        body='`<!-- inline example -->`\n```html\n<!-- fenced example -->\n```\n  ~~~html\n<!-- tilde example -->\n  ~~~'
+        self.assertEqual(message_pages({'description':body})[0][0]['description'],body)
+
+    def test_hidden_comments_with_code_and_unclosed_comments(self):
+        for hidden in ('<!--\n```html\nsecret\n```\n-->','<!-- secret `code` -->'):
+            shown=message_pages({'description':'Before\n'+hidden+'\nAfter'})
+            self.assertEqual(shown[0][0]['description'],'Before\n\nAfter')
+        shown=message_pages({'description':'Before<!-- unfinished\n![x](https://example.com/hidden.png)'})
+        self.assertEqual(shown[0][0]['description'],'Before')
+
     def test_same_url_continuations_and_final_details_are_visible_in_one_message(self):
         from notification_markdown import adapt
         body='## First section\n'+('Ordinary description line.\n'*145)+'## Final section\nFINAL_LINE'
