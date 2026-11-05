@@ -15,6 +15,30 @@ concurrency:
   group: threadle-${{ github.event_name == 'pull_request' && github.ref || 'production' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
+  receiver-diagnostics:
+    if: github.event_name == 'workflow_dispatch' && inputs.preflight_only && github.ref != 'refs/heads/main'
+    runs-on: [self-hosted, Windows, X64, threadle-production]
+    timeout-minutes: 2
+    steps:
+      - name: Read receiver identity without stopping or changing the service
+        shell: powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "{0}"
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $threadleRoot = 'C:\ProgramData\TeamHJD\GitHubDiscord'
+          $threadleRuntime = Get-Content -LiteralPath (Join-Path $threadleRoot 'runtime.json') -Raw | ConvertFrom-Json
+          Write-Host ('Identity=' + [Security.Principal.WindowsIdentity]::GetCurrent().Name)
+          Write-Host ('ExpectedPython=' + $threadleRuntime.python)
+          foreach ($endpoint in [Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpListeners()) {
+            if ($endpoint.Port -eq 8787) { Write-Host ('Listener=' + $endpoint.ToString()) }
+          }
+          foreach ($candidate in @(Get-CimInstance Win32_Process -Filter "Name='python.exe' OR Name='pythonw.exe'")) {
+            Write-Host ('Python pid=' + $candidate.ProcessId + ' path=' + $candidate.ExecutablePath + ' commandVisible=' + [bool]$candidate.CommandLine)
+            if ($candidate.CommandLine -match 'service\.py') { Write-Host ('ReceiverCommand=' + $candidate.CommandLine) }
+          }
+          $scheduler = New-Object -ComObject 'Schedule.Service'
+          $scheduler.Connect()
+          $task = $scheduler.GetFolder('\').GetTask('TeamHJD-GitHubDiscord-Receiver')
+          Write-Host ('TaskState=' + $task.State + ' enabled=' + $task.Enabled)
   regression:
     name: Regression ${{ matrix.shard }}/4
     strategy:
