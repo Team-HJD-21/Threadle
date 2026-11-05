@@ -88,7 +88,7 @@ def footer():
 <div><dt>사업자등록번호</dt><dd>622-10-17519 <a class="business-info-link" href="https://www.ftc.go.kr/bizCommPop.do?wrkr_no=6221017519" target="_blank" rel="noopener noreferrer">(사업자정보확인)</a></dd></div>
 <div><dt>통신판매업 신고번호</dt><dd translate="no" lang="ko">2026-수원영통-1221호</dd></div><div><dt>사업장 주소</dt><dd translate="no" lang="ko">경기도 수원시 영통구 태장로 71번길 19</dd></div>
 </dl><div class="footer-policy"><a href="https://teamhjd.com/press/index.html" target="_blank" rel="noopener noreferrer">프레스킷</a><a href="https://teamhjd.com/content-policy/index.html" target="_blank" rel="noopener noreferrer">콘텐츠 이용 · AI 학습 정책</a><p>AI 검색·정보 조회는 허용하며, 콘텐츠의 AI 학습 이용은 금지합니다.</p></div>
-<small class="footer-copyright">© 2026 TeamHJD. All rights reserved. · v1.0.0-beta.31</small>
+<small class="footer-copyright">© 2026 TeamHJD. All rights reserved. · v1.0.0-beta.32</small>
 <details class="related-sites"><summary>관련 사이트<svg class="footer-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m6 15 6-6 6 6"></path></svg></summary><ul><li><a href="https://teamhjd.com/" target="_blank" rel="noopener noreferrer">TeamHJD 메인</a></li><li><a href="https://docs.teamhjd.com/" target="_blank" rel="noopener noreferrer">TeamHJD Docs</a></li></ul></details>
 </div></footer>'''
 
@@ -312,6 +312,9 @@ class Onboarding:
         return choices
 
     def callback(self, request, provider, session, query):
+        if session is not None and session.data.get('account_pending'):
+            from account_web import AccountWeb
+            return AccountWeb(self).callback(request, provider, session, query)
         if session is None:
             raise ConnectError('연결 세션이 만료됐습니다. 처음부터 다시 진행해 주세요.', 401)
         try:
@@ -366,6 +369,9 @@ class Onboarding:
         self.redirect(request, target if provider == 'discord' else '/connect/team' if session.data.pop('return_to_team', False) else '/connect/repositories', session)
 
     def get(self, request, path, session, query):
+        if path == '/connect/account':
+            from account_web import AccountWeb
+            return AccountWeb(self).get(request, session, query)
         if path in ('/', '/connect', '/connect/'):
             if query.get('ticket'):
                 try:
@@ -531,6 +537,9 @@ class Onboarding:
     def post(self, request, path, session, fields):
         if session is None or not self.sessions.valid_csrf(session, fields.get('csrf')):
             raise ConnectError('연결 확인 정보가 만료됐습니다. 페이지를 다시 열어 주세요.', 403)
+        if path.startswith('/connect/account/'):
+            from account_web import AccountWeb
+            return AccountWeb(self).post(request, path, session, fields)
         if path == '/connect/logout':
             self.sessions.remove(session)
             return self.send(request, 303, location='/connect', clear=True)

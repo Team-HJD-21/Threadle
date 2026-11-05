@@ -97,6 +97,12 @@ class Service:
         self.file_index = FileIndex(self.root / 'repository-files.sqlite3')
         from connect_web import Onboarding
         self.web = Onboarding.create(self)
+        self.accounts = self.comment_bridge = None
+        if self.web is not None:
+            from account_links import Accounts
+            from comment_bridge import CommentBridge
+            self.accounts = Accounts(self, self.web.settings, self.web.sessions.cipher)
+            self.comment_bridge = CommentBridge(self, self.accounts)
         from discord_connect import DiscordConnect
         self.discord_connect = DiscordConnect.create(self)
         from operator_mail import OperatorMail
@@ -139,6 +145,15 @@ class Service:
         if not isinstance(payload, dict):
             return 400
         if event == 'ping':
+            return 200
+        if event == 'github_app_authorization' and mode == 'app':
+            if payload.get('action') == 'revoked' and self.accounts is not None:
+                user = str(payload.get('sender', {}).get('id', ''))
+                if user.isdigit():
+                    self.accounts.disconnect(github=user)
+                    with self.registry.db() as db:
+                        db.execute('INSERT OR IGNORE INTO inbox(id,delivery,event,payload,recipients,done) VALUES(?,?,?,NULL,?,1)',
+                                   ('app:' + delivery, delivery, event, '[]'))
             return 200
         if event not in EVENTS | {'installation', 'installation_repositories'}:
             return 200
@@ -188,6 +203,12 @@ class Service:
             if int(payload['repository']['id']) != binding.repo_id or (
                 binding.auth == 'app' and int(payload.get('installation', {}).get('id', 0)) != binding.installation):
                 raise ValueError('Queued event connection scope mismatch')
+            if self.comment_bridge is not None and self.comment_bridge.echo(binding, event, payload):
+                queue.finish_group(group_ids)
+                return True
+            if self.accounts is not None:
+                from account_mentions import MentionPolicy
+                threads.api.mention_policy = MentionPolicy(self, self.accounts, binding, event, payload, delivery)
             if event == 'threadle_bundle':
                 for item in payload['_events']:
                     child=item['payload']
@@ -287,6 +308,8 @@ class Service:
             if isinstance(error,ApiError) and error.retry_after is not None:queue.retry(delivery,attempts,retry_after=error.retry_after)
             else:queue.retry(delivery, attempts)
         finally:
+            if hasattr(threads.api, 'mention_policy'):
+                threads.api.mention_policy = None
             end(timing_token)
         return True
 
@@ -343,6 +366,8 @@ class Service:
         readiness=ready
         workers = {}
         self.operator_mail.start(stop)
+        if self.comment_bridge is not None:
+            self.comment_bridge.start(stop)
         from presence import Presence
         presence_worker = Presence(self).start(stop)
         self.guilds.start(stop)

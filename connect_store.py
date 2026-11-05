@@ -92,15 +92,17 @@ class Sessions:
                        (self.digest(code), interaction, data['expires'], self.encode(data)))
         return code
 
-    def consume_ticket(self, code):
+    def consume_ticket(self, code, purpose='connect'):
         if not isinstance(code, str) or len(code) > 128:
             raise ValueError('Invalid connection ticket')
         with self.db() as db:
             db.execute('BEGIN IMMEDIATE')
-            row = db.execute('SELECT data FROM tickets WHERE id=? AND expires>?',
+            row = db.execute('SELECT data,interaction FROM tickets WHERE id=? AND expires>?',
                              (self.digest(code), self.clock())).fetchone()
             if row is None or row[0] is None:
                 raise ValueError('Connection ticket expired or already used')
+            if row[1].startswith('account:') != (purpose == 'account'):
+                raise ValueError('Connection ticket purpose mismatch')
             db.execute('UPDATE tickets SET data=NULL WHERE id=?', (self.digest(code),))
         result = json.loads(self.cipher.decrypt(row[0]))
         result.pop('code')

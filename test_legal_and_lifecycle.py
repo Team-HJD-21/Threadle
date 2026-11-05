@@ -58,7 +58,7 @@ class LegalAndLifecycleTests(unittest.TestCase):
         self.service.discord=lambda:api
         sync=CommandSync(self.service,SimpleNamespace(discord_id='9000'))
         sync.check()
-        self.assertEqual({row['name'] for row in api.rows},{'connect','summary','settings','settings-history','unrelated'})
+        self.assertEqual({row['name'] for row in api.rows},{'connect','summary','settings','settings-history','account','unrelated'})
         summary=next(row for row in api.rows if row['name']=='summary')
         self.assertEqual(summary['options'],[])
         settings=next(row for row in api.rows if row['name']=='settings')

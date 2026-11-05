@@ -1,0 +1,97 @@
+# Personal accounts and bidirectional comments
+
+Members run `/account connect` in a connected Discord server, follow its private
+five-minute link, verify the same Discord account, choose features, then authorize
+GitHub. `/account status` is private. `/account disconnect` removes the personal
+connection in **all** servers and cancels pending comments.
+
+Opt-in is per Discord server. Mentions are selected by default; forwarding is
+**off** until the member explicitly selects it. The OAuth flow reuses the existing
+Discord and GitHub `/connect/{provider}/callback` URLs. It uses browser-bound,
+single-use state and GitHub PKCE; it never accepts an identity supplied in a URL.
+Repository setup remains restricted to server administrators.
+
+## Operator activation
+
+1. In the Threadle **GitHub App registration**, set repository permissions:
+   - Issues: **Read and write**
+   - Pull requests: **Read and write**
+   - Discussions: **Read and write**
+   Keep the existing Metadata/Contents/Actions read permissions and existing
+   webhook subscriptions. Do not add Contents write or Organization administration.
+2. Installation owners/organization administrators must approve the additional
+   repository permissions for existing installations. Updating the registration
+   alone does not grant them to every installation.
+3. Every participating member authorizes their **own** account. The bot owner
+   cannot authorize impersonation of other members. Effective GitHub access is
+   the intersection of that user's access and the App installation's access.
+4. In Discord Developer Portal → Application → Bot → Privileged Gateway Intents,
+   enable **Message Content Intent**. Restart the receiver after changing it.
+   The gateway checks the application's approved/limited content-intent flags
+   before requesting it. Without the intent, ordinary notifications and account
+   linking still work, but ordinary Discord messages are not forwarded. Verified
+   applications may need Discord's intent approval.
+5. Let each member run `/account connect` and select forwarding. Bot reinvitation
+   is unnecessary if the existing bot and `applications.commands` scopes and
+   channel permissions remain present. Command synchronization publishes
+   `/account` on startup automatically. The bot needs View Channel, Read Message
+   History, Send Messages, Send Messages in Threads, and Add Reactions for receipts.
+
+GitHub `github_app_authorization` revocation webhooks are signature-verified and
+cancel personal credentials; no new periodic repository scan is introduced.
+
+## What is forwarded
+
+- Human **new** messages in a uniquely mapped, active, Threadle-managed public
+  PR, Issue, or Discussion thread, from an opted-in member of that server.
+- PR comments are conversation comments, not code-line review submissions.
+- Repository, thread parent, message ownership, current Discord membership and
+  channel access are checked again before a write. GitHub checks the member's
+  current authority with their user token; no installation-token fallback exists.
+- Bots, webhooks, DMs, unrelated channels, unknown threads, locked threads, and
+  unlinked members are excluded. Existing Discord history is not imported.
+- Attachments become Discord CDN links; Threadle does not upload those files to
+  GitHub. Such links can expire. Later Discord edits/deletions and code-review
+  reply targeting are not synchronized by this version.
+- A ✅ reaction confirms a GitHub write. A ⚠️ reaction and quiet reply explain a
+  failure; after an ambiguous result, check GitHub before manually reposting.
+
+GitHub `@login` mentions resolve only for linked, opted-in people who currently
+belong to the destination server and can view that channel. Missing members and
+unlinked users keep their original GitHub text. Code, URLs, emails, teams, HTML
+comments, and escaped mentions do not become pings. Explicit `allowed_mentions`
+allows only those users; never roles or everyone. DND/silent messages and edits
+render the link without adding a ping. A delivery pings once across its topic
+and alert messages.
+
+## Encryption, retries, and echo prevention
+
+Personal access/refresh tokens and pending comment bodies are Fernet-encrypted
+using the existing protected `CONNECT_SESSION_KEY`, inside `connections.sqlite3`.
+That database is already covered by SQLCipher and managed encrypted backups.
+Do not rotate the session key without migrating these credentials. Recovery
+requires both the database encryption key and the original session-key credential.
+Token expiry is refreshed serially; a crash or failed refresh requires reconnect
+rather than reusing a potentially consumed refresh token.
+
+Each outgoing comment has a durable operation ID **before** the network request
+and an authenticated HTML comment receipt, invisible in GitHub's rendered view.
+An echo must match a recorded operation, GitHub author ID, repository ID, item
+number/type, and the resulting comment ID. It is suppressed only in the originating
+Discord connection; another connected server still receives it normally. No
+visible tracking code is added to Discord. Other people's replies are forwarded.
+
+Comment writes have no automatic HTTP POST retry. On a lost response or process
+restart, the worker searches for its signed receipt. If the result stays unknown,
+it asks for manual review rather than risk posting twice. Restored pre-send rows
+are also reconciled before a write. This favors avoiding duplicates over blind
+at-least-once delivery; it is not a claim of exactly-once external API execution.
+
+Bodies are removed on completion/cancellation; pending work expires after 24h.
+Receipts and terminal records expire after 30 days. Disconnecting removes active
+tokens immediately; historical backup copies follow the existing retention period.
+
+References: [GitHub user tokens](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app),
+[issue/PR comments](https://docs.github.com/en/rest/issues/comments#create-an-issue-comment),
+[Discussion mutations](https://docs.github.com/en/graphql/reference/discussions#adddiscussioncomment),
+[Discord intents](https://docs.discord.com/developers/events/gateway#privileged-intents).

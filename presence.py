@@ -43,6 +43,11 @@ class Presence:
     async def session(self, stop, discord, text, status):
         intents = discord.Intents.none()
         intents.guilds = True
+        bridge = getattr(self.service, 'comment_bridge', None)
+        if bridge is not None:
+            enabled = await asyncio.to_thread(bridge.discover_intent)
+            intents.guild_messages = enabled
+            intents.message_content = enabled
         client = discord.Client(intents=intents,
                                 activity=discord.CustomActivity(name=text),
                                 status=getattr(discord.Status, status))
@@ -68,6 +73,20 @@ class Presence:
         async def on_guild_update(before, after):
             if before.name != after.name:
                 await asyncio.to_thread(self.service.registry.save_guild_name, str(after.id), after.name)
+
+        @client.event
+        async def on_message(message):
+            if bridge is None or message.guild is None or message.author.bot or message.webhook_id:
+                return
+            try:
+                await asyncio.to_thread(bridge.ingest, {
+                    'id': str(message.id), 'guild_id': str(message.guild.id),
+                    'channel_id': str(message.channel.id), 'author_id': str(message.author.id),
+                    'author': {'bot': message.author.bot}, 'webhook_id': message.webhook_id,
+                    'type': message.type.value, 'content': message.content,
+                    'attachments': [{'url': a.url, 'filename': a.filename} for a in message.attachments]})
+            except Exception as error:
+                log_exception(LOG, 'Comment intake failed error=%s', type(error).__name__, level=logging.WARNING)
 
         task = asyncio.create_task(client.start(self.service.env['DISCORD_BOT_TOKEN'], reconnect=True))
         last_status = 0

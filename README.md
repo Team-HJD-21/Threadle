@@ -7,6 +7,7 @@ This repository contains the existing Windows notebook service and the scoped me
 - [Deployment setup (Korean)](deploy/README.ko.md)
 - [Exact changed files and baseline checksums](deploy/changes.json)
 - [CI and deployment workflow](.github/workflows/threadle.yml)
+- [Personal accounts, mentions, and comment forwarding](docs/accounts-and-comments.md)
 
 PRs run regression checks on a GitHub-hosted Windows runner. After main is updated, deployment runs on the notebook only when the repository variable `THREADLE_CD_ENABLED=true` and the `threadle-production` runner is connected. Start with a manual preflight-only run.
 

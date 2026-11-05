@@ -208,7 +208,8 @@ def command_definitions():
     for item in options:
         if item['name'] in prefixes:item['description']='['+prefixes[item['name']]+'] '+item['description']
     base = {'type':1,'default_member_permissions':'32','contexts':[0],'integration_types':[0],'name_localizations':None,'description_localizations':None}
-    return [dict(base,name='summary',description='Show open PRs, issues, and discussions for every connected repository.',options=[]),dict(base,name='settings',description='View or change notification preferences for a connected repository.',options=options),dict(base,name='settings-history',description='Show who changed notification settings and what changed.',options=[repository])]
+    from account_links import command_definition as account_command
+    return [dict(base,name='summary',description='Show open PRs, issues, and discussions for every connected repository.',options=[]),dict(base,name='settings',description='View or change notification preferences for a connected repository.',options=options),dict(base,name='settings-history',description='Show who changed notification settings and what changed.',options=[repository]), account_command()]
 
 
 def register_extra_commands(service, settings):
