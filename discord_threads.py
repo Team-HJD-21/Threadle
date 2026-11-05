@@ -7,6 +7,7 @@ import re
 import socket
 import sys
 import time
+import threading
 import datetime as dt
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -26,6 +27,17 @@ class Api:
     def __init__(self, service, base, token, scheme, sleep=time.sleep):
         self.service, self.base, self.token = service, base, token
         self.scheme, self.sleep = scheme, sleep
+        self._mention_context = threading.local()
+
+    @property
+    def mention_policy(self):
+        return getattr(getattr(self, '_mention_context', None), 'policy', None)
+
+    @mention_policy.setter
+    def mention_policy(self, value):
+        if not hasattr(self, '_mention_context'):
+            self._mention_context = threading.local()
+        self._mention_context.policy = value
 
     def observe_usage(self, method, path, headers, status=200, detail=None):
         observer = getattr(self, 'usage_observer', None)
@@ -34,6 +46,10 @@ class Api:
             except Exception: pass  # Telemetry must never interrupt notification delivery.
 
     def call(self, method, path, data=None):
+        mention_policy = getattr(self, 'mention_policy', None) if self.service == 'Discord' else None
+        mention_operation = None
+        if mention_policy is not None:
+            data, mention_operation = mention_policy.prepare(method, path, data)
         tracking = getattr(self, 'message_tracking', None) if self.service == 'Discord' else None
         operation = None
         if tracking is not None:
@@ -61,6 +77,8 @@ class Api:
                               headers=headers, method=method)
             try:
                 with urlopen(request, timeout=30) as response:
+                    if mention_policy is not None:
+                        mention_policy.remember(mention_operation)
                     self.observe_usage(method, path, response.headers)
                     raw = response.read()
                     self.last_link = response.headers.get("Link", "")

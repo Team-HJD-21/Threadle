@@ -25,10 +25,10 @@ class DiscordConnect:
         return cls(service, settings, key)
 
     @staticmethod
-    def message(text, url=None):
+    def message(text, url=None, label='Connect a GitHub repository'):
         data = {'content': text, 'flags': 64, 'allowed_mentions': {'parse': []}}
         if url:
-            data['components'] = [{'type': 1, 'components': [{'type': 2, 'style': 5, 'label': 'Connect a GitHub repository', 'url': url}]}]
+            data['components'] = [{'type': 1, 'components': [{'type': 2, 'style': 5, 'label': label, 'url': url}]}]
         return 200, {'type': 4, 'data': data}
 
     def receive(self, body, signature, timestamp):
@@ -45,6 +45,11 @@ class DiscordConnect:
                 return 200, {'type': 1}
             if str(payload.get('application_id')) != self.settings.discord_id:
                 return 403, {'error': 'application mismatch'}
+            if payload.get('type') == 2 and payload.get('data', {}).get('name') == 'account':
+                accounts = getattr(self.service, 'accounts', None)
+                if accounts is None:
+                    return self.message('Personal account connections are not ready yet. Try again shortly.')
+                return accounts.interaction(payload, self.sessions, self.message)
             if payload.get('type') == 4:
                 choices = []
                 data = payload.get('data', {})

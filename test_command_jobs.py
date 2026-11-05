@@ -120,11 +120,11 @@ class CommandTests(unittest.TestCase):
 
     def test_registration_preserves_other_commands_and_uses_english(self):
         api = Mock()
-        api.call.side_effect = [[{'id': '12', 'name': 'summary', 'type': 1}, {'id': '13', 'name': 'unrelated', 'type': 1}], {'id': '12'}, {'id': '14'}, {'id': '15'}]
+        api.call.side_effect = [[{'id': '12', 'name': 'summary', 'type': 1}, {'id': '13', 'name': 'unrelated', 'type': 1}], {'id': '12'}, {'id': '14'}, {'id': '15'}, {'id': '16'}]
         register_extra_commands(SimpleNamespace(discord=lambda: api), SimpleNamespace(discord_id='9000'))
-        self.assertEqual([c.args[0] for c in api.call.call_args_list], ['GET', 'PATCH', 'POST', 'POST'])
+        self.assertEqual([c.args[0] for c in api.call.call_args_list], ['GET', 'PATCH', 'POST', 'POST', 'POST'])
         self.assertTrue(all(c['description'].isascii() for c in command_definitions()))
-        self.assertTrue(all(c['default_member_permissions'] == '32' for c in command_definitions()))
+        self.assertTrue(all(c['default_member_permissions'] == ('32' if c['name'] != 'account' else None) for c in command_definitions()))
 
     def test_language_is_saved_for_only_the_selected_repository(self):
         second=self.service.registry.add('two',22,'two/repo',101,'app',dict(config(2000),guild_id='1000',language='en'))

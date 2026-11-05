@@ -19,7 +19,11 @@ class WebhookRecovery:
         if not self.service.tokens:
             return 0
         active = {(b.installation,b.repo_id) for b in self.service.registry.active(include_paused=True) if b.auth == 'app'}
-        if not active:
+        has_accounts = False
+        if getattr(self.service, 'accounts', None) is not None:
+            with self.service.registry.db() as db:
+                has_accounts = db.execute('SELECT 1 FROM personal_accounts LIMIT 1').fetchone() is not None
+        if not active and not has_accounts:
             return 0
         api = self.service.tokens.app_api()
         path = '/app/hook/deliveries?per_page=100'
@@ -34,9 +38,10 @@ class WebhookRecovery:
                     when = dt.datetime.fromisoformat(row['delivered_at'].replace('Z','+00:00')).timestamp()
                 except (KeyError,ValueError,TypeError):
                     continue
-                if when < cutoff or (row.get('installation_id'),row.get('repository_id')) not in active:
+                personal_revocation = has_accounts and row.get('event') == 'github_app_authorization'
+                if when < cutoff or not personal_revocation and (row.get('installation_id'),row.get('repository_id')) not in active:
                     continue
-                if row.get('event') not in ('issues','pull_request','issue_comment','discussion','discussion_comment','pull_request_review','pull_request_review_comment','pull_request_review_thread','workflow_run','push'):
+                if not personal_revocation and row.get('event') not in ('issues','pull_request','issue_comment','discussion','discussion_comment','pull_request_review','pull_request_review_comment','pull_request_review_thread','workflow_run','push'):
                     continue
                 guid = row.get('guid','')
                 if re.fullmatch(r'[a-fA-F0-9-]{16,64}',guid) and str(row.get('id','')).isdigit():

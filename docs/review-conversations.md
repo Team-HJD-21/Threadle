@@ -9,6 +9,16 @@ message and displays its Review ID. Each code/file conversation has one mutable
 card identifying that same parent review with a GitHub link, file/line, and
 Unresolved (red) or Resolved (green). Replies append author, local Discord timestamp
 and original Markdown to that card. Edits and deletions refresh the conversation.
+The overall review is delivered before its code/file cards for Commented,
+Approved, and Changes requested. If a child webhook arrives first, the current
+GraphQL snapshot supplies the submitted parent and its full body; its normal
+webhook later reuses the same review source rather than posting another message.
+Failed parent delivery retries before publishing the child. Existing historical
+cards are not deleted/reposted to reorder Discord history.
+
+Dates beside comment authors use Discord's short date-and-time timestamp (`s`),
+which displays an actual date and time in each reader's local time zone and locale,
+instead of long month names or a relative Yesterday/Today label.
 Long bodies and media use the existing lossless mutable pagination, so unusually
 long conversations can span continuation messages with the same status color.
 
@@ -25,6 +35,16 @@ message ownership checks, hidden source markers, retry receipts, media permissio
 checks and repository-scoped credentials are reused. Old root comment cards retain
 their source identity; mapped old reply messages are cleaned after the aggregate
 card has been delivered. No global historical backfill runs on startup.
+
+Members who enable comment forwarding through `/account connect` can use Discord
+Reply on a review card (including continuation pages) to reply in that GitHub
+review conversation using their own account. This needs Pull requests write
+permission in addition to the read-only notification setup above. The webhook
+refreshes the existing conversation card first; only then can the bot remove the
+unchanged Discord input, with Manage Messages permission. Delayed snapshots,
+failed updates, changed inputs, and disconnected accounts preserve the input.
+An uncertain GitHub response is reconciled using the signed receipt, never by
+blindly repeating the comment write. No recurring PR scan is added.
 
 Verification includes fake Discord delivery/edit/delete/retry tests and a read-only
 query against PR #616 (four conversations, seven comments). This does not substitute
