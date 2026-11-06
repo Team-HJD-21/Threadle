@@ -1,5 +1,5 @@
 {
-  "version": "v1.0.0-beta.41",
+  "version": "v1.0.0-beta.42",
   "baseline": "2026.11.02.8",
   "files": {
     "demo_web.py": {
@@ -102,7 +102,7 @@
     },
     "changelog.py": {
       "before": "261336f2f039d63348697c8fb4f9f7ec8f25c959ad6f0e2ccd74230f8c208e28",
-      "after": "50a6108b3ee360c35ab78db4faf7f2cf9c877f61c3f80fdfc75045c1f4f3239d",
+      "after": "85785892f322c585f4d675bbf08743d2fc65a551c74846a29d8572c55a1bf609",
       "previous": [
         "ce59507c70872a51ef2bbd42a7ee232a5bd4e2692a6b0c8903887594a1e59b90",
         "70c46b09eeacc09189050699f22f47224d0f1b157c741d0f25f9f51bd23af677",
@@ -164,7 +164,8 @@
         "d8e01b216ba8f9e7ccb6bc11202ed81f28f6c4e8a8c6a0d4a91b19e7b7b58c46",
         "36e6d985eb25adfce37a9cc541a649a0b537da0eb66090fec83c287acf45b86e",
         "59b46a5a254d0834a561a8d01ad8778ba5b37d9cecf57b7e05637a8a95205d13",
-        "60361f45c5dff087fd67ae855e3c9170df93bc46db9847318622fb2a2fd3acc1"
+        "60361f45c5dff087fd67ae855e3c9170df93bc46db9847318622fb2a2fd3acc1",
+        "50a6108b3ee360c35ab78db4faf7f2cf9c877f61c3f80fdfc75045c1f4f3239d"
       ]
     },
     "web_assets/preview.js": {
@@ -239,7 +240,7 @@
     },
     "discord_threads.py": {
       "before": "0b353710016c6563fda1178e599cacca7ab802854803040f0866ef940dcbec94",
-      "after": "9b52ff56256da6dd3eb7e2f6ed632b3e70e638cd0bc8f70833d5e571ad5ec7fc",
+      "after": "23f759f18be2d1c81ad80654bfe2f63e2ca9842117034b89877785309be94d63",
       "previous": [
         "7db8a83427bc41833c8673eb12f23da21cad41888357873706070557c0d50cd5",
         "11914c2dee5b538656765b97ba424055a2ed686dd6e543be11390b0c20dcd7a5",
@@ -261,7 +262,8 @@
         "73a4b189b06b10855734929ada1d5f97e643027b56a099f4ca7c64b1e609dc4e",
         "6dacbeb946c824bb319bc8cf5caeb17f9bcb0628ab37b1c0c8d25e216d83cf17",
         "140566e7a80c9575e36c05cee6af8c9c13f759d53d3a935df4d0f1d0294009bd",
-        "e98bd9f388c0406edc207df785d538b021dd5dcef5483ee760d261ce2700356e"
+        "e98bd9f388c0406edc207df785d538b021dd5dcef5483ee760d261ce2700356e",
+        "9b52ff56256da6dd3eb7e2f6ed632b3e70e638cd0bc8f70833d5e571ad5ec7fc"
       ]
     },
     "notification_media.py": {
@@ -449,9 +451,10 @@
     },
     "connection_welcome.py": {
       "before": null,
-      "after": "4387612569280cd1ee84bd5103889dff8c69376bdb7074c6809672184f994ec2",
+      "after": "61f672a8ae7b86c5e477c8295ca79cb679ef6958389ed2e011d43b70c8fa82ea",
       "previous": [
-        "a03be35220c173a7973c03f952a52034c64f3a289cf2641b3c2909a91a833b93"
+        "a03be35220c173a7973c03f952a52034c64f3a289cf2641b3c2909a91a833b93",
+        "4387612569280cd1ee84bd5103889dff8c69376bdb7074c6809672184f994ec2"
       ]
     },
     "notification_language.py": {
@@ -509,7 +512,7 @@
     },
     "message_edits.py": {
       "before": null,
-      "after": "386901b564c193101c5937022b34ed57b26ea74586de7b4db183a1771999b415",
+      "after": "d88c6fa870104e8cde0f20d27b4673a83b6cfe2146e5924c993cfdef8cbc0c72",
       "previous": [
         "1d612525ff927c11820dcb484a5886aee35e9a0ffaf45a452bd88145d0c71760",
         "18f45c4b58079db4e238eac3de0a5145529aa1bc557f61acec22a2e0881bc2a1",
@@ -521,7 +524,8 @@
         "e06e8eb8157484fc303dbc9c92fb69aac441c3ce592b388cdf3c3bf1b2b082db",
         "b044963503e6f40e48644517d3d6ddc5d8f9131474646487e56efdceee6107c6",
         "2cb83e0f84eebca3ddcd569f2192f048b3415a7d44063404f977bacd8bc34817",
-        "6f07ced071d5bda3a587ef79fe4842ff33ea4fbbfb3f46e398aeb457d026101f"
+        "6f07ced071d5bda3a587ef79fe4842ff33ea4fbbfb3f46e398aeb457d026101f",
+        "386901b564c193101c5937022b34ed57b26ea74586de7b4db183a1771999b415"
       ]
     },
     "dnd_notifications.py": {
@@ -607,9 +611,10 @@
     },
     "delivery_metrics.py": {
       "before": null,
-      "after": "a5bcc247bd91e4ab97f76cb08194abdfeac173eb6bf7d72eba17ff9bd4a99e9f",
+      "after": "06f7daf1ce8be24362140df917446e99edf4f4df25a801aefab78d7caa5a16d2",
       "previous": [
-        "50d95386f2612e710ee8c02f8805f48cd9b1c97bb7fde2fc37945a1c80c541e2"
+        "50d95386f2612e710ee8c02f8805f48cd9b1c97bb7fde2fc37945a1c80c541e2",
+        "a5bcc247bd91e4ab97f76cb08194abdfeac173eb6bf7d72eba17ff9bd4a99e9f"
       ]
     },
     "api_cooldowns.py": {
@@ -719,12 +724,13 @@
     },
     "review_conversations.py": {
       "before": null,
-      "after": "a9fc5e81bccbf41f2eb007063e71e4a6d5289152157bb6f5420e100d7a3226fd",
+      "after": "57cf4ab3ae496084d6f6b039319e61bc1cb953e4155a77539ab06cb8b58595cc",
       "previous": [
         "548193f4f5619fc4140b143a8b56ffe21ad96abef9aafc01df26239745ca3a79",
         "fa2b03f702cb0b35985823bfb47fa108bf4eb4f3dbd3bd237bd3cbf7d6861cc9",
         "3e264f7f053d862838033610aa6c883eb185b312435b761038ff2af046f824b9",
-        "c72ef791325eef07fe932899f6c490b600adf75d45f34166593d271707a1e934"
+        "c72ef791325eef07fe932899f6c490b600adf75d45f34166593d271707a1e934",
+        "a9fc5e81bccbf41f2eb007063e71e4a6d5289152157bb6f5420e100d7a3226fd"
       ]
     },
     "restart_notices.py": {
@@ -737,15 +743,19 @@
     },
     "account_web.py": {
       "before": null,
-      "after": "3a262f77369ba13d50b612ebc6f7e3e7a86ef81983b21036ada6eb532f45f541",
+      "after": "c9682c9dd809e66d9b98151e3d8a016285dc7025f36cf68c5444bbb11b3fef06",
       "previous": [
         "c26612794a628821ec86df0a32d3f4d7a284d2f8dadf91ff76760e814da6861d",
-        "14c659aa468174776f1baa37dbccd36251cf9efeddf3ac7742abb62888820ecb"
+        "14c659aa468174776f1baa37dbccd36251cf9efeddf3ac7742abb62888820ecb",
+        "3a262f77369ba13d50b612ebc6f7e3e7a86ef81983b21036ada6eb532f45f541"
       ]
     },
     "account_mentions.py": {
       "before": null,
-      "after": "502892b797073cb5a404e61d208d4d293a2c81fb862b00911dd73baa28fe6a1b"
+      "after": "956328bfcd9df73ad91f53a2172ae76ad7675dd8f9a5a2b4070ee47707326381",
+      "previous": [
+        "502892b797073cb5a404e61d208d4d293a2c81fb862b00911dd73baa28fe6a1b"
+      ]
     },
     "comment_bridge.py": {
       "before": null,
@@ -835,6 +845,10 @@
       "previous": [
         "c036554f3e44d7421293347afb11c9029dc80619c33f2164f74407b695034a6e"
       ]
+    },
+    "delivery_reads.py": {
+      "before": null,
+      "after": "638c55288616b5c1e392eea6d11e1dee294ebce171ca026115b5d09c4c5b0330"
     }
   },
   "state_encryption": true

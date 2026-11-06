@@ -1,7 +1,6 @@
 """Explicit user-only mentions, scoped to opted-in members who can see the channel."""
 import copy
 import re
-import time
 
 from connect_auth import channel_permissions
 from discord_threads import ApiError
@@ -103,24 +102,11 @@ class MentionPolicy:
                 embed['description'] = replace(embed['description'], mapping)
             for field in embed.get('fields', []):
                 field['value'] = replace(field.get('value', ''), mapping)
-        users = []
-        if method == 'POST' and not data.get('flags', 0) & (1 << 12):
-            with self.accounts.db() as db:
-                seen = {row[0] for row in db.execute('SELECT discord FROM mention_receipts WHERE event=?', (self.event_id,))}
-            users = sorted(set(mapping.values()) - seen)
-        # Embed mentions render but do not notify; content supplies an explicit, bounded ping.
-        if users:
-            content = ((value.get('content') or '') + '\n' + ' '.join('<@' + user + '>' for user in users)).strip()
-            if len(content) <= 2000:
-                value['content'] = content
-            else:
-                users = []
-        value['allowed_mentions'] = {'parse': [], 'users': users, 'replied_user': False}
-        return value, (channel, users)
+        # Linked names stay inside the card. Do not append a second mention line
+        # or request a real ping, including on ordinary non-silent new messages.
+        value['allowed_mentions'] = {'parse': [], 'users': [], 'replied_user': False}
+        return value, None
 
     def remember(self, operation):
-        if operation:
-            channel, users = operation
-            with self.accounts.db() as db:
-                db.executemany('INSERT OR IGNORE INTO mention_receipts VALUES(?,?,?,?)',
-                               [(self.event_id, channel, user, time.time()) for user in users])
+        # Keep the transport hook compatible; display-only mentions have no ping receipt.
+        pass

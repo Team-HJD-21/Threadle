@@ -37,6 +37,21 @@ def revision(obj):
     except (ValueError,TypeError,OverflowError):return 0
 
 
+def before_source(message,obj):
+    """No Discord copy can predate its GitHub source; keep a clock-skew margin."""
+    created=obj.get('created_at') or obj.get('createdAt')
+    if not created:return False
+    try:
+        stamp=dt.datetime.fromisoformat(str(created).replace('Z','+00:00'))
+        if stamp.tzinfo is None:return False
+        source=stamp.timestamp()
+        identity=str(message.get('id',''))
+        if not identity.isdigit() or len(identity)<17:return False
+        posted=(int(identity)>>22)/1000+1420070400
+        return posted<source-300
+    except (ValueError,TypeError,OverflowError,OSError):return False
+
+
 class MutableMessages:
     def __init__(self,threads):
         self.threads=threads;self.queue=threads.queue
@@ -98,6 +113,7 @@ class MutableMessages:
     def recover(self,topic,source,thread,kind,obj):
         found={};legacy=[];latest_version=0
         for message in self.threads.messages(thread):
+            if before_source(message,obj):break
             if message.get('author',{}).get('id')!=self.threads.bot['id']:continue
             embeds=message.get('embeds',[])
             for embed in embeds:
@@ -258,6 +274,10 @@ class MutableMessages:
                     keep=[{'id':a['id']} for a in existing['attachments']]
             if not keep and isinstance(threads.api,Api):files=attach_public_images(embeds,threads.media_fetcher)
             data={'embeds':embeds,'allowed_mentions':{'parse':[]},'attachments':keep,**({'_files':files} if files else {})}
+            if existing and re.fullmatch(r'(?:<@!?\d+>\s*)+',existing.get('content') or ''):
+                # Clear old bot-generated ping-only prefixes when updating their
+                # card. Preserve unrelated text and never rewrite user messages.
+                data['content']=''
             if existing:
                 try:sent=threads.api.call('PATCH',f'/channels/{thread_id}/messages/{row[0]}',data)
                 except ApiError as error:

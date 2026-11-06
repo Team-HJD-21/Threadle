@@ -37,7 +37,7 @@ class AccountWeb:
         else:
             body = '<div class="card"><p>' + say('이 서버에서 사용할 기능을 직접 선택해 주세요.', 'Choose which features to enable in this server.') + '</p>'
             choices = ('<label><input type="checkbox" name="mentions" value="1" checked> ' + say(
-                'GitHub에서 내 계정이 언급되면 Discord에서도 멘션 받기', 'Mention me in Discord when my GitHub account is mentioned') + '</label><br>'
+                'GitHub에서 내 계정이 언급되면 Discord 카드 안에 내 이름 표시 (멘션 알림 없음)', 'Show my Discord name inside notification cards when mentioned on GitHub (no mention ping)') + '</label><br>'
                 '<label><input type="checkbox" name="comments" value="1"> ' + say(
                 'Threadle의 PR·Issue·Discussion 스레드에 내가 쓴 새 메시지를 내 GitHub 계정의 댓글로 전송',
                 'Forward my new messages in Threadle PR, Issue, and Discussion threads as comments from my GitHub account') + '</label><p>' + say(

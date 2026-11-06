@@ -8,7 +8,7 @@ from unittest.mock import MagicMock,patch
 
 from delivery import Queue,CachedThreads
 from discord_threads import Api,ApiError,Topic,make_embed
-from message_edits import deliver_events
+from message_edits import deliver_events,MutableMessages,before_source
 from test_discord_threads import FakeDiscord
 
 
@@ -47,6 +47,38 @@ class EditTests(unittest.TestCase):
 
     def edit_body(self,body,event='body-edit',time='2026-11-03T00:01:00Z'):
         return self.send({'action':'edited','pull_request':dict(self.topic.metadata,body=body,updated_at=time)},event,'pull_request')
+
+    def test_edit_removes_only_old_bot_ping_line_and_preserves_other_text(self):
+        thread=self.send(self.payload(),'one')
+        row=self.api.posts[thread][0]
+        row['content']='<@55> <@!66>'
+        self.send(self.payload('Updated','edited',time='2026-11-03T00:01:00Z'),'two')
+        self.assertEqual(row['content'],'')
+        row['content']='Keep this bot guidance'
+        self.send(self.payload('Again','edited',time='2026-11-03T00:02:00Z'),'three')
+        self.assertEqual(row['content'],'Keep this bot guidance')
+
+    def test_source_recovery_stops_before_comments_source_creation(self):
+        import datetime as dt
+        def snowflake(stamp):
+            value=dt.datetime.fromisoformat(stamp.replace('Z','+00:00')).timestamp()
+            return str(int((value-1420070400)*1000)<<22)
+        old=snowflake('2026-11-01T00:00:00Z')
+        inspected=[]
+        def history(thread):
+            inspected.append('first-page')
+            yield {'id':old,'author':{'id':'someone'},'embeds':[]}
+            inspected.append('second-page')
+            raise AssertionError('Older history must not be read for a new source')
+        self.threads.messages=history
+        self.assertEqual(MutableMessages(self.threads).recover(self.topic,'source','thread','comment:issue_comment:7',
+                         {'created_at':'2026-11-03T00:00:00Z'}),0)
+        self.assertEqual(inspected,['first-page'])
+        # A small clock skew, missing timestamps and synthetic IDs stay conservative.
+        self.assertFalse(before_source({'id':snowflake('2026-11-02T23:57:00Z')},{'created_at':'2026-11-03T00:00:00Z'}))
+        self.assertFalse(before_source({'id':old},{}))
+        self.assertFalse(before_source({'id':'101'},{'created_at':'2026-11-03T00:00:00Z'}))
+        self.assertFalse(before_source({'id':old},{'created_at':'2026-11-03T00:00:00'}))
 
     def test_growing_description_is_replaced_as_one_group_after_comments(self):
         thread=self.send({'action':'opened','pull_request':self.topic.metadata},'opened','pull_request')
