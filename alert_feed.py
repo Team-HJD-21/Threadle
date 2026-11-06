@@ -42,6 +42,29 @@ def merge_details(topic,event,payload):
     return ''
 
 
+def closure_details(topic, event, payload):
+    if topic.kind not in ('pr', 'issue'):
+        return None
+    expected = ('pull_request', 'pull_request_target') if topic.kind == 'pr' else ('issues',)
+    entries = [(row['event'], row['payload']) for row in payload.get('_events', [])] if event == 'threadle_bundle' else [(event, payload)]
+    for kind, value in reversed(entries):
+        if kind not in expected:
+            continue
+        action = value.get('action')
+        if action in ('opened', 'reopened', 'ready_for_review', 'converted_to_draft'):
+            return None
+        if action != 'closed':
+            continue
+        obj = value.get('pull_request' if topic.kind == 'pr' else 'issue') or {}
+        from topic_state import status_actor
+        from repository_summary import summary_text
+        state = 'Merged' if topic.kind == 'pr' and (obj.get('merged') or obj.get('merged_at')) else 'Closed'
+        actor = status_actor(topic.kind, dict(obj, state='closed')) or (value.get('sender') or {}).get('login')
+        return {'state': state, 'title': summary_text(obj.get('title') or topic.title, 220),
+                'actor': summary_text(actor, 100) if actor else ''}
+    return None
+
+
 def english_activity(event, payload):
     if event == 'threadle_bundle':
         return 'Opened' if payload.get('_created') else f"{len(payload.get('_events', []))} updates"
@@ -131,12 +154,33 @@ class AlertFeed:
             self.activity_cards[key] = ActivityCards(self, *key)
         self.activity_cards[key].update(items, window)
 
+    def lifecycle(self, topic, details, event_key, thread, now=None):
+        from alert_activity import ActivityCards
+        english = self.config.get('language') == 'en'
+        label = {'pr': 'PR', 'issue': 'ISSUE'}[topic.kind]
+        state = details['state']
+        link = f"https://discord.com/channels/{self.config['guild_id']}/{thread}"
+        description = '**' + details['title'] + '**\n' if details['title'] else ''
+        if details['actor']:
+            description += state + ' by ' + details['actor'] + '\n'
+        description += ('[Open thread](' if english else '[스레드 확인하기](') + link + ') · '
+        description += ('[View on GitHub](' if english else '[GitHub 원문](') + topic.url + ')'
+        key = (topic.repo, english)
+        if key not in self.activity_cards:
+            self.activity_cards[key] = ActivityCards(self, *key)
+        item = (event_key, topic.key, f'{label} #{topic.number} · {state}', description, link, 0x8957E5)
+        self.activity_cards[key].lifecycle(item, label + ' ' + state, time.time() if now is None else now)
+
     def topic(self, topic, event, payload, event_key, thread):
         from alert_policy import filter_alert
         selected = filter_alert(event, payload)
         if selected is None:
             return
         event, payload = selected
+        closure = closure_details(topic, event, payload)
+        if closure:
+            self.lifecycle(topic, closure, event_key, thread)
+            return
         label = {'issue': 'ISSUE', 'pr': 'PR', 'discussion': 'Discussion'}[topic.kind]
         actor = clip(payload.get('sender', {}).get('login', 'GitHub'), 80)
         english = self.config.get('language') == 'en'
