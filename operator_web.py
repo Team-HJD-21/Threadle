@@ -129,70 +129,72 @@ class OperatorWeb:
 
     def dashboard(self, session, claims, query):
         from connect_web import esc
-        rows = self.rows()
-        selected = [r for r in rows if query.casefold() in (r['repo'] + ' ' + r['guild'] + ' ' + (r.get('guild_name') or '') + ' ' + (r.get('github_login') or '')).casefold()]
-        enabled = [r for r in rows if r['enabled'] and r['installation_enabled']]
-        body = '<div class="admin-heading"><p>Threadle 운영 관리</p><p class="muted">' + esc(claims['email']) + '</p></div>'
-        body += '<div class="admin-stats">' + ''.join('<div class="card"><strong>' + str(value) + '</strong><span>' + label + '</span></div>' for value, label in [(len({r['guild'] for r in enabled}), '연결된 서버'), (len({r['repo_id'] for r in enabled}), '연결된 저장소'), (len(enabled), '서버별 연결'), (sum(r['paused'] for r in enabled), '일시중지')]) + '</div>'
-        from api_usage import panel
-        body += panel(self.service.api_usage, session)
-        body += self.service.operator_mail.panel(session,claims)
-        body += '<form method="get" action="/connect/admin" class="admin-search"><label for="admin-query">저장소 또는 서버 ID 검색</label><input id="admin-query" name="q" maxlength="100" value="' + esc(query) + '"><button>검색</button><a class="button secondary" href="/connect/admin">전체 보기</a></form>'
-        body += '<p class="muted">일시중지 중에도 새 웹후크는 대기열에 보관합니다. 재개하면 순서대로 처리합니다. 이미 전송 중인 요청 하나는 완료될 수 있습니다.</p>'
+        from operator_presentation import heading,stats,queue_counts,event_history,t
         from operator_accounts import panel as accounts_panel
-        body += accounts_panel(self.service.registry,selected)
-        for heading, group in [('현재 연결', [r for r in selected if r['enabled']]), ('연결 해제 기록', [r for r in selected if not r['enabled']])]:
-            body += '<section class="admin-connection-group"><h2>' + heading + ' (' + str(len(group)) + ')</h2>'
-            if len(group) > 50:
-                body += '<p class="muted">처음 50건을 표시합니다. 검색으로 범위를 좁혀 주세요.</p>'
-            if not group:
-                body += '<p class="muted">표시할 연결이 없습니다.</p>'
+        from operator_settings import details
+        from guild_plans import subscription
+        from delivery_metrics import summary
+        from state_backups import latest
+        rows = self.rows()
+        plans = {}
+        selected = [r for r in rows if query.casefold() in (r['repo'] + ' ' + r['guild'] + ' ' + (r.get('guild_name') or '') + ' ' + (r.get('github_login') or '')).casefold()]
+        body='<div class="operator-dashboard" data-operator-dashboard>'+heading(claims['email'])+stats(rows)
+        body+='<section class="operator-section" id="operator-connections"><div class="operator-section-heading"><div><p class="operator-eyebrow">CONNECTIONS</p><h2>'+t('서버와 저장소 연결','Servers & repositories')+'</h2></div><span>'+t('검색 결과','Matching connections')+' '+str(len(selected))+'</span></div>'
+        body+='<form method="get" action="/connect/admin" class="admin-search"><label for="admin-query">'+t('서버 이름·저장소·서버 ID','Server name, repository or server ID')+'</label><div><input id="admin-query" name="q" maxlength="100" placeholder="'+t('이름이나 ID로 찾기','Search by name or ID')+'" value="'+esc(query)+'"><button>'+t('검색','Search')+'</button><a class="button secondary" href="/connect/admin">'+t('전체 보기','Show all')+'</a></div></form>'
+        body+='<p class="operator-context-note">'+t('같은 저장소도 연결된 서버마다 설정과 처리 상태가 다릅니다. 일시중지 중에는 이벤트를 보관하고, 재개하면 순서대로 처리합니다.','Each server connection has its own preferences and delivery state, even for the same repository. Paused connections retain events and resume in order.')+'</p>'
+        for heading_text,group in [(t('현재 연결','Current connections'),[r for r in selected if r['enabled']]),(t('연결 해제 기록','Disconnected history'),[r for r in selected if not r['enabled']])]:
+            history=bool(group and not group[0]['enabled'])
+            body+=('<details class="operator-history"><summary>'+heading_text+' <span>'+str(len(group))+'</span></summary>' if history else '<section class="admin-connection-group"><h3>'+heading_text+' <span>'+str(len(group))+'</span></h3>')
+            if len(group)>50:body+='<p class="muted">'+t('처음 50건입니다. 검색으로 범위를 좁혀 주세요.','Showing the first 50. Use search to narrow the results.')+'</p>'
+            if not group:body+='<div class="operator-empty">'+t('표시할 연결이 없습니다.','No connections match this view.')+'</div>'
+            body+='<div class="admin-binding-grid">'
             for row in group[:50]:
-                status = '연결 해제' if not row['enabled'] else 'GitHub 설치 중지' if not row['installation_enabled'] else '일시중지' if row['paused'] else '동작 중'
-                body += '<article id="connection-' + esc(row['id']) + '" class="card admin-binding"><div class="admin-binding-title"><h2>' + esc(row['repo']) + '</h2><span class="admin-status">' + status + '</span></div><p class="muted">Discord 서버 ID ' + esc(row['guild']) + ' · ' + esc(row['auth']) + '</p>'
+                active=bool(row['enabled'] and row['installation_enabled'] and not row['paused'])
+                status=t('연결 해제','Disconnected') if not row['enabled'] else t('GitHub 설치 중지','Installation suspended') if not row['installation_enabled'] else t('일시중지','Paused') if row['paused'] else t('동작 중','Active')
+                status_class='active' if active else 'paused' if row['enabled'] else 'disconnected'
+                body+='<article id="connection-'+esc(row['id'])+'" class="card admin-binding"><div class="operator-binding-server"><span>'+t('DISCORD 서버','DISCORD SERVER')+'</span><strong>'+esc(row.get('guild_name') or t('이름 확인 대기','Name unavailable'))+'</strong></div><div class="admin-binding-title"><h2>'+esc(row['repo'])+'</h2><span class="admin-status status-'+status_class+'">'+status+'</span></div>'
+                if row['guild'] not in plans:
+                    plans[row['guild']]=subscription(self.service.registry,row['guild'])
+                plan=plans[row['guild']]
+                subscription_text={'none':t('구독 없음 · 베타 무료 이용','No subscription · free beta access'),'active':t('구독 중','Active subscription'),'trialing':t('체험 중','Trial'),'past_due':t('결제 확인 필요','Payment attention'),'canceled':t('구독 종료','Canceled'),'expired':t('기간 만료','Expired')}.get(plan['status'],esc(plan['status']))
+                body+='<div class="operator-binding-plan"><span>'+esc(plan['plan'].title())+'</span><small>'+subscription_text+'</small></div>'
                 try:
-                    pending, retries, notices = self.counts(row)
-                    body += '<p>대기 이벤트 <b>' + str(pending) + '</b> · 재시도 중 <b>' + str(retries) + '</b> · 예약/묶음 알림 <b>' + str(notices) + '</b></p>'
-                except sqlite3.Error:
-                    body += '<p class="error">대기열 상태를 읽지 못했습니다.</p>'
-                from delivery_metrics import summary
-                from web_locale import LANGUAGE
+                    pending,retries,notices=self.counts(row)
+                    body+=queue_counts(pending,retries,notices,active)
+                except sqlite3.Error:body+='<p class="error">'+t('대기열 상태를 읽지 못했습니다.','Queue status could not be read.')+'</p>'
+                if not row['enabled']:body+='<p class="operator-context-note">'+t('연결 해제 당시의 기록입니다. 이 연결의 이벤트는 처리하지 않습니다.','Historical counts from this disconnected connection. Its events are not processed.')+'</p>'
+                body+=details(json.loads(row['config']))
                 state=self.service.root if row['legacy_state'] else self.service.root/'connections'/row['id']
                 metrics=summary((state/'queue.sqlite3').resolve())
+                body+='<details class="operator-diagnostics"><summary>'+t('연결 정보·전송 측정','Connection details & timing')+'</summary><dl><div><dt>Discord ID</dt><dd><code>'+esc(row['guild'])+'</code></dd></div><div><dt>GitHub</dt><dd>'+esc(('@'+row['github_login']) if row.get('github_login') else ('ID '+row['github_user']) if row.get('github_user') else '—')+'</dd></div><div><dt>'+t('연결 ID','Connection ID')+'</dt><dd><code>'+esc(row['id'])+'</code></dd></div><div><dt>'+t('인증 방식','Authentication')+'</dt><dd>'+esc(row['auth'])+'</dd></div></dl>'
                 if metrics:
+                    from web_locale import LANGUAGE
                     text=(f"First Discord write: median {metrics['p50']:.2f}s · P95 {metrics['p95']:.2f}s · {metrics['count']} events; queue {metrics['queue_p50']:.2f}s / processing {metrics['processing_p50']:.2f}s" if LANGUAGE.get()=='en' else f"첫 전송·갱신: 중앙값 {metrics['p50']:.2f}초 · P95 {metrics['p95']:.2f}초 · {metrics['count']}건; 대기 {metrics['queue_p50']:.2f}초 / 처리 {metrics['processing_p50']:.2f}초")
                     body+='<p class="muted">'+esc(text)+'</p>'
-                else:body+='<p class="muted">'+('Waiting for delivery timing samples' if LANGUAGE.get()=='en' else '전송 지연 측정 대기')+'</p>'
-                body += '<p>서버: <b>' + esc(row.get('guild_name') or '이름 확인 대기') + '</b> · GitHub: <b>' + esc(('@' + row['github_login']) if row.get('github_login') else ('ID ' + row['github_user']) if row.get('github_user') else '확인할 수 없음') + '</b></p>'
-                from guild_plans import subscription
-                plan=subscription(self.service.registry,row['guild'])
-                body += '<p class="admin-plan">'+('Server plan' if LANGUAGE.get()=='en' else '서버 요금제')+': <b>'+esc(plan['plan'].title())+'</b> · '+esc(({'none':'구독 없음 · 베타 무료 이용','active':'구독 중','trialing':'체험 중','past_due':'결제 확인 필요','canceled':'구독 종료','expired':'기간 만료'} if LANGUAGE.get()!='en' else {'none':'No subscription · free beta access','active':'Active','trialing':'Trial','past_due':'Past due','canceled':'Canceled','expired':'Expired'}).get(plan['status'],plan['status']))+'</p>'
-                from operator_settings import details
-                body += details(json.loads(row['config']))
-                body += '<p class="muted">연결 ID <code>' + esc(row['id']) + '</code></p>'
+                else:body+='<p class="muted">'+t('전송 지연 측정 대기','Waiting for delivery timing samples')+'</p>'
+                body+='</details>'
                 if row['enabled']:
-                    body += '<div class="admin-actions">'
-                    if row['installation_enabled']:
-                        body += self.form(session, row, 'resume' if row['paused'] else 'pause', '재개' if row['paused'] else '일시중지')
-                    body += self.form(session, row, 'disconnect', '연결 해제') + '</div>'
-                body += '</article>'
-            body += '</section>'
-        with self.service.registry.db() as db:
-            inbox = db.execute('SELECT count(*) FROM inbox WHERE done=0').fetchone()[0]
-        body += '<p class="muted">분배 대기 웹후크 ' + str(inbox) + ' · 디스크 여유 ' + str(round(shutil.disk_usage(self.service.root).free / 1024**3, 1)) + ' GB · 조회 시각 ' + time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime()) + '</p>'
-        from state_backups import latest
-        from web_locale import LANGUAGE
+                    body+='<div class="admin-actions">'
+                    if row['installation_enabled']:body+=self.form(session,row,'resume' if row['paused'] else 'pause','재개' if row['paused'] else '일시중지')
+                    body+=self.form(session,row,'disconnect','연결 해제')+'</div>'
+                body+='</article>'
+            body+='</div>'+('</details>' if history else '</section>')
+        body+='</section>'+accounts_panel(self.service.registry,selected)
+        from api_usage import panel
+        body+='<section class="operator-section" id="operator-tools"><div class="operator-section-heading"><div><p class="operator-eyebrow">SERVICE TOOLS</p><h2>'+t('API와 운영 알림','API & operator notifications')+'</h2></div></div><p class="muted">'+t('API 사용량은 조회 버튼을 눌렀을 때만 외부 서비스에서 갱신합니다.','External API usage is refreshed only when you press its refresh button.')+'</p><div class="operator-tool-grid">'+panel(self.service.api_usage,session)+self.service.operator_mail.panel(session,claims)+'</div></section>'
+        body+=event_history(self.service)
+        with self.service.registry.db() as db:inbox=db.execute('SELECT count(*) FROM inbox WHERE done=0').fetchone()[0]
         snapshot=latest(self.service.root)
+        body+='<section class="operator-section operator-system"><div class="operator-section-heading"><h2>'+t('시스템 정보','System information')+'</h2></div><div class="operator-system-grid"><article><span>'+t('분배 대기 웹후크','Undistributed webhooks')+'</span><b>'+str(inbox)+'</b></article><article><span>'+t('디스크 여유','Free disk space')+'</span><b>'+str(round(shutil.disk_usage(self.service.root).free/1024**3,1))+' GB</b></article><article><span>'+t('명령어 등록','Command registration')+'</span>'+self.command_status()+'</article></div>'
         if snapshot:
             stamp=time.strftime('%Y-%m-%d %H:%M:%S UTC',time.gmtime(snapshot['created']))
-            text=(f"Last DB backup / restore check: {stamp} · {snapshot['files']} databases" if LANGUAGE.get()=='en' else f"마지막 DB 백업·복원 검증: {stamp} · DB {snapshot['files']}개")
-            body+='<p class="muted">'+esc(text)+'</p>'
-        body += '<p><a href="/connect/admin/changelog">'+('Website & administration changelog' if LANGUAGE.get()=='en' else '사이트·관리자 패치노트')+'</a></p>'
-        body += self.command_status()
-        body += '<details class="card"><summary>최근 관리자 작업</summary><ul class="admin-audit">'
-        for happened, actor, action, binding in self.audit():
-            body += '<li>' + esc(happened) + ' UTC · ' + esc(actor) + ' · ' + esc(action) + ' · <code>' + esc(binding) + '</code></li>'
-        return body + '</ul></details>'
+            body+='<p class="muted">'+t('마지막 DB 백업·복원 검증','Last DB backup / restore check')+': '+stamp+' · DB '+str(snapshot['files'])+'</p>'
+        body+='<p class="muted">'+t('화면 조회 시각','Page loaded')+' · '+time.strftime('%Y-%m-%d %H:%M:%S UTC',time.gmtime())+'</p></section>'
+        body+='<details class="operator-history" id="admin-audit"><summary>'+t('최근 관리자 작업','Recent administrator actions')+'</summary><ul class="admin-audit">'
+        audit=self.audit()
+        for happened,actor,action,binding in audit:body+='<li><time>'+esc(happened)+' UTC</time><b>'+esc(actor)+'</b><span>'+esc(action)+'</span><code>'+esc(binding)+'</code></li>'
+        if not audit:body+='<li>'+t('아직 기록된 관리자 작업이 없습니다.','No administrator actions recorded yet.')+'</li>'
+        return body+'</ul></details></div>'
 
     def command_status(self):
         from connect_web import esc
@@ -215,6 +217,8 @@ class OperatorWeb:
         if session and session.data.get('admin_subject') != claims['sub']:
             session = None
         path = urlsplit(request.path).path
+        from web_locale import PAGE_PATH
+        PAGE_PATH.set(path)
         if path.startswith('/connect/admin/update/'):
             raise ConnectError('요청을 찾을 수 없습니다.',404)
         accounts_path=re.fullmatch(r'/connect/admin/accounts/([1-9][0-9]{0,24})',path)

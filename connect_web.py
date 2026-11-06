@@ -90,7 +90,7 @@ def footer():
 <div><dt>사업자등록번호</dt><dd>622-10-17519 <a class="business-info-link" href="https://www.ftc.go.kr/bizCommPop.do?wrkr_no=6221017519" target="_blank" rel="noopener noreferrer">(사업자정보확인)</a></dd></div>
 <div><dt>통신판매업 신고번호</dt><dd translate="no" lang="ko">2026-수원영통-1221호</dd></div><div><dt>사업장 주소</dt><dd translate="no" lang="ko">경기도 수원시 영통구 태장로 71번길 19</dd></div>
 </dl><div class="footer-policy"><a href="https://teamhjd.com/press/index.html" target="_blank" rel="noopener noreferrer">프레스킷</a><a href="https://teamhjd.com/content-policy/index.html" target="_blank" rel="noopener noreferrer">콘텐츠 이용 · AI 학습 정책</a><p>AI 검색·정보 조회는 허용하며, 콘텐츠의 AI 학습 이용은 금지합니다.</p></div>
-<small class="footer-copyright">© 2026 TeamHJD. All rights reserved. · v1.0.0-beta.39</small>
+<small class="footer-copyright">© 2026 TeamHJD. All rights reserved. · v1.0.0-beta.40</small>
 <details class="related-sites"><summary>관련 사이트<svg class="footer-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m6 15 6-6 6 6"></path></svg></summary><ul><li><a href="https://teamhjd.com/" target="_blank" rel="noopener noreferrer">TeamHJD 메인</a></li><li><a href="https://docs.teamhjd.com/" target="_blank" rel="noopener noreferrer">TeamHJD Docs</a></li></ul></details>
 </div></footer>'''
 
@@ -100,14 +100,17 @@ def page(title, body, landing=False):
     from product_web import PUBLIC_PATHS
     base = PUBLIC_ORIGIN.get()
     path = PAGE_PATH.get()
+    operator = path.startswith('/connect/admin') or 'data-operator-dashboard' in body
     public = landing and path in PUBLIC_PATHS
     title_text = 'TeamHJD - Threadle' + ((' | ' + text(title)) if title != 'TeamHJD - Threadle' else '')
     description = ('GitHub conversations, organized in Discord. Follow PRs, issues, discussions and code reviews in threads. Link your account to reply as yourself with connected mentions.' if LANGUAGE.get() == 'en' else 'GitHub 대화를 Discord 스레드에서 이어가세요. PR·Issue·Discussion과 코드 리뷰를 모으고, 계정을 연결해 내 이름으로 답장하고 팀원을 멘션하세요.')
     extra = '<link rel="icon" type="image/png" href="/connect/assets/threadle-avatar.png"><meta name="description" content="' + esc(description) + '">'
     extra += '<meta name="robots" content="' + ('index,follow' if public else 'noindex,nofollow') + '">'
     if landing:
-        extra += '<link rel="stylesheet" href="/connect/assets/landing.css?v=20261102-2"><link rel="stylesheet" href="/connect/assets/product.css?v=20261105-collaboration-1"><script src="/connect/assets/preview.js?v=20261105-30" defer></script>'
-    extra += '<link rel="stylesheet" href="/connect/assets/controls.css?v=20261102-6"><script src="/connect/assets/controls.js?v=1" defer></script>'
+        extra += '<link rel="stylesheet" href="/connect/assets/landing.css?v=20261102-2"><link rel="stylesheet" href="/connect/assets/product.css?v=20261106-experience-1"><script src="/connect/assets/preview.js?v=20261105-30" defer></script>'
+    extra += '<link rel="stylesheet" href="/connect/assets/controls.css?v=20261106-ui-1"><script src="/connect/assets/controls.js?v=1" defer></script>'
+    if operator:
+        extra += '<link rel="stylesheet" href="/connect/assets/operator.css?v=20261106-ui-1">'
     if public:
         preview_image = esc(base + '/connect/assets/threadle-banner.png?v=20261102-9')
         extra += '<meta property="og:image" content="' + preview_image + '"><meta property="og:image:alt" content="Threadle — GitHub updates delivered to Discord"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="' + preview_image + '">'
@@ -121,9 +124,9 @@ def page(title, body, landing=False):
         extra += '<script type="application/ld+json">' + json.dumps(data, ensure_ascii=False).replace('<', '\u003c') + '</script>'
     note = '' if landing else '<p class="connection-note">저장소의 알림 내용은 연결한 Discord 알림 채널을 볼 수 있는 구성원에게 공개됩니다. 개인 GitHub 토큰을 입력할 필요가 없습니다. 로그인 세션은 30분 후 만료되며, 완료한 알림 연결은 유지됩니다.</p>'
     return render('<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-                  + '<title>' + esc(title_text) + '</title><style>' + CSS + '</style>' + extra + '</head><body' + (' class="product-page"' if landing else '') + '>'
+                  + '<title>' + esc(title_text) + '</title><style>' + CSS + '</style>' + extra + '</head><body' + (' class="operator-page"' if operator else ' class="product-page"' if landing else ' class="connect-page"') + '>'
                   + '<header class="site-header"><a class="threadle-brand" href="/connect" aria-label="Threadle Home"><img src="/connect/assets/threadle-avatar.png" width="32" height="32" alt="Threadle"><span>Threadle<small>by TeamHJD</small></span></a><div class="header-tools">' + switcher() + '</div></header><main>'
-                  + ('' if landing else '<h1>' + esc(title) + '</h1>') + body + note + '</main>' + footer() + '</body></html>')
+                  + ('' if landing or 'data-operator-dashboard' in body else '<h1>' + esc(title) + '</h1>') + body + note + '</main>' + footer() + '</body></html>')
 
 
 
@@ -231,7 +234,7 @@ class Onboarding:
 
     def asset(self, request, path):
         name = path.removeprefix('/connect/assets/')
-        if name not in ('notify-logo.png', 'teamhjd-wordmark.png', 'threadle-icon.png', 'team-settings.js', 'landing.css', 'product.css', 'threadle-avatar.png', 'admin-update.js', 'controls.js', 'controls.css', 'preview.js', 'threadle-banner.png'):
+        if name not in ('notify-logo.png', 'teamhjd-wordmark.png', 'threadle-icon.png', 'team-settings.js', 'landing.css', 'product.css', 'threadle-avatar.png', 'admin-update.js', 'controls.js', 'controls.css', 'operator.css', 'preview.js', 'threadle-banner.png'):
             raise ConnectError('파일을 찾을 수 없습니다.', 404)
         asset = Path(__file__).parent / 'web_assets' / name
         if not asset.is_file():

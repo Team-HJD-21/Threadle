@@ -78,6 +78,31 @@ class OperatorTests(WebFixture):
             self.enable()
         self.assertEqual(self.service.operator.audit(), [])
 
+    def test_dashboard_groups_connections_and_events_without_external_api_queries(self):
+        self.enable()
+        self.service.chat_events.record('message-delete','1000','1002','8000',author='55')
+        self.install_api.reset_mock()
+        status,headers,body=self.request()
+        self.assertEqual(status,200)
+        self.assertIn('class="operator-page"',body)
+        self.assertIn('/connect/assets/operator.css',body)
+        for identity in ('operator-connections','server-accounts','operator-tools','operator-events'):
+            self.assertIn('id="'+identity+'"',body)
+        self.assertIn('메시지 삭제',body)
+        self.assertIn('미상',body)
+        self.assertNotIn('본문과 인증정보를 보관합니다',body)
+        self.install_api.call.assert_not_called()
+        self.assertEqual(body.count('<h1>'),1)
+
+    def test_event_view_escapes_identifiers_and_preserves_actor_uncertainty(self):
+        self.enable()
+        self.service.chat_events.record('message-delete','1000','1002','8000',author='<img src=x onerror=alert(1)>')
+        status,_,body=self.request()
+        self.assertEqual(status,200)
+        self.assertNotIn('<img src=x',body)
+        self.assertIn('&lt;img',body)
+        self.assertIn('미상',body)
+
     def test_wrong_audience_issuer_expiration_signature_and_email_are_rejected(self):
         self.enable()
         cases = [{'aud': 'b' * 64}, {'iss': 'https://other.cloudflareaccess.com'}, {'exp': int(time.time()) - 1}, {'email': 'someone@example.com'}]
@@ -167,8 +192,9 @@ class OperatorTests(WebFixture):
         self.enable()
         result = self.request(path='/connect/admin?lang=en')
         self.assertEqual(result[0], 200)
-        self.assertIn('Threadle administration', result[2])
-        self.assertIn('Discord server ID 1000', result[2])
+        self.assertIn('Operations overview', result[2])
+        self.assertIn('Discord ID', result[2])
+        self.assertIn('<code>1000</code>', result[2])
         self.assertIn('/connect/admin?lang=ko', result[2])
         self.assertNotIn('일시중지', result[2])
 
