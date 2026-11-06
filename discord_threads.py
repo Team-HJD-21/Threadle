@@ -46,6 +46,11 @@ class Api:
             except Exception: pass  # Telemetry must never interrupt notification delivery.
 
     def call(self, method, path, data=None):
+        from delivery_reads import cache_key,read as cached_read,remember as remember_read,invalidate
+        if self.service=='Discord':invalidate(method,path)
+        read_key=cache_key(self,method,path,data)
+        hit,cached=cached_read(read_key)
+        if hit:return cached
         events = getattr(self, 'chat_events', None) if self.service == 'Discord' else None
         mention_policy = getattr(self, 'mention_policy', None) if self.service == 'Discord' else None
         mention_operation = None
@@ -102,6 +107,7 @@ class Api:
                     if events is not None:
                         try: events.after_api(method, path, result)
                         except Exception: pass  # A successful write must not be retried for telemetry.
+                    remember_read(read_key,result)
                     return result
             except HTTPError as error:
                 try:

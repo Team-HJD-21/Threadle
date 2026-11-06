@@ -276,6 +276,7 @@ class ReviewConversations:
             version=dt.datetime.now(dt.timezone.utc).timestamp()
             if previous:version=max(version,previous[0]+0.001)
             obj={'html_url':thread['comments'][0].get('url'),
+                 'created_at':thread['comments'][0].get('createdAt'),
                  'updated_at':dt.datetime.fromtimestamp(version,dt.timezone.utc).isoformat()}
             rendered=render(topic,thread)
             fingerprint=nonce(rendered['description']+str(rendered['color']))

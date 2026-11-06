@@ -538,19 +538,30 @@ class AccountTests(unittest.TestCase):
         self.assertEqual(names('Hi @alice `@bob` ```py\n@chris\n``` https://host/@dave mail@eve.com @org/team'), {'alice'})
         self.assertEqual(replace('@alice `@alice`', {'alice': '55'}), '<@55> `@alice`')
 
-    def test_mentions_only_ping_visible_opted_in_members_once_and_never_parse_everyone(self):
+    def test_linked_mentions_stay_inside_cards_without_external_pings(self):
         self.link()
         policy = self.policy()
         data = {'embeds': [{'description': 'Hi @alice and @everyone'}], 'allowed_mentions': {'parse': []}}
         value, receipt = policy.prepare('POST', '/channels/7777/messages', data)
-        self.assertEqual(value['content'], '<@55>')
-        self.assertEqual(value['allowed_mentions'], {'parse': [], 'users': ['55'], 'replied_user': False})
+        self.assertNotIn('content', value)
+        self.assertIn('<@55>', value['embeds'][0]['description'])
+        self.assertEqual(value['allowed_mentions'], {'parse': [], 'users': [], 'replied_user': False})
         self.assertIn('@everyone', value['embeds'][0]['description'])
         policy.remember(receipt)
         value, _ = policy.prepare('POST', '/channels/7777/messages', data)
         self.assertFalse(value['allowed_mentions']['users'])
         self.assertNotIn('content', value)
         self.assertEqual(data['embeds'][0]['description'], 'Hi @alice and @everyone')
+        with self.accounts.db() as db:
+            self.assertEqual(db.execute('SELECT count(*) FROM mention_receipts').fetchone()[0],0)
+
+    def test_card_mentions_preserve_normal_content_and_field_names(self):
+        self.link()
+        data={'content':'Threadle update','embeds':[{'fields':[{'name':'Review','value':'Ask @alice'}]}]}
+        value,_=self.policy().prepare('POST','/channels/7777/messages',data)
+        self.assertEqual(value['content'],'Threadle update')
+        self.assertEqual(value['embeds'][0]['fields'][0],{'name':'Review','value':'Ask <@55>'})
+        self.assertEqual(value['allowed_mentions']['users'],[])
 
     def test_silent_messages_and_edits_render_mentions_without_notifying(self):
         self.link()
@@ -596,7 +607,8 @@ class AccountTests(unittest.TestCase):
         policy = self.policy('Hi @new-login')
         data = {'embeds': [{'description': '@new-login'}]}
         value, _ = policy.prepare('POST', '/channels/7777/messages', data)
-        self.assertEqual(value['content'], '<@55>')
+        self.assertNotIn('content', value)
+        self.assertIn('<@55>',value['embeds'][0]['description'])
         self.assertEqual(self.accounts.get('55')['login'], 'new-login')
         policy.binding = binding_replace(self.binding, auth='legacy')
         self.assertEqual(policy.prepare('POST', '/channels/7777/messages', data)[0], data)

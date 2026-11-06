@@ -19,7 +19,7 @@ def write(queue,sql,rows):
 
 
 def begin(queue,identities):
-    now=time.time();context={'queue':queue,'ids':identities,'first':None}
+    now=time.time();context={'queue':queue,'ids':identities,'first':None,'started':now}
     write(queue,'UPDATE delivery_latency SET started=coalesce(started,?) WHERE delivery=?',[(now,i) for i in identities])
     return ACTIVE.set(context)
 
@@ -43,6 +43,10 @@ def end(token):
             now=time.time()
             write(context['queue'],'UPDATE delivery_latency SET completed=? WHERE delivery=? AND EXISTS(SELECT 1 FROM jobs WHERE id=delivery_latency.delivery AND done=1)',[(now,i) for i in context['ids']])
             write(context['queue'],'DELETE FROM delivery_latency WHERE completed<?',[(now-30*86400,)])
+            if context['first'] is not None:
+                LOG.info('Delivery attempt elapsed_ms=%.1f first_discord_ms=%.1f reused_discord_reads=%d',
+                         (now-context['started'])*1000,(context['first']-context['started'])*1000,
+                         context.get('discord_reads_reused',0))
     finally:ACTIVE.reset(token)
 
 

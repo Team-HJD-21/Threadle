@@ -77,10 +77,11 @@ cancel personal credentials; no new periodic repository scan is introduced.
 GitHub `@login` mentions resolve only for linked, opted-in people who currently
 belong to the destination server and can view that channel. Missing members and
 unlinked users keep their original GitHub text. Code, URLs, emails, teams, HTML
-comments, and escaped mentions do not become pings. Explicit `allowed_mentions`
-allows only those users; never roles or everyone. DND/silent messages and edits
-render the link without adding a ping. A delivery pings once across its topic
-and alert messages.
+comments, and escaped mentions are left unchanged. Linked names appear only
+inside the notification card: Threadle does not append an outside mention line
+or request a real mention notification. This applies to new messages, edits and
+Do Not Disturb alike. Explicit `allowed_mentions` disables users, roles,
+everyone and reply pings. Ordinary channel notification preferences still apply.
 
 In the other direction, native Discord user mentions (`<@id>`) become the linked
 person's current GitHub `@login`. Stable account IDs and current server membership
