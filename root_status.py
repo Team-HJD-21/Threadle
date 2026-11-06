@@ -3,7 +3,7 @@ import copy
 from discord_threads import ApiError,Topic,clip,iso_timestamp,marker,root_description
 
 
-from topic_state import state_label,card_color,status_field
+from topic_state import state_label,card_color,status_field,status_actor
 
 
 def decorate(topic,embed,obj):
@@ -48,12 +48,53 @@ class TopicRoots:
                 db.execute('CREATE TABLE IF NOT EXISTS deleted_topics(topic TEXT PRIMARY KEY,cleaned INTEGER NOT NULL DEFAULT 0)')
                 db.execute('CREATE TABLE IF NOT EXISTS topic_thread_names(topic TEXT PRIMARY KEY,name TEXT NOT NULL)')
                 db.execute('CREATE TABLE IF NOT EXISTS topic_visuals(topic TEXT PRIMARY KEY,state TEXT NOT NULL,event TEXT NOT NULL)')
+                db.execute('CREATE TABLE IF NOT EXISTS topic_status_actors(topic TEXT NOT NULL,state TEXT NOT NULL,actor TEXT NOT NULL,revision REAL NOT NULL,PRIMARY KEY(topic,state))')
+
+    def observe(self,topic,event,payload):
+        """Remember lifecycle actors, never a later commenter or metadata editor."""
+        if self.queue is None:return topic
+        from message_edits import revision
+        expected={'pr':('pull_request','pull_request_target'),'issue':('issues',),'discussion':('discussion',)}[topic.kind]
+        key={'pr':'pull_request','issue':'issue','discussion':'discussion'}[topic.kind]
+        entries=[(item['event'],item['payload']) for item in payload.get('_events',[])] if event=='threadle_bundle' else [(event,payload)]
+        with self.queue.connect() as db:
+            for kind,value in entries:
+                if kind not in expected:continue
+                action=value.get('action');obj=value.get(key) or {}
+                state=None
+                if action in ('opened','created','reopened','ready_for_review'):
+                    state='Draft' if topic.kind=='pr' and obj.get('draft') else 'Open'
+                elif action=='converted_to_draft' and topic.kind=='pr':state='Draft'
+                elif action in ('closed','merged'):
+                    state='Merged' if topic.kind=='pr' and (obj.get('merged') or obj.get('merged_at') or action=='merged') else 'Closed'
+                elif action=='answered' and topic.kind=='discussion':state='Answered'
+                elif action=='unanswered' and topic.kind=='discussion' and not (obj.get('closed') or obj.get('state')=='closed'):state='Open'
+                if state is None:continue
+                actor=(value.get('sender') or {}).get('login')
+                if not actor and action in ('opened','created'):actor=(obj.get('user') or {}).get('login')
+                if not actor:continue
+                # A close on an already Answered Discussion records the closer
+                # separately; the visible Answered actor remains the chooser.
+                db.execute('INSERT INTO topic_status_actors VALUES(?,?,?,?) ON CONFLICT(topic,state) DO UPDATE SET actor=excluded.actor,revision=excluded.revision WHERE excluded.revision>topic_status_actors.revision',
+                           (topic.key,state,str(actor)[:100],revision(obj)))
+        obj=self.with_actor(topic,topic.metadata)
+        return Topic(topic.repo,topic.kind,topic.number,topic.title,topic.url,obj)
+
+    def with_actor(self,topic,obj):
+        result=dict(obj)
+        # Never carry a stale state attribution into a different state.
+        result.pop('_status_actor',None);result.pop('_status_actor_state',None)
+        if self.queue is not None:
+            with self.queue.connect() as db:
+                row=db.execute('SELECT actor FROM topic_status_actors WHERE topic=? AND state=?',(topic.key,state_label(topic.kind,obj))).fetchone()
+            if row:result.update(_status_actor=row[0],_status_actor_state=state_label(topic.kind,obj))
+        return result
 
     def read(self,topic):
         if self.loaded:return self.snapshot
         if topic.kind=='discussion':
             owner,name=topic.repo.split('/')
-            response=self.github.call('POST','/graphql',{'query':'query($owner:String!,$name:String!,$number:Int!){repository(owner:$owner,name:$name){discussion(number:$number){title closed isAnswered}}}', 'variables':{'owner':owner,'name':name,'number':topic.number}})
+            response=self.github.call('POST','/graphql',{'query':'query($owner:String!,$name:String!,$number:Int!){repository(owner:$owner,name:$name){discussion(number:$number){title closed isAnswered answerChosenBy{login}}}}', 'variables':{'owner':owner,'name':name,'number':topic.number}})
             errors=response.get('errors',[])
             if errors and not all(error.get('type')=='NOT_FOUND' and error.get('path',[])[-1:]==['discussion'] for error in errors):raise RuntimeError('Could not read current Discussion status')
             self.snapshot=(response.get('data',{}).get('repository') or {}).get('discussion')
@@ -63,6 +104,7 @@ class TopicRoots:
             except ApiError as error:
                 if error.status!=404 and not (topic.kind=='issue' and error.status==410):raise
                 self.snapshot=None
+        if self.snapshot is not None:self.snapshot=self.with_actor(topic,self.snapshot)
         self.loaded=True
         return self.snapshot
 
@@ -127,7 +169,7 @@ class TopicRoots:
             if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='message_sources'").fetchone():return
             current=db.execute('SELECT event FROM message_sources WHERE source=?',(source,)).fetchone()
             if not current:return
-            visual=state_label(topic.kind,obj)+':'+str(card_color(topic.kind,obj))
+            visual=state_label(topic.kind,obj)+':'+str(card_color(topic.kind,obj))+':'+status_actor(topic.kind,obj)
             saved=db.execute('SELECT state,event FROM topic_visuals WHERE topic=?',(topic.key,)).fetchone()
             if saved==(visual,current[0]):return
             pages=db.execute('SELECT m.thread,p.message FROM message_sources m JOIN source_pages p ON p.source=m.source WHERE m.source=? ORDER BY p.page',(source,)).fetchall()
@@ -136,7 +178,9 @@ class TopicRoots:
                 row=db.execute('SELECT value FROM creation_snapshots WHERE topic=?',(topic.key,)).fetchone()
                 if row:
                     value=json.loads(row[0])
-                    value.update({key:obj[key] for key in ('state','closed','draft','merged','merged_at','isAnswered','answer_chosen_at','answer') if key in obj})
+                    value.update({key:obj[key] for key in ('state','closed','draft','merged','merged_at','merged_by','closed_by','isAnswered','answer_chosen_at','answer','answerChosenBy','answer_chosen_by','_status_actor','_status_actor_state') if key in obj})
+                    for key in ('_status_actor','_status_actor_state'):
+                        if key not in obj:value.pop(key,None)
                     db.execute('UPDATE creation_snapshots SET value=? WHERE topic=?',(json.dumps(value),topic.key))
         for thread,message_id in pages:
             try:message=self.threads.api.call('GET',f'/channels/{thread}/messages/{message_id}')
@@ -235,7 +279,7 @@ class TopicRoots:
                         # Parent channels contain other topics; only their exact starter is ours.
                         db.execute('DELETE FROM '+table+' WHERE channel=? OR (channel=? AND message=?)',(identity,channel,identity))
             for table in ('creation_snapshots','metadata_snapshot','metadata_bursts','metadata_events','metadata_states',
-                          'topic_thread_names','topic_visuals','links','root_index','deferred_threads','deferred_thread_jobs',
+                          'topic_thread_names','topic_visuals','topic_status_actors','links','root_index','deferred_threads','deferred_thread_jobs',
                           'notice_events','dnd_activity'):
                 if table in tables:db.execute('DELETE FROM '+table+' WHERE topic=?',(topic.key,))
             # A partially sent roundup may also contain another topic: keep its ID and rows.

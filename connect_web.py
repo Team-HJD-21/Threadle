@@ -487,6 +487,7 @@ class Onboarding:
                 body += '<p>아래 카테고리와 채널을 자동으로 생성하고 연결합니다. 이 봇이 이미 만든 채널이 있으면 재사용합니다.</p>'
                 body += '<strong>' + esc(self.layouts.name(guild['id'], repo_id, repo['full_name'])) + '</strong><ul>' + ''.join('<li>' + esc(name) + '</li>' for _, name in CHANNELS) + '</ul>'
                 body += '<p class="muted">연결 후 채널 이름은 원하는 대로 바꿔도 알림이 유지됩니다.</p>'
+                body += '<p class="muted">📖threadle-guide 안내 채널도 서버당 하나만 만들고, 처음 사용하는 방법을 한 번 안내합니다.</p>'
                 fields = language_field + legal_consent.fields(session)
                 fields += '<label for="workflow">CI 워크플로 이름 필터 (선택)</label><input id="workflow" name="workflow" maxlength="1000" placeholder="비워두면 모든 워크플로, 여러 개는 쉼표로 구분">'
                 fields += '<button>카테고리·채널 자동 생성하고 연결하기</button>'
@@ -620,7 +621,7 @@ class Onboarding:
                     raise ConnectError('기존 연결이 있습니다. 연결 관리에서 확인해 주세요.', 409)
                 config = dict(existing.config)
             else:
-                config = self.layouts.ensure(self.service.discord(), str(guild['id']), repo_id, actual['full_name'])
+                config = self.layouts.ensure(self.service.discord(), str(guild['id']), repo_id, actual['full_name'], include_guide=True)
                 config['workflow_names'] = list(dict.fromkeys(names))
                 config['team_notifications'] = {'digest_weekday':4,'weekly_digest_hour':9}
                 config['language'] = notification_language

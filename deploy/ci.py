@@ -14,6 +14,7 @@ sys.path.insert(0, str(ROOT))
 from deploy.patch_runtime import digest, read_manifest
 
 TEST_TARGETS = [
+    'test_status_actors', 'test_digest_readability',
     'test_accounts',
     'test_comment_deletions', 'test_chat_events', 'test_presence',
     'test_alert_activity', 'test_source_package',

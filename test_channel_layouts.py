@@ -23,6 +23,35 @@ class ChannelLayoutTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_guide_is_once_per_guild_across_repositories_and_restarts(self):
+        first = self.layouts.ensure(self.bot,'10',11,'owner/first',include_guide=True)
+        restarted = ChannelLayouts(self.path,'9000')
+        second = restarted.ensure(self.bot,'10',22,'owner/second',include_guide=True)
+        self.assertEqual(first['guide_channel'],second['guide_channel'])
+        guides = [c for c in self.bot.created.values() if c['name']=='📖threadle-guide']
+        self.assertEqual(len(guides),1)
+        guide = guides[0]
+        guide['name']='custom-guide'
+        self.assertEqual(restarted.ensure(self.bot,'10',22,'owner/second',include_guide=True)['guide_channel'],guide['id'])
+        del self.bot.created[guide['id']]
+        restarted.ensure(self.bot,'10',22,'owner/second',include_guide=True)
+        self.assertEqual(len(self.bot.created_payloads),13)
+        third = restarted.ensure(self.bot,'20',11,'owner/first',include_guide=True)
+        self.assertNotEqual(first['guide_channel'],third['guide_channel'])
+
+    def test_lost_guide_create_response_does_not_duplicate_channel(self):
+        create = self.bot.create_channel
+        def lose(guild,payload):
+            result = create(guild,payload)
+            if payload['name']=='📖threadle-guide':
+                raise ApiError('Discord','network')
+            return result
+        self.bot.create_channel=lose
+        config=self.layouts.ensure(self.bot,'10',11,'owner/first',include_guide=True)
+        self.assertTrue(config['guide_channel'])
+        self.layouts.ensure(self.bot,'10',22,'owner/second',include_guide=True)
+        self.assertEqual(sum(p['name']=='📖threadle-guide' for p in self.bot.created_payloads),1)
+
     def test_creates_category_and_five_ordered_channels_without_permission_overwrites(self):
         config = self.layouts.ensure(self.bot, '10', 11, 'owner/repo')
         category = next(c for c in self.bot.created.values() if c['type'] == 4)

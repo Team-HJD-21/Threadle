@@ -4,9 +4,9 @@ import math
 import re
 import time
 
-from alert_feed import AlertFeed, activity, english_activity
+from alert_feed import AlertFeed, activity, english_activity, merge_details
 from discord_threads import clip, nonce
-from repository_summary import open_prs, open_issue_digest
+from repository_summary import open_prs, open_issue_digest, pr_counts, summary_item, summary_pages
 
 
 def validate_options(options):
@@ -143,6 +143,10 @@ class TeamNotifications:
         link = f"https://discord.com/channels/{self.binding.config['guild_id']}/{thread}"
         description = (f'[Open thread]({link}) · [View on GitHub]({topic.url})' if self.english
                        else f'[스레드 확인하기]({link}) · [GitHub 원문]({topic.url})')
+        merged=merge_details(topic,event,payload)
+        if merged:
+            title=f'PR #{topic.number} · Merged'
+            description=merged+description
         critical = (event == 'workflow_run' or any(item['payload'].get('action')=='closed' or item['payload'].get('review',{}).get('state','').lower()=='changes_requested' for item in payload.get('_events',[])) or payload.get('action') == 'closed'
                     or payload.get('review', {}).get('state', '').lower() == 'changes_requested')
         self.schedule(topic.key, title, description, link, event_key, channels, critical, bypass_dnd=event=='workflow_run')
@@ -265,25 +269,14 @@ class TeamNotifications:
         for channel,items in sorted(batch['channels'].items()):
             items=[pr for pr in items if open_numbers is None or pr['number'] in open_numbers]
             count=len(items);drafts=sum(pr['draft'] for pr in items);review=sum(pr['review'] for pr in items)
-            summary=(f'{count} open PRs · {review} awaiting review · {drafts} drafts' if en else f'현재 열린 PR {count}개 · 리뷰 요청 대기 {review}개 · 초안 {drafts}개')
-            lines=[]
-            for pr in items:
-                title=clip(str(pr['title']).replace('\n',' ').replace('@','@\u200b'),85)
-                title=re.sub(r'([\\`*_\[\]<>~|])',r'\\\1',title)
-                lines.append(f'• [#{pr["number"]} {title}](https://github.com/{self.binding.repo}/pull/{pr["number"]})')
-            pages=[];current=[];size=0
-            for line in lines:
-                length=len(line.encode('utf-16-le'))//2+1
-                if current and size+length>3000:
-                    pages.append(current);current=[];size=0
-                current.append(line);size+=length
-            if current:pages.append(current)
+            summary=pr_counts(count,review,drafts,en)
+            pages=summary_pages([summary_item(self.binding.repo,'pr',pr,en) for pr in items],summary) if items else []
             for index,page in enumerate(pages):
                 if not page:continue
                 self.feed(channel).send('open-pr-roundup:'+identity,str(index),
                     '🧵 Here are the PRs that are still open.' if en else '🧵 아직 열린 PR을 모아왔어요.',
                     ('Open PR reminders' if en else '열린 PR 현황')+' · '+self.binding.repo,
-                    summary+'\n\n'+'\n'.join(page),'https://github.com/'+self.binding.repo+'/pulls',0xD29922)
+                    page,'https://github.com/'+self.binding.repo+'/pulls',0xD29922)
         self.advance_reminders(batch['due'],hours)
 
     def advance_reminders(self,due,hours):
@@ -318,23 +311,18 @@ class TeamNotifications:
         review = [p for p in prs if not p.get('draft') and (p.get('requested_reviewers') or p.get('requested_teams'))]
         title = ('Daily PR & issue digest' if kind == 'daily' else 'Weekly PR & issue digest') if self.english else ('일일' if kind == 'daily' else '주간') + ' PR · Issue 현황'
         drafts = sum(bool(p.get('draft')) for p in prs)
-        lines = [(f'{len(prs)} open PRs · {len(review)} awaiting review · {drafts} drafts' if self.english else f'현재 열린 PR {len(prs)}개 · 리뷰 요청 대기 {len(review)}개 · 초안 {drafts}개'), '']
-        for pr in sorted(prs, key=lambda p: p.get('updated_at', ''))[:15]:
-            pr_title=clip(str(pr.get('title','')).replace('\n',' ').replace('@','@\u200b'),85)
-            pr_title=re.sub(r'([\\`*_\[\]<>~|])',r'\\\1',pr_title)
-            link=f'https://github.com/{self.binding.repo}/pull/{int(pr["number"])}'
-            lines.append(f'• [#{pr["number"]} {pr_title}]({link})')
+        summary=pr_counts(len(prs),len(review),drafts,self.english)
+        lines=[summary_item(self.binding.repo,'pr',pr,self.english) for pr in sorted(prs,key=lambda p:p.get('updated_at',''))[:15]]
         url = f'https://github.com/{self.binding.repo}/pulls'
         if len(prs) > 15:
-            lines.append(f'… {len(prs)-15} more PRs · /summary')
-        def item_lines(items):
-            return '\n'.join(f'• [#{item["number"]} {clip(item.get("title", ""), 85)}]({item["url"]})' for item in items) or ('None' if self.english else '없음')
+            lines.append(f'… {len(prs)-15} more PRs · /summary' if self.english else f'그 외 PR {len(prs)-15}개 · /summary로 확인')
+        issue_footer=(f'{count} open issues · showing {len(oldest)} oldest' if self.english else f'미해결 Issue {count}개 · 오래된 순 {len(oldest)}개 표시')
         issue_embeds = [
             {'title': 'Oldest open issues' if self.english else '가장 오래된 미해결 Issue',
-             'description': item_lines(oldest), 'color':0x2DA44E,
-             'footer':{'text':f'{count} remaining issues…'}}]
-        from notification_text import split_description,units
-        pr_pages=split_description('\n'.join(lines),2700)
+             'description': '\n\n'.join(summary_item(self.binding.repo,'issue',item,self.english) for item in oldest) or ('None' if self.english else '없음'), 'color':0x2DA44E,
+             'footer':{'text':issue_footer}}]
+        from notification_text import units
+        pr_pages=summary_pages(lines,summary)
         cards=[{'title':title,'description':part,'url':url,'color':0x0969DA} for part in pr_pages]+issue_embeds
         groups=[];group=[];size=0
         for card in cards:

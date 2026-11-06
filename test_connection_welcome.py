@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock,patch
 
-from connection_welcome import ConnectionWelcome
+from connection_welcome import ConnectionWelcome, guide_text
 from delivery import Queue
 from registry import Registry
 
@@ -22,6 +22,8 @@ class WelcomeApi:
             return row
         if method=='GET' and '/messages?' in path:
             return list(reversed(copy.deepcopy(self.posts)))
+        if method=='GET' and path.startswith('/channels/'):
+            return {'id':path.split('/')[2],'guild_id':'10','type':0}
         raise AssertionError((method,path))
 
 
@@ -54,6 +56,45 @@ class WelcomeTests(unittest.TestCase):
     def test_existing_users_do_not_get_upgrade_welcome(self):
         identity=self.registry.add('old',11,'owner/repo',12,'app',self.config)
         self.assertFalse(self.welcome(self.registry.get(identity)).pending())
+
+    def test_guide_sent_once_across_repositories_workers_and_restarts(self):
+        self.config['guide_channel']='106'
+        first=self.connect()
+        other_id=self.registry.connect(22,'owner/other',12,self.config,'1','2')
+        second=self.registry.get(other_id)
+        with patch('connection_welcome.open_items',return_value=[]):
+            self.welcome(second).tick(Mock())
+            self.welcome(first).tick(Mock())
+            self.welcome(first).tick(Mock())
+        guides=[row for row in self.api.posts if row['channel_id']=='106']
+        self.assertEqual(len(guides),1)
+        self.assertEqual(guides[0]['flags'],4096)
+        self.assertIn('/account connect',guides[0]['embeds'][0]['description'])
+        self.assertEqual(guides[0]['allowed_mentions'],{'parse':[]})
+        self.assertFalse(self.welcome(first).pending())
+        self.assertEqual(len(self.api.posts),5)
+
+    def test_lost_guide_response_is_recovered_before_marking_done(self):
+        self.config['guide_channel']='106';binding=self.connect();self.api.lose=True
+        with self.assertRaises(RuntimeError):self.welcome(binding).tick(Mock())
+        self.assertTrue(self.welcome(binding).guide_pending())
+        with patch('connection_welcome.open_items',return_value=[]):self.welcome(binding).tick(Mock())
+        self.assertEqual(len([r for r in self.api.posts if r['channel_id']=='106']),1)
+        self.assertFalse(self.welcome(binding).guide_pending())
+
+    def test_guide_transfer_if_first_repository_disconnected_before_delivery(self):
+        self.config['guide_channel']='106';first=self.connect()
+        self.registry.disconnect(first.id,'10','1')
+        other=self.registry.connect(22,'owner/other',12,self.config,'1','2')
+        with patch('connection_welcome.open_items',return_value=[]):self.welcome(self.registry.get(other)).tick(Mock())
+        self.assertEqual(len([r for r in self.api.posts if r['channel_id']=='106']),1)
+
+    def test_guide_has_both_languages_and_fits_one_embed(self):
+        for english in (False,True):
+            text=guide_text(english)
+            self.assertLess(len(text),4096)
+            self.assertIn('/settings',text)
+            self.assertIn('https://discord.gg/6faZbNBdv',text)
     def test_lost_response_and_summary_retry_do_not_repeat_greeting(self):
         binding=self.connect();self.api.lose=True
         with self.assertRaises(RuntimeError):self.welcome(binding).tick(Mock())
