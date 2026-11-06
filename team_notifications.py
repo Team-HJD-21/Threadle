@@ -4,7 +4,7 @@ import math
 import re
 import time
 
-from alert_feed import AlertFeed, activity, english_activity, merge_details
+from alert_feed import AlertFeed, activity, english_activity, merge_details, closure_details
 from discord_threads import clip, nonce
 from repository_summary import open_prs, open_issue_digest, pr_counts, summary_item, summary_pages
 
@@ -138,6 +138,11 @@ class TeamNotifications:
                 for index in range(len(payload.get('_events') or [None])):
                     self.dnd.record(topic,event_key+':part:'+str(index),thread,until)
                 return
+        closure = closure_details(topic, event, payload)
+        if closure:
+            for channel in set(channels):
+                self.feed(channel).lifecycle(topic, closure, event_key, thread, self.clock())
+            return
         label = {'pr': 'PR', 'issue': 'ISSUE', 'discussion': 'Discussion'}[topic.kind]
         title = f'{label} #{topic.number} · ' + (english_activity(event, payload) if self.english else activity(event, payload))
         link = f"https://discord.com/channels/{self.binding.config['guild_id']}/{thread}"

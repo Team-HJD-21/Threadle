@@ -7,6 +7,8 @@ from discord_threads import ApiError, clip, nonce
 
 LOCKS = [threading.RLock() for _ in range(64)]
 PAGE_SIZE = 10
+LIFECYCLE_GAP = 300
+LIFECYCLE_SPAN = 900
 
 
 def receipt(feed, key, event):
@@ -26,13 +28,39 @@ class ActivityCards:
                     activities TEXT,url TEXT,PRIMARY KEY(channel,window,topic));
                 CREATE TABLE IF NOT EXISTS activity_pages(channel TEXT,window TEXT,page INTEGER,digest TEXT,
                     PRIMARY KEY(channel,window,page));
+                CREATE TABLE IF NOT EXISTS activity_details(channel TEXT,window TEXT,topic TEXT,description TEXT,
+                    PRIMARY KEY(channel,window,topic));
+                CREATE TABLE IF NOT EXISTS activity_windows(channel TEXT,category TEXT,window TEXT,started REAL,updated REAL,
+                    PRIMARY KEY(channel,category));
             ''')
+
+    def lock(self):
+        return LOCKS[int(hashlib.sha256((str(self.feed.queue.path) + ':' + str(self.feed.channel)).encode()).hexdigest(), 16) % len(LOCKS)]
+
+    def lifecycle(self, item, category, now):
+        """Send immediately; append a nearby closure to its durable card."""
+        feed = self.feed
+        with self.lock():
+            with feed.queue.connect() as db:
+                saved = db.execute('SELECT window FROM activity_events WHERE channel=? AND event=? AND topic=?',
+                                   (feed.channel, item[0], item[1])).fetchone()
+                group = self.repo + ':' + category + (':en' if self.english else ':ko')
+                current = db.execute('SELECT window,started,updated FROM activity_windows WHERE channel=? AND category=?',
+                                     (feed.channel, group)).fetchone()
+                if saved:
+                    window = saved[0]
+                elif current and 0 <= now-current[2] <= LIFECYCLE_GAP and 0 <= now-current[1] < LIFECYCLE_SPAN:
+                    window = current[0]
+                    db.execute('UPDATE activity_windows SET updated=? WHERE channel=? AND category=?', (now, feed.channel, group))
+                else:
+                    window = 'lifecycle:' + category + ':' + nonce(self.repo + ':' + item[0] + ':' + item[1] + ':' + str(now))
+                    db.execute('INSERT OR REPLACE INTO activity_windows VALUES(?,?,?,?,?)', (feed.channel, group, window, now, now))
+            self.update([item], window)
 
     def update(self, items, window):
         """Persist before sending. Replays retain their original window across restarts."""
         feed = self.feed
-        lock = LOCKS[int(hashlib.sha256((str(feed.queue.path) + ':' + str(feed.channel)).encode()).hexdigest(), 16) % len(LOCKS)]
-        with lock:
+        with self.lock():
             windows = set()
             with feed.queue.connect() as db:
                 db.execute('BEGIN IMMEDIATE')
@@ -53,28 +81,52 @@ class ActivityCards:
                                'DO UPDATE SET label=excluded.label,activities=excluded.activities,url=excluded.url',
                                (feed.channel, selected, topic, clip(label, 70), json.dumps(activities), url))
                     db.execute('INSERT INTO activity_events VALUES(?,?,?,?)', (feed.channel, event, topic, selected))
+                    if selected.startswith('lifecycle:'):
+                        db.execute('INSERT OR REPLACE INTO activity_details VALUES(?,?,?,?)',
+                                   (feed.channel, selected, topic, description))
             for selected in sorted(windows):
                 self.publish(selected)
 
-    def publish(self, window):
-        feed = self.feed
-        with feed.queue.connect() as db:
-            rows = db.execute('SELECT label,activities,url FROM activity_items WHERE channel=? AND window=? ORDER BY rowid',
-                              (feed.channel, window)).fetchall()
-        for page, start in enumerate(range(0, len(rows), PAGE_SIZE)):
-            lines = []
-            for label, raw, url in rows[start:start + PAGE_SIZE]:
+    def render(self, window):
+        from notification_text import units
+        with self.feed.queue.connect() as db:
+            rows = db.execute('SELECT i.label,i.activities,i.url,d.description FROM activity_items i '
+                              'LEFT JOIN activity_details d ON d.channel=i.channel AND d.window=i.window AND d.topic=i.topic '
+                              'WHERE i.channel=? AND i.window=? ORDER BY i.rowid', (self.feed.channel, window)).fetchall()
+        lifecycle = window.startswith('lifecycle:')
+        title = clip(self.repo, 140) + (' · Recent activity' if self.english else ' · 최근 활동')
+        color, separator, limit = 0x0969DA, '\n', PAGE_SIZE
+        if lifecycle:
+            category = window.split(':', 2)[1]
+            title = clip(self.repo, 110) + ' · ' + category + ' · ' + str(len(rows)) + (' items' if self.english else '건')
+            color = 0xD1242F if category == 'PR Closed' else 0x8957E5
+            separator, limit = '\n\n', 5
+        groups, group, size = [], [], 0
+        for label, raw, url, details in rows:
+            label = label.replace('\\', '\\\\').replace('[', '\\[').replace(']', '\\]')
+            if lifecycle:
+                entry = f'**[{label}]({url})**\n' + (details or '')
+            else:
                 activities = json.loads(raw)
                 # Summarize kinds of activity, not duplicate webhook deliveries.
                 text = ', '.join(clip(item, 60) for item in activities[:4])
                 if len(activities) > 4:
                     text += f' +{len(activities)-4}'
-                label = label.replace('\\', '\\\\').replace('[', '\\[').replace(']', '\\]')
-                lines.append(f'• [{label}]({url}) · {text}' if text else f'• [{label}]({url})')
-            title = clip(self.repo, 140) + (' · Recent activity' if self.english else ' · 최근 활동')
-            if len(rows) > PAGE_SIZE:
-                title += f' ({page+1}/{(len(rows)+PAGE_SIZE-1)//PAGE_SIZE})'
-            body = '\n'.join(lines)
+                entry = f'• [{label}]({url}) · {text}' if text else f'• [{label}]({url})'
+            if group and (len(group) >= limit or size + units(entry) + len(separator) > 3500):
+                groups.append(group)
+                group, size = [], 0
+            group.append((entry, url))
+            size += units(entry) + len(separator)
+        if group:
+            groups.append(group)
+        return [(title + (f' ({page+1}/{len(groups)})' if len(groups) > 1 else ''),
+                 separator.join(entry for entry, _ in group), group[0][1], color)
+                for page, group in enumerate(groups)]
+
+    def publish(self, window):
+        feed = self.feed
+        for page, (title, body, url, color) in enumerate(self.render(window)):
             digest = hashlib.sha256((title + '\n' + body).encode()).hexdigest()
             key, event = 'activity:' + self.repo + ':' + str(feed.channel) + ':' + window, str(page)
             identity = receipt(feed, key, event)
@@ -85,7 +137,7 @@ class ActivityCards:
             if old and old[0] == digest:
                 continue
             if not message or not message[0]:
-                message_id = feed.send(key, event, '', title, body, rows[start][2], 0x0969DA)
+                message_id = feed.send(key, event, '', title, body, url, color)
                 # A lost POST response may have left an older version on Discord.
                 recovering = message is not None
             else:
@@ -93,8 +145,8 @@ class ActivityCards:
             if recovering:
                 data = {
                     'content': '', 'allowed_mentions': {'parse': []},
-                    'embeds': [{'title': title, 'description': body, 'url': rows[start][2],
-                                'color': 0x0969DA, 'footer': {'text': identity}}]}
+                    'embeds': [{'title': title, 'description': body, 'url': url,
+                                'color': color, 'footer': {'text': identity}}]}
                 try:
                     feed.api.call('PATCH', '/channels/' + feed.channel + '/messages/' + str(message_id), data)
                 except ApiError as error:
@@ -102,7 +154,7 @@ class ActivityCards:
                         raise
                     with feed.queue.connect() as db:
                         db.execute('DELETE FROM alerts WHERE receipt=?', (identity,))
-                    feed.send(key, event, '', title, body, rows[start][2], 0x0969DA)
+                    feed.send(key, event, '', title, body, url, color)
             with feed.queue.connect() as db:
                 db.execute('INSERT OR REPLACE INTO activity_pages VALUES(?,?,?,?)',
                            (feed.channel, window, page, digest))

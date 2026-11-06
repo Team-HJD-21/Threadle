@@ -49,7 +49,8 @@ class DigestReadabilityTests(unittest.TestCase):
             notices=TeamNotifications(b,self.queue,self.api,clock=lambda:2000000000)
             notices.topic(topic,'pull_request',payload,'merge-'+language,'thread',['104'])
             card=self.api.messages[-1][1]['embeds'][0]
-            self.assertEqual(card['title'],'PR #626 · Merged')
+            self.assertIn('PR Merged',card['title'])
+            self.assertIn('**[PR #626]',card['description'])
             self.assertIn('**feat(encounter): actual PR title**',card['description'])
             self.assertIn('Merged by actual-merger',card['description'])
             self.assertNotIn('webhook-bot',card['description'])
