@@ -279,6 +279,7 @@ class Service:
                 LOG.info('Routing topic binding=%s event=%s kind=%s number=%s channel=%s',
                          binding.id,event,topic.kind,topic.number,destination)
                 roots.threads=routed
+                topic=roots.observe(topic,event,payload)
                 from deferred_threads import defer
                 deferred=defer(routed,roots,topic,event,payload,delivery,binding.config.get('team_notifications',{}),time.time())
                 if deferred=='gone':continue

@@ -294,7 +294,7 @@ class NotificationTests(unittest.TestCase):
         self.now[0]+=3600;notices.reminders(github)
         self.assertEqual(len(self.api.messages),1)
         text=str(self.api.messages)
-        self.assertIn('현재 열린 PR 3개 · 리뷰 요청 대기 1개 · 초안 1개',text)
+        self.assertIn('**열린 PR** `3` · **리뷰 대기** `1` · **Draft** `1`',text)
         for number in range(1,4):self.assertIn('/pull/'+str(number),text)
         self.assertNotIn('4시간 뒤에도',text)
         github.pages.return_value.append({'number':4,'title':'Just opened'})
@@ -320,7 +320,7 @@ class NotificationTests(unittest.TestCase):
         github=Mock();github.pages.return_value=[{'number':1,'title':'[link](bad) @everyone','draft':True}]
         self.now[0]+=4*3600;notices.reminders(github)
         text=str(self.api.messages)
-        self.assertIn('1 open PRs · 0 awaiting review · 1 drafts',text)
+        self.assertIn('**Open PRs** `1` · **Awaiting review** `0` · **Drafts** `1`',text)
         self.assertNotIn('@everyone',text)
         self.assertIn('/pull/1',text)
 
@@ -390,7 +390,7 @@ class NotificationTests(unittest.TestCase):
         self.notices(digest='daily', digest_hour=9, utc_offset=9, enabled_at=self.now[0]-3600).digest(github)
         self.assertEqual(len(self.api.messages), 1)
         self.assertEqual(github.call.call_count, 1)
-        self.assertIn('현재 열린 PR 2개', self.api.messages[0][1]['embeds'][0]['description'])
+        self.assertIn('**열린 PR** `2`', self.api.messages[0][1]['embeds'][0]['description'])
 
 
 class DeliveryIntegrationTests(unittest.TestCase):
@@ -484,7 +484,7 @@ class TeamWebTests(WebFixture):
         self.assertEqual(self.post('/connect/team/apply')[0], 303)
         saved = self.service.registry.active()[0]
         self.assertEqual(len(saved.config['routing_groups']), 2)
-        self.assertEqual(len(self.bot.created_payloads), 8)
+        self.assertEqual(len(self.bot.created_payloads), 9)
         self.assertEqual(saved.config['team_notifications'], {'digest_weekday':4,'weekly_digest_hour':9})
 
     def test_existing_connection_can_enable_options_without_changing_binding_or_queue(self):

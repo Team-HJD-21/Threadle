@@ -145,7 +145,7 @@ class ChannelLayouts:
         if key != 'category':
             self.clean_topic(api,guild,data,key,row)
 
-    def ensure(self, api, guild, repo_id, repository, groups=None):
+    def ensure(self, api, guild, repo_id, repository, groups=None, include_guide=False):
         from pr_routing import validate_groups, group_channel_name
         groups = validate_groups(groups or [], provisioned=False)
         guild = str(guild)
@@ -191,7 +191,25 @@ class ChannelLayouts:
                       'alert_channel': data['channels']['alert'], 'ci_channel': data['channels']['ci']}
             if groups:
                 config['routing_groups'] = [dict(group, channel=data['channels']['role:' + group['id']]) for group in groups]
+            if include_guide:
+                config['guide_channel'] = self.ensure_guide(api, guild, data['category'])
             return config
+
+    def ensure_guide(self, api, guild, category):
+        # A separate guild scope keeps onboarding independent of repository count.
+        with self.claim(guild + ':guide') as (owner, data):
+            data['scope'] = guild + ':guide'
+            self.save(guild, owner, data)
+            if data.get('not_before', 0) > self.clock():
+                raise ConnectError('안내 채널 생성 대기 시간이 남아 있습니다. 잠시 후 다시 시도해 주세요.', 429)
+            self.reconcile(api, guild, owner, data)
+            if not data['channels'].get('guide'):
+                data['category'] = category
+                self.create(api, guild, owner, data, 'guide', {
+                    'name': '📖threadle-guide', 'type': 0, 'parent_id': category, 'position': 0,
+                    'topic': 'Threadle managed channel | layout=' + data['token'] + '; kind=guide'})
+            # Names/moves/deletion chosen by server admins do not trigger recreation.
+            return data['channels']['guide']
 
 
     def clean_topic(self,api,guild,data,kind,row=None):
@@ -203,7 +221,8 @@ class ChannelLayouts:
             markers=[brand+' managed channel | layout='+data['token']+'; kind='+kind for brand in ('GitHub Notify','Threadle')]
             if row.get('topic') in markers:
                 label={'pr':'pull request','issue':'issue','discussion':'discussion','ci':'CI/CD','alert':'repository update'}.get(kind,'pull request')
-                api.call('PATCH','/channels/'+channel,{'topic':'Threadle · GitHub '+label+' notifications.'})
+                topic = 'Threadle · Getting started and commands.' if kind == 'guide' else 'Threadle · GitHub '+label+' notifications.'
+                api.call('PATCH','/channels/'+channel,{'topic':topic})
             with self.db() as db:
                 db.execute('UPDATE topic_cleanup SET done=1 WHERE channel=?',(channel,))
         except Exception as error:

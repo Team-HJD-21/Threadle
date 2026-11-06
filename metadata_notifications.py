@@ -72,6 +72,8 @@ def creation_snapshot(queue,topic,obj,event,payload,language,version):
         db.execute('CREATE TABLE IF NOT EXISTS creation_snapshots(topic TEXT PRIMARY KEY,value TEXT NOT NULL)')
         row=db.execute('SELECT value FROM creation_snapshots WHERE topic=?',(topic.key,)).fetchone()
         previous=json.loads(row[0]) if row else dict(topic.metadata)
+        for key in ('_status_actor','_status_actor_state'):
+            if key in topic.metadata:previous[key]=topic.metadata[key]
         base=Topic(topic.repo,topic.kind,topic.number,previous.get('title',topic.title),topic.url,previous)
         snapshot=merge_snapshot(base,[(event,payload)])
         snapshot=Topic(topic.repo,topic.kind,topic.number,snapshot.metadata.get('title',topic.title),topic.url,snapshot.metadata)

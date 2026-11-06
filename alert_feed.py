@@ -25,6 +25,23 @@ def activity(event, payload):
     return english_activity(event, payload)
 
 
+def merge_details(topic,event,payload):
+    """Readable merge context shared by immediate and legacy alert paths."""
+    if topic.kind!='pr':return ''
+    entries=[(row['event'],row['payload']) for row in payload.get('_events',[])] if event=='threadle_bundle' else [(event,payload)]
+    for kind,value in reversed(entries):
+        obj=value.get('pull_request') or {}
+        if kind not in ('pull_request','pull_request_target') or value.get('action')!='closed' or not (obj.get('merged') or obj.get('merged_at')):continue
+        from topic_state import status_actor
+        from repository_summary import summary_text
+        actor=status_actor('pr',obj) or (value.get('sender') or {}).get('login')
+        title=summary_text(obj.get('title') or topic.title,220)
+        lines=['**'+title+'**'] if title else []
+        if actor:lines.append('Merged by '+summary_text(actor,100))
+        return '\n'.join(lines)+'\n\n' if lines else ''
+    return ''
+
+
 def english_activity(event, payload):
     if event == 'threadle_bundle':
         return 'Opened' if payload.get('_created') else f"{len(payload.get('_events', []))} updates"
@@ -124,16 +141,19 @@ class AlertFeed:
         actor = clip(payload.get('sender', {}).get('login', 'GitHub'), 80)
         english = self.config.get('language') == 'en'
         summary = f'{label} #{topic.number} · ' + (english_activity(event, payload) if english else activity(event, payload))
+        merged=merge_details(topic,event,payload)
+        if merged:summary=f'PR #{topic.number} · Merged'
         link = f"https://discord.com/channels/{self.config['guild_id']}/{thread}"
         content = f'🧵 I brought you an update: {summary}.' if english else f'🧵 새 소식을 가져왔어요! {summary} — 스레드에서 확인해 주세요.'
         description = f'By {actor}\n[Open thread]({link}) · [View on GitHub]({topic.url})' if english else f'작성자: {actor}\n[스레드 확인하기]({link}) · [GitHub 원문]({topic.url})'
-        urgent = payload.get('action') == 'closed' or payload.get('review', {}).get('state', '').lower() == 'changes_requested'
+        if merged:description=merged+description.split('\n',1)[-1]
+        urgent = bool(merged) or payload.get('action') == 'closed' or payload.get('review', {}).get('state', '').lower() == 'changes_requested'
         if not urgent:
             self.activity(topic.repo,
                 [(event_key, topic.key, summary, description, link, 0x0969DA)], 'live:' + str(int(time.time() // 60)))
             return
         self.send(topic.key, event_key, content,
-                  topic.title or summary, description,
+                  summary if merged else topic.title or summary, description,
                   link, {'issue': 0x2DA44E, 'pr': 0x8957E5, 'discussion': 0x0969DA}[topic.kind])
 
     def ci_detail(self, repo, payload, event_key):

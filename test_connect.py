@@ -489,7 +489,7 @@ class ConnectionFlowTests(WebFixture):
         self.assertEqual(len(self.service.registry.active()), 1)
         self.assertTrue(all(method in ('GET', 'PATCH') or (method == 'POST' and path.endswith('/channels'))
                             for method, path in self.bot.calls))
-        self.assertEqual(len(self.bot.created_payloads), 6)
+        self.assertEqual(len(self.bot.created_payloads), 7)
 
     def test_two_users_cannot_access_each_others_servers_repositories_or_connections(self):
         a_fields = self.configure()

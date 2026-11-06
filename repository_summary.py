@@ -2,6 +2,42 @@ import time
 from discord_threads import clip
 
 
+def summary_text(value,limit=160):
+    import re
+    text=' '.join(str(value or '').split()).replace('@','@\u200b')
+    return re.sub(r'([\\`*_\[\]<>~|#])',r'\\\1',clip(text,limit))
+
+
+def pr_counts(count,review,drafts,english=False):
+    return (f'**Open PRs** `{count}` · **Awaiting review** `{review}` · **Drafts** `{drafts}`' if english
+            else f'**열린 PR** `{count}` · **리뷰 대기** `{review}` · **Draft** `{drafts}`')
+
+
+def summary_item(repo,kind,item,english=False):
+    number=int(item['number'])
+    path='pull' if kind=='pr' else 'issues'
+    label='PR' if kind=='pr' else 'Issue'
+    heading=f'**[{label} #{number}](https://github.com/{repo}/{path}/{number})**'
+    if kind=='pr':
+        review=item.get('review') or item.get('requested_reviewers') or item.get('requested_teams')
+        state='Draft' if item.get('draft') else ('Awaiting review' if english else '리뷰 대기') if review else 'Open'
+        heading+=' · `'+state+'`'
+    return heading+'\n'+summary_text(item.get('title',''))
+
+
+def summary_pages(entries,header='',limit=2700):
+    """Keep each number/title pair intact when Discord needs another page."""
+    from notification_text import units
+    pages=[];current=header
+    for entry in entries:
+        candidate=(current+'\n\n' if current else '')+entry
+        if current and units(candidate)>limit:
+            pages.append(current);current=(header+'\n\n' if header else '')+entry
+        else:current=candidate
+    if current:pages.append(current)
+    return pages or [header]
+
+
 def open_items(github, repo, kind):
     field = {'pr': 'pullRequests', 'issue': 'issues', 'discussion': 'discussions'}[kind]
     owner, name = repo.split('/')

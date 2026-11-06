@@ -184,7 +184,7 @@ class NotificationUpdateTests(unittest.TestCase):
         embeds = notices.api.messages[0][1]['embeds']
         self.assertIn('Unassigned open PR',embeds[0]['description'])
         self.assertIn('Oldest issue',embeds[1]['description'])
-        self.assertIn('11 remaining issues',embeds[1]['footer']['text'])
+        self.assertIn('미해결 Issue 11개',embeds[1]['footer']['text'])
         self.assertEqual(len(embeds),2)
         self.assertNotIn('Completed issue',str(embeds))
 

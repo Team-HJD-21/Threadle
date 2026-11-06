@@ -54,6 +54,7 @@ class Registry:
             from operator_mail import schema as mail_schema
             mail_schema(db)
             db.execute('CREATE TABLE IF NOT EXISTS connection_welcomes(guild TEXT NOT NULL,repo_id INTEGER NOT NULL,binding TEXT NOT NULL,phase INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(guild,repo_id))')
+            db.execute('CREATE TABLE IF NOT EXISTS guild_guides(guild TEXT PRIMARY KEY,channel TEXT NOT NULL,binding TEXT NOT NULL,sent INTEGER NOT NULL DEFAULT 0)')
             db.execute('CREATE TABLE IF NOT EXISTS connection_retention(id TEXT PRIMARY KEY, disconnected_at REAL NOT NULL)')
             db.execute('CREATE TABLE IF NOT EXISTS retention_scopes(scope TEXT PRIMARY KEY)')
             db.execute('CREATE TABLE IF NOT EXISTS legal_acceptances(binding TEXT NOT NULL, discord_user TEXT NOT NULL, '
@@ -97,7 +98,7 @@ class Registry:
         names = config.get('workflow_names', [])
         if not isinstance(names, list) or not all(isinstance(name, str) and name for name in names):
             raise ValueError('workflow_names must be a list of nonempty names')
-        for value in [config['guild_id'], *config['channels'].values(), config.get('alert_channel', '1'), config.get('ci_channel', '1'),
+        for value in [config['guild_id'], *config['channels'].values(), config.get('alert_channel', '1'), config.get('ci_channel', '1'), config.get('guide_channel', '1'),
                       *[g['channel'] for g in config.get('routing_groups', [])]]:
             if not re.fullmatch('[0-9]+', str(value)) or int(value) <= 0:
                 raise ValueError('Discord IDs must be numeric')
@@ -161,6 +162,11 @@ class Registry:
             self.acceptance(db, identity, discord_user, github_user, consent)
             if row is None:
                 db.execute('INSERT OR IGNORE INTO connection_welcomes(guild,repo_id,binding) VALUES(?,?,?)',(guild,repo_id,identity))
+            if config.get('guide_channel'):
+                db.execute('INSERT OR IGNORE INTO guild_guides(guild,channel,binding) VALUES(?,?,?)',
+                           (guild,str(config['guide_channel']),identity))
+                db.execute('UPDATE guild_guides SET binding=? WHERE guild=? AND sent=0 AND NOT EXISTS '
+                           '(SELECT 1 FROM bindings b WHERE b.id=guild_guides.binding AND b.enabled=1)',(identity,guild))
             from operator_mail import enqueue
             enqueue(db,identity,repo,guild)
         return identity

@@ -25,7 +25,24 @@ def card_color(kind,obj):
 
 
 def status_field(kind,obj):
-    return {'name':'Current Status','value':'`'+state_label(kind,obj)+'`','inline':False}
+    import re
+    state=state_label(kind,obj)
+    actor=status_actor(kind,obj)
+    # Keep the state in code; a login is plain text, not a Discord mention.
+    suffix=' by '+re.sub(r'([\\`*_\[\]<>~|])',r'\\\1',actor) if actor else ''
+    return {'name':'Current Status','value':'`'+state+'`'+suffix,'inline':False}
+
+
+def status_actor(kind,obj):
+    state=state_label(kind,obj)
+    direct={'Merged':('merged_by',),'Closed':('closed_by',),
+            'Answered':('answerChosenBy','answer_chosen_by')}.get(state,())
+    for key in direct:
+        value=obj.get(key)
+        if isinstance(value,dict) and value.get('login'):return str(value['login'])[:100]
+    if obj.get('_status_actor_state')==state:
+        return str(obj.get('_status_actor') or '')[:100]
+    return ''
 
 
 def event_color(kind,event,payload):

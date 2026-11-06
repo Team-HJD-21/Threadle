@@ -152,6 +152,10 @@ def merge_snapshot(topic, entries):
                 if action=='field_removed':existing.pop(display(field),None)
                 else:existing[display(field)]=field_details(payload,True)[0].split(': ',1)[-1]
                 obj['issue_fields']=existing
+    # Lifecycle attribution was resolved before rendering; raw metadata edits
+    # must not replace it with the latest event sender.
+    for key in ('_status_actor','_status_actor_state'):
+        if key in topic.metadata:obj[key]=topic.metadata[key]
     return Topic(topic.repo,topic.kind,topic.number,obj.get('title',topic.title),topic.url,obj)
 
 
