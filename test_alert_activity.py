@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from alert_activity import ActivityCards
 from alert_feed import AlertFeed
-from discord_threads import ApiError
+from discord_threads import Api, ApiError
 from delivery import Queue
 from test_alert_feed import FakeAlertApi
 from alert_feed import closure_details
@@ -30,6 +30,30 @@ class ActivityTests(unittest.TestCase):
     def item(self, number, event='a', activity='New commits'):
         return (event, 'pr:' + str(number), f'PR #{number} · {activity}', '',
                 'https://discord.com/channels/10/' + str(number), 1)
+
+    def test_emojis_appear_only_on_selected_pr_activity_and_merge_rows(self):
+        cards = self.cards()
+        with patch('app_emojis.prefix', side_effect=lambda api, name: name + ' '):
+            cards.update([self.item(1, 'open', 'Opened'), self.item(2, 'review', 'Review requested'),
+                          self.item(3, 'commit')], 'live:10')
+            body = cards.render('live:10')[0][1]
+            self.assertIn('threadle_pr_sent [PR #1]', body)
+            self.assertIn('threadle_review_please [PR #2]', body)
+            self.assertIn('• [PR #3]', body)
+            cards.lifecycle(self.item(4, 'merge', 'Merged'), 'PR Merged', 1)
+        self.assertIn('threadle_merge **[PR #4]', self.api.posts[-1]['embeds'][0]['description'])
+
+    def test_application_emoji_lookup_reuses_existing_and_uploads_only_missing(self):
+        from app_emojis import prefix
+        api = Api('Discord', '', 'emoji-test-token', 'Bot')
+        existing = [{'name': name, 'id': str(index)} for index, name in enumerate(
+            ('threadle_hello', 'threadle_review_please', 'threadle_merge'), 1)]
+        with patch.object(api, 'call', side_effect=[{'id': '99'}, {'items': existing},
+                                                   {'id': '4', 'name': 'threadle_pr_sent'}]) as call:
+            self.assertEqual(prefix(api, 'threadle_hello'), '<:threadle_hello:1> ')
+            self.assertEqual(prefix(api, 'threadle_pr_sent'), '<:threadle_pr_sent:4> ')
+            self.assertEqual(call.call_count, 3)
+            self.assertEqual(call.call_args.args[2]['name'], 'threadle_pr_sent')
 
     def test_first_event_is_immediate_later_topics_and_activities_edit_one_card(self):
         cards = self.cards()

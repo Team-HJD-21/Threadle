@@ -88,12 +88,14 @@ class ActivityCards:
                 self.publish(selected)
 
     def render(self, window):
+        from app_emojis import prefix
         from notification_text import units
         with self.feed.queue.connect() as db:
             rows = db.execute('SELECT i.label,i.activities,i.url,d.description FROM activity_items i '
                               'LEFT JOIN activity_details d ON d.channel=i.channel AND d.window=i.window AND d.topic=i.topic '
                               'WHERE i.channel=? AND i.window=? ORDER BY i.rowid', (self.feed.channel, window)).fetchall()
         lifecycle = window.startswith('lifecycle:')
+        main_alert = not self.feed.config.get('alert_scope')
         title = clip(self.repo, 140) + (' · Recent activity' if self.english else ' · 최근 활동')
         color, separator, limit = 0x0969DA, '\n', PAGE_SIZE
         if lifecycle:
@@ -105,14 +107,21 @@ class ActivityCards:
         for label, raw, url, details in rows:
             label = label.replace('\\', '\\\\').replace('[', '\\[').replace(']', '\\]')
             if lifecycle:
-                entry = f'**[{label}]({url})**\n' + (details or '')
+                emoji = prefix(self.feed.api, 'threadle_merge') if main_alert and category == 'PR Merged' else ''
+                entry = f'{emoji}**[{label}]({url})**\n' + (details or '')
             else:
                 activities = json.loads(raw)
                 # Summarize kinds of activity, not duplicate webhook deliveries.
                 text = ', '.join(clip(item, 60) for item in activities[:4])
                 if len(activities) > 4:
                     text += f' +{len(activities)-4}'
-                entry = f'• [{label}]({url}) · {text}' if text else f'• [{label}]({url})'
+                emoji = ''
+                if label.startswith('PR #'):
+                    if main_alert and any(item in ('Opened', 'Created') for item in activities[:4]):
+                        emoji += prefix(self.feed.api, 'threadle_pr_sent')
+                    if 'Review requested' in activities[:4]:
+                        emoji += prefix(self.feed.api, 'threadle_review_please')
+                entry = f'• {emoji}[{label}]({url})' + (f' · {text}' if text else '')
             if group and (len(group) >= limit or size + units(entry) + len(separator) > 3500):
                 groups.append(group)
                 group, size = [], 0
