@@ -179,6 +179,7 @@ class ReviewConversations:
     def parent(self,topic,review,entries,event_key,mutable,closed,language):
         """A child webhook can beat review.submitted. Publish its actual parent first."""
         from discord_threads import make_embed
+        from message_edits import REVIEW_DISMISSED_REVISION
         identity=str(review.get('databaseId',''))
         if not identity.isdigit() or str(review.get('state','')).upper()=='PENDING' or 'body' not in review:
             raise RuntimeError('Submitted parent review is not yet available; retrying')
@@ -188,6 +189,8 @@ class ReviewConversations:
             if saved and saved[0]==login:return
             source='github-source:'+nonce(topic.key+':review:'+identity)
             current=db.execute('SELECT revision FROM message_sources WHERE source=?',(source,)).fetchone()
+        if str(review['state']).upper()=='DISMISSED' or (current and current[0]==REVIEW_DISMISSED_REVISION):
+            return
         value={'id':int(identity),'state':review['state'].lower(),'body':review['body'] or '',
                'submitted_at':review.get('submittedAt'),'html_url':review.get('url') or topic.url,
                'user':{'login':login}}

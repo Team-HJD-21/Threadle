@@ -293,6 +293,10 @@ class Service:
                 from message_edits import deliver_events
                 thread = deliver_events(routed,topic,event,payload,notice_key,
                                         lambda topic=topic: roots.closed(topic),binding.config.get('language','ko'),github=github)
+                if topic.kind == 'pr':
+                    from review_dismissals import notify
+                    notify(routed, topic, github, event, payload, binding.config.get('language','ko'),
+                           lambda: roots.closed(topic), feed, notices)
                 if thread is None:continue
                 if topic.kind=='pr' and not had_thread:self.conflicts.signal(binding,delivery+':thread-ready','pull_request',{'action':'opened'})
                 if notices:

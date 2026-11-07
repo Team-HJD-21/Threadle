@@ -233,6 +233,21 @@ class NotificationTests(unittest.TestCase):
         self.assertEqual(len(self.api.messages), 1)
         self.assertFalse(disabled.has_pending())
 
+    def test_dismissal_summary_keeps_its_reason_after_quiet_hours(self):
+        self.now[0] += 23 * 3600
+        notices = self.notices(quiet=True, quiet_start=22, quiet_end=8, utc_offset=0)
+        notices.schedule(self.topic.key, 'All reviews dismissed', 'Dismissal reason', self.topic.url,
+                         'reviews-dismissed:42', ['104'], critical=True)
+        notices.flush()
+        self.assertEqual(self.api.messages, [])
+        self.now[0] += 9 * 3600
+        notices.flush()
+        notices.flush()
+        self.assertEqual(len(self.api.messages), 1)
+        embed = self.api.messages[0][1]['embeds'][0]
+        self.assertEqual(embed['title'], 'All reviews dismissed')
+        self.assertEqual(embed['description'], 'Dismissal reason')
+
     def test_pending_normal_batch_stays_silent_until_dnd_ends_but_ci_is_immediate(self):
         self.now[0] += 21 * 3600 + 59 * 60
         notices = self.notices(batch_seconds=60, quiet=True, quiet_start=22, quiet_end=8, utc_offset=0)
