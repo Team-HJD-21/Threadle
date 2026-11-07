@@ -91,6 +91,11 @@ class EditTests(unittest.TestCase):
         self.assertEqual(github.pages.call_count, 1)
 
         reviews[1]['state'] = 'DISMISSED'
+        pending = timeline.pop()
+        with self.assertRaisesRegex(RuntimeError, 'not yet complete'):
+            notify(self.threads, self.topic, github, event, first, 'en', lambda: False, feed, None)
+        self.assertEqual(self.api.posts, {})
+        timeline.append(pending)
         notify(self.threads, self.topic, github, event, second, 'en', lambda: False, feed, None)
         notify(self.threads, self.topic, github, event, first, 'en', lambda: False, feed, None)
         with self.queue.connect() as db:

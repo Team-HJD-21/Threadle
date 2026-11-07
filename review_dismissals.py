@@ -50,8 +50,10 @@ def summary(github, topic, event, payload, language):
         review_id = str(review.get('review_id'))
         if review_id in dismissed:
             decisions[review_id] = review
-    if (trigger_ids & dismissed) - decisions.keys():
-        raise RuntimeError('Review dismissal is not yet visible in the GitHub timeline; retrying')
+    # A bulk dismissal can be visible in the review list before every event
+    # reaches the timeline. Wait for all rows so retries use the same summary ID.
+    if dismissed - decisions.keys():
+        raise RuntimeError('Review dismissals are not yet complete in the GitHub timeline; retrying')
     relevant = {review_id: review for review_id, review in decisions.items()
                 if str(review.get('state')).lower() in DECISIONS}
     if not trigger_ids.intersection(relevant):
