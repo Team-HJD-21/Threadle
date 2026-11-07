@@ -1,5 +1,5 @@
 {
-  "version": "v1.0.0-beta.43",
+  "version": "v1.0.0-beta.44",
   "baseline": "2026.11.02.8",
   "files": {
     "demo_web.py": {
@@ -102,7 +102,7 @@
     },
     "changelog.py": {
       "before": "261336f2f039d63348697c8fb4f9f7ec8f25c959ad6f0e2ccd74230f8c208e28",
-      "after": "170fbc2b000a60c3a0c73c75b73446f5b2e696a91f0c4cf2af237bccecbca674",
+      "after": "9b83742eae4d43c0f5cbd92bbf2ab713bd97d649b68d02f88cf1db4b9047cb99",
       "previous": [
         "ce59507c70872a51ef2bbd42a7ee232a5bd4e2692a6b0c8903887594a1e59b90",
         "70c46b09eeacc09189050699f22f47224d0f1b157c741d0f25f9f51bd23af677",
@@ -166,7 +166,8 @@
         "59b46a5a254d0834a561a8d01ad8778ba5b37d9cecf57b7e05637a8a95205d13",
         "60361f45c5dff087fd67ae855e3c9170df93bc46db9847318622fb2a2fd3acc1",
         "50a6108b3ee360c35ab78db4faf7f2cf9c877f61c3f80fdfc75045c1f4f3239d",
-        "85785892f322c585f4d675bbf08743d2fc65a551c74846a29d8572c55a1bf609"
+        "85785892f322c585f4d675bbf08743d2fc65a551c74846a29d8572c55a1bf609",
+        "170fbc2b000a60c3a0c73c75b73446f5b2e696a91f0c4cf2af237bccecbca674"
       ]
     },
     "web_assets/preview.js": {
@@ -269,12 +270,13 @@
     },
     "notification_media.py": {
       "before": "8de2185cda462cf8cff64cc21a3eb38b3849390951cdeafcabc0a720015aa484",
-      "after": "50b0c8262a71142b3411e4d4a1e685562bfb229c1c8c9226b68809a82378189c",
+      "after": "ac49375acffe2de14c140b4a3c69bed88d5f3e99d7c6054e60a1db76b91cef89",
       "previous": [
         "606b47fa89b1e59eac0adcc456992b2b3d32f10f7986dec74d4fd39536fde6a4",
         "96a281aebc00c0df01bb4379c7de9df46cec8ffcf912f19307f4e5320d548335",
         "194fefbcb7a9c2f032975617f7e34d830d98e548adf001423d40c762db7f0b35",
-        "8b3f9275e4ed48094c72d0afd0d427ece471b6c44cd82c8d60df42305c5557ee"
+        "8b3f9275e4ed48094c72d0afd0d427ece471b6c44cd82c8d60df42305c5557ee",
+        "50b0c8262a71142b3411e4d4a1e685562bfb229c1c8c9226b68809a82378189c"
       ]
     },
     "notification_layout.py": {
@@ -477,10 +479,11 @@
     },
     "notification_markdown.py": {
       "before": null,
-      "after": "90c78c46e778c2f12032a5b3b1aad34e396efd419ab59177bf801e39d0949cb1",
+      "after": "55c4eec9f7e75144c2e8c7ee0d43faf2e734d27411c0c0827657aaf9d8868966",
       "previous": [
         "406e11f090a924dae24cc6ac8e6731b102124609f4ae5e19c72ad6ad9510af91",
-        "d3f30c55722657c1fc907a2a4600c7c690bb56fd58eff181543d38bd75510ea9"
+        "d3f30c55722657c1fc907a2a4600c7c690bb56fd58eff181543d38bd75510ea9",
+        "90c78c46e778c2f12032a5b3b1aad34e396efd419ab59177bf801e39d0949cb1"
       ]
     },
     "operator_web.py": {
@@ -855,6 +858,10 @@
     "delivery_reads.py": {
       "before": null,
       "after": "638c55288616b5c1e392eea6d11e1dee294ebce171ca026115b5d09c4c5b0330"
+    },
+    "notification_html.py": {
+      "before": null,
+      "after": "f482bf25079e3678aa62421ad141d3686836c798ba49dbebf4804f37ee277d93"
     }
   },
   "state_encryption": true
