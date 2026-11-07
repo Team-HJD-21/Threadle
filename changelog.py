@@ -209,6 +209,14 @@ ADMIN_RELEASES = [('v1.0.0-beta.40', '제품·관리 화면 정리', 'Clearer pr
     'Korean and English are supported, with free access during beta.')])]
 
 
+RELEASES.insert(0, ('v1.0.0-beta.45', 'PR 리뷰 무효화 알림 정리', 'Clearer PR review dismissals', [
+    ('승인이나 변경 요청이 무효화되면 기존 리뷰 카드를 Dismissed로 갱신합니다.',
+     'Dismissing an approval or changes request updates its original card to Dismissed.'),
+    ('승인·변경 요청이 모두 무효화되면 PR 스레드와 github-alert에 GitHub에 기록된 사유를 한 번 안내합니다.',
+     'When every approval or changes request is dismissed, the PR thread and github-alert receive one summary with the recorded reasons.'),
+]))
+
+
 def content(t,admin=False):
     title=t('사이트·관리자 패치노트','Website & administration changelog') if admin else t('Threadle 패치노트','Threadle changelog')
     intro=t('사이트와 운영 관리 화면의 변경 사항입니다.','Changes to the website and operational administration.') if admin else t('Discord에서 사용하는 Threadle의 새 기능과 개선 사항입니다.','New features and improvements to Threadle in Discord.')

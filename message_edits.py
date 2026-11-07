@@ -10,6 +10,7 @@ STATE_CHANGES={'closed','reopened','merged','converted_to_draft','ready_for_revi
 
 COMMENTS={'issue_comment','discussion_comment','pull_request_review_comment'}
 FOLDED={'assigned','unassigned','labeled','unlabeled','milestoned','demilestoned','review_requested','review_request_removed','typed','untyped','field_added','field_removed'}
+REVIEW_DISMISSED_REVISION = 253402300799
 
 
 def identity(event,payload):
@@ -23,7 +24,7 @@ def identity(event,payload):
         return 'body',payload.get('pull_request') or payload.get('issue') or payload.get('discussion') or {}
     if event in CREATION and action in ('opened','created','edited'):
         return 'body',payload.get('pull_request') or payload.get('issue') or payload.get('discussion') or {}
-    obj=payload.get('comment') if event in COMMENTS and action in ('created','edited','deleted') else payload.get('review') if event=='pull_request_review' and action in ('submitted','edited') else None
+    obj=payload.get('comment') if event in COMMENTS and action in ('created','edited','deleted') else payload.get('review') if event=='pull_request_review' and action in ('submitted','edited','dismissed') else None
     if obj is not None:
         value=obj.get('id') or obj.get('node_id')
         if value is not None and re.fullmatch(r'[A-Za-z0-9_=-]{1,200}',str(value)):
@@ -35,6 +36,14 @@ def revision(obj):
     value=obj.get('updated_at') or obj.get('updatedAt') or obj.get('submitted_at') or obj.get('created_at')
     try:return dt.datetime.fromisoformat(str(value).replace('Z','+00:00')).timestamp()
     except (ValueError,TypeError,OverflowError):return 0
+
+
+def source_revision(event, payload, obj):
+    # Dismissal is terminal for this review ID, even when GitHub omits the
+    # dismissal time or an older submission/edit arrives later.
+    if event == 'pull_request_review' and (payload.get('action') == 'dismissed' or str(obj.get('state', '')).lower() == 'dismissed'):
+        return REVIEW_DISMISSED_REVISION
+    return revision(obj)
 
 
 def before_source(message,obj):
@@ -220,7 +229,8 @@ class MutableMessages:
         threads=self.threads;thread=threads.ensure(topic);thread_id=str(thread['id'])
         if thread.get('thread_metadata',{}).get('locked'):raise RuntimeError('The topic thread is moderator-locked')
         source='github-source:'+nonce(topic.key+':'+kind)
-        version=revision(obj)
+        version=source_revision(event,payload,obj)
+        dismissal=version==REVIEW_DISMISSED_REVISION
         with self.queue.connect() as db:
             db.execute('BEGIN IMMEDIATE')
             current=db.execute('SELECT revision,event FROM message_sources WHERE source=?',(source,)).fetchone()
@@ -272,6 +282,7 @@ class MutableMessages:
                     for e in embeds:
                         if e.get('image'):e['image']={'url':image['url']}
                     keep=[{'id':a['id']} for a in existing['attachments']]
+            if dismissal and not existing:continue
             if not keep and isinstance(threads.api,Api):files=attach_public_images(embeds,threads.media_fetcher)
             data={'embeds':embeds,'allowed_mentions':{'parse':[]},'attachments':keep,**({'_files':files} if files else {})}
             if existing and re.fullmatch(r'(?:<@!?\d+>\s*)+',existing.get('content') or ''):
@@ -284,6 +295,7 @@ class MutableMessages:
                     if error.status!=404:raise
                     existing=None
             if not existing:
+                if dismissal:continue
                 sent=threads.api.call('POST',f'/channels/{thread_id}/messages',dict(data,nonce=nonce(thread_id+":"+receipt),enforce_nonce=True,**({'flags':1<<12} if threads.notifications_suppressed() or current or payload.get('action')=='edited' else {})))
             with self.queue.connect() as db:db.execute('INSERT INTO source_pages VALUES(?,?,?,?) ON CONFLICT(source,page) DO UPDATE SET message=excluded.message,media=excluded.media',(source,index,sent['id'],origin))
             threads.remember_delivery(receipt,sent['id'])
@@ -396,7 +408,7 @@ def deliver_events(threads,topic,event,payload,event_key,closed,language,github=
             if mutable is None:mutable=MutableMessages(threads)
             if mutable.is_deleted(topic,key):continue
             previous=sources.get(key)
-            if previous and (revision(obj)<revision(previous[2]) or value.get('action') in ('opened','created','submitted') and previous[1].get('action')=='edited'):continue
+            if previous and (source_revision(kind,value,obj)<source_revision(*previous) or value.get('action') in ('opened','created','submitted') and previous[1].get('action')=='edited'):continue
             sources[key]=(kind,value,obj)
         elif created and kind in CREATION and value.get('action') in FOLDED:
             continue
@@ -427,8 +439,13 @@ def deliver_events(threads,topic,event,payload,event_key,closed,language,github=
                 value=dict(value)
                 value[{'pr':'pull_request','issue':'issue','discussion':'discussion'}[topic.kind]]=obj
         else:
+            if source_revision(kind,value,obj)==REVIEW_DISMISSED_REVISION:
+                obj=dict(obj,state='dismissed')
+                value=dict(value,action='dismissed',review=obj)
             rendered=make_embed(topic,kind,value,language)
         key=event_key+':'+source
+        if kind=='pull_request_review' and value.get('action')=='dismissed':
+            key='dismissed:'+source
         if source.startswith('commits:'):
             from commit_notifications import event_key as commit_event_key
             key=commit_event_key(kind,value,key)

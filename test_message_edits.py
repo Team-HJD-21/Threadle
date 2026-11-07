@@ -48,6 +48,69 @@ class EditTests(unittest.TestCase):
     def edit_body(self,body,event='body-edit',time='2026-11-03T00:01:00Z'):
         return self.send({'action':'edited','pull_request':dict(self.topic.metadata,body=body,updated_at=time)},event,'pull_request')
 
+    def test_dismissal_edits_the_original_review_and_late_edits_cannot_restore_it(self):
+        for identity, state in ((7, 'approved'), (8, 'changes_requested')):
+            review = {'id': identity, 'state': state, 'body': 'Original review',
+                      'submitted_at': '2026-11-03T00:00:00Z', 'user': {'login': 'reviewer'}}
+            payload = {'action': 'submitted', 'review': review}
+            thread = self.send(payload, f'create-{identity}', 'pull_request_review')
+            message = self.api.posts[thread][-1]
+            dismissed = dict(payload, action='dismissed')
+            self.send(dismissed, f'dismiss-{identity}', 'pull_request_review')
+            self.send(dismissed, f'replay-{identity}', 'pull_request_review')
+            self.send(dict(payload, action='edited', review=dict(review, updated_at='2026-11-03T01:00:00Z')),
+                      f'late-edit-{identity}', 'pull_request_review')
+            self.assertIn('Review dismissed', message['embeds'][0]['title'])
+            self.assertEqual(message['embeds'][0]['author']['name'], 'reviewer')
+            self.assertIn('Original review', message['embeds'][0]['description'])
+        self.assertEqual(len(self.api.posts[thread]), 2)
+
+    def test_dismissal_does_not_post_a_missing_review_card(self):
+        thread = self.send({'action': 'dismissed', 'review': {'id': 7, 'state': 'dismissed'}},
+                           'dismiss-untracked', 'pull_request_review')
+        self.assertEqual(self.api.posts.get(thread, []), [])
+
+    def test_review_dismissal_summary_reaches_both_channels_once_with_actual_reasons(self):
+        from alert_feed import AlertFeed
+        from review_dismissals import notify
+
+        feed = AlertFeed(self.api, {'alert_channel': 'alert', 'guild_id': 'g'}, self.queue)
+        github = MagicMock()
+        reviews = [{'id': 7, 'state': 'DISMISSED'}, {'id': 8, 'state': 'CHANGES_REQUESTED'},
+                   {'id': 9, 'state': 'COMMENTED'}]
+        timeline = [{'event': 'review_dismissed', 'dismissed_review': {
+            'review_id': identity, 'state': state, 'dismissal_message': reason}}
+            for identity, state, reason in [(7, 'approved', 'New commits'), (8, 'changes_requested', 'Re-review needed')]]
+        github.pages.side_effect = lambda path: iter(reviews if path.endswith('/reviews') else timeline)
+        event = 'pull_request_review'
+        first = {'action': 'dismissed', 'review': {'id': 7, 'body': 'Original comment'}}
+        second = {'action': 'dismissed', 'review': {'id': 8}}
+
+        notify(self.threads, self.topic, github, event, first, 'en', lambda: False, feed, None)
+        self.assertEqual(self.api.posts, {})
+        self.assertEqual(github.pages.call_count, 1)
+
+        reviews[1]['state'] = 'DISMISSED'
+        notify(self.threads, self.topic, github, event, second, 'en', lambda: False, feed, None)
+        notify(self.threads, self.topic, github, event, first, 'en', lambda: False, feed, None)
+        with self.queue.connect() as db:
+            thread = db.execute('SELECT thread FROM links').fetchone()[0]
+        for channel in (thread, 'alert'):
+            self.assertEqual(len(self.api.posts[channel]), 1)
+            embed = self.api.posts[channel][0]['embeds'][0]
+            self.assertIn('All reviews dismissed', embed['title'])
+            self.assertIn('New commits', embed['description'])
+            self.assertIn('Re-review needed', embed['description'])
+            self.assertNotIn('Original comment', embed['description'])
+
+    def test_dismissal_without_reason_links_the_recorded_commit(self):
+        from review_dismissals import dismissal_reason
+
+        commit = '123abcd' + 'a' * 33
+        reason = dismissal_reason({'dismissal_message': None, 'dismissal_commit_id': commit}, self.topic, True)
+        self.assertIn(f'https://github.com/owner/repo/commit/{commit}', reason)
+        self.assertEqual(dismissal_reason({}, self.topic, True), 'GitHub provided no reason.')
+
     def test_edit_removes_only_old_bot_ping_line_and_preserves_other_text(self):
         thread=self.send(self.payload(),'one')
         row=self.api.posts[thread][0]

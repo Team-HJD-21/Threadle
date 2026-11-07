@@ -172,6 +172,8 @@ class TeamNotifications:
                       description, link, event_key, [self.binding.config['alert_channel']], True, 0xD1242F, bypass_dnd=True)
 
     def flush(self):
+        from review_dismissals import NOTICE_PREFIX
+
         self.dnd.flush()
         with self.queue.connect() as db:
             due = db.execute('SELECT channel,bucket FROM notice_events WHERE sent=0 AND due<=? GROUP BY channel,bucket ORDER BY MIN(due) LIMIT 20', (self.clock(),)).fetchall()
@@ -182,10 +184,11 @@ class TeamNotifications:
             with self.queue.connect() as db:
                 rows = db.execute('SELECT event_key,topic,title,description,url,color FROM notice_events WHERE sent=0 AND channel=? AND bucket=? ORDER BY rowid',
                                   (channel, bucket)).fetchall()
-            critical = [row for row in rows if ':ci:' in row[1]]
+            critical = [row for row in rows if ':ci:' in row[1]
+                        or not quiet and row[0].startswith(NOTICE_PREFIX)]
             for event, topic, title, description, url, color in critical:
                 self.feed(channel).send(topic, event, '', title, description, url, color)
-            normal = [row for row in rows if ':ci:' not in row[1]] if not quiet else []
+            normal = [row for row in rows if ':ci:' not in row[1] and not row[0].startswith(NOTICE_PREFIX)] if not quiet else []
             if normal:
                 self.feed(channel).activity(self.binding.repo, normal, 'batch:' + bucket)
             with self.queue.connect() as db:
