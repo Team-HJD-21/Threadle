@@ -48,8 +48,7 @@ def media_embeds(original):
     """
     embed=copy.deepcopy(original)
     from notification_markdown import protect_code,adapt
-    body,restore=protect_code(embed.get('description',''))
-    body=adapt(body)
+    body,restore=protect_code(adapt(embed.get('description','')))
     pattern=(r'(?P<markdown>!?\[(?P<alt>[^\]\n]*)\]\(\s*'
              r'(?P<destination><https://[^>\s]+>|https://(?:[^\s()]+|\([^()\s]*\))+)'
              r'(?:\s+"[^"]*")?\s*\))'

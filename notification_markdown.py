@@ -1,9 +1,9 @@
 """Keep Discord-compatible Markdown and adapt GitHub-only presentation."""
-import html
 import re
 import uuid
 
-CODE_PATTERN=r'^ {0,3}```[^\n]*\n.*?(?:^ {0,3}```[^\n]*$|\Z)|^ {0,3}~~~[^\n]*\n.*?(?:^ {0,3}~~~[^\n]*$|\Z)|`+[^`\n]+`+'
+CODE_PATTERN=(r'^ {0,3}(?P<ticks>`{3,})[^\n]*\n.*?(?:^ {0,3}(?P=ticks)`*[ \t]*\r?$|\Z)'
+              r'|^ {0,3}(?P<tildes>~{3,})[^\n]*\n.*?(?:^ {0,3}(?P=tildes)~*[ \t]*\r?$|\Z)|`+[^`\n]+`+')
 
 
 def strip_comments(text):
@@ -29,13 +29,11 @@ def protect_code(text):
 
 
 def adapt(text):
-    text=strip_comments(text)
+    from notification_html import to_markdown
+    text,restore=protect_code(text)
+    text=to_markdown(text)
+    text,restore_html=protect_code(text)
     text=re.sub(r'(?mi)^(\s*)[-*+] \[([ xX])\] ',lambda m:m.group(1)+('☑ ' if m.group(2).lower()=='x' else '☐ '),text)
-    text=re.sub(r'<summary\b[^>]*>(.*?)</summary>',lambda m:'**'+html.unescape(re.sub(r'<[^>]+>','',m.group(1)))+'**\n',text,flags=re.I|re.S)
-    text=re.sub(r'</?details\b[^>]*>','\n',text,flags=re.I)
-    text=re.sub(r'<br\s*/?>','\n',text,flags=re.I)
-    for tag,marker in [('strong','**'),('b','**'),('em','*'),('i','*'),('del','~~')]:
-        text=re.sub(r'<'+tag+r'>(.*?)</'+tag+r'>',lambda m:marker+m.group(1)+marker,text,flags=re.I|re.S)
     lines=text.splitlines();result=[];index=0
     def cells(line):return [cell.strip() for cell in line.strip().strip('|').split('|')]
     while index<len(lines):
@@ -45,4 +43,4 @@ def adapt(text):
                 values=cells(lines[index]);result.append('• '+' · '.join('**'+(headers[n] if n<len(headers) else str(n+1))+'**: '+value for n,value in enumerate(values)));index+=1
             continue
         result.append(lines[index]);index+=1
-    return '\n'.join(result)
+    return restore(restore_html('\n'.join(result)))
