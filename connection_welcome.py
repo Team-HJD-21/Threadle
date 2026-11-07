@@ -119,8 +119,10 @@ class ConnectionWelcome:
         key='connection:'+binding.config['guild_id']+':'+str(binding.repo_id)
         link='https://github.com/'+binding.repo
         if self.phase()==0:
+            from app_emojis import prefix
+            greeting = prefix(self.api, 'threadle_hello') or '🧵 '
             feed.send(key,'welcome',
-                '🧵 Hi! I’m Threadle. I’ll bring you updates from **'+binding.repo+'** here from now on.' if en else '🧵 안녕하세요! Threadle이에요. 지금부터 **'+binding.repo+'** 저장소의 소식을 전해드릴게요.',
+                greeting + ('Hi! I’m Threadle. I’ll bring you updates from **'+binding.repo+'** here from now on.' if en else '안녕하세요! Threadle이에요. 지금부터 **'+binding.repo+'** 저장소의 소식을 전해드릴게요.'),
                 'We’re connected!' if en else '연결됐어요!',
                 'Let’s start with a quick look at your repository.' if en else '먼저 현재 저장소 현황을 간단히 살펴볼까요?',link,0x96B86A)
             with self.service.registry.db() as db:

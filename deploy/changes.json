@@ -1,5 +1,5 @@
 {
-  "version": "v1.0.0-beta.45",
+  "version": "v1.0.0-beta.46",
   "baseline": "2026.11.02.8",
   "files": {
     "demo_web.py": {
@@ -459,10 +459,11 @@
     },
     "connection_welcome.py": {
       "before": null,
-      "after": "61f672a8ae7b86c5e477c8295ca79cb679ef6958389ed2e011d43b70c8fa82ea",
+      "after": "591f03d02cdcc44ace6b98ba1917296dba8a5fc2ab93acfc866d8c05c157bbb6",
       "previous": [
         "a03be35220c173a7973c03f952a52034c64f3a289cf2641b3c2909a91a833b93",
-        "4387612569280cd1ee84bd5103889dff8c69376bdb7074c6809672184f994ec2"
+        "4387612569280cd1ee84bd5103889dff8c69376bdb7074c6809672184f994ec2",
+        "61f672a8ae7b86c5e477c8295ca79cb679ef6958389ed2e011d43b70c8fa82ea"
       ]
     },
     "notification_language.py": {
@@ -824,9 +825,10 @@
     },
     "alert_activity.py": {
       "before": null,
-      "after": "c1cf20dd98c19d1003b6e9971a4116fa4f70938ca2804713fe44719104390e1b",
+      "after": "7a818dea7462f25f039ad70005039cbe4f8c9ce68a9b332c39cd4673d0c5b76f",
       "previous": [
-        "df18c7aadc1280361c5d8a0fd973f0beb3a3754a4e56eadbe08dfa0a05d3202d"
+        "df18c7aadc1280361c5d8a0fd973f0beb3a3754a4e56eadbe08dfa0a05d3202d",
+        "c1cf20dd98c19d1003b6e9971a4116fa4f70938ca2804713fe44719104390e1b"
       ]
     },
     "operator_accounts.py": {
@@ -871,6 +873,26 @@
     "review_dismissals.py": {
       "before": null,
       "after": "ec4b2424a4696738e77c5cff5f6a47ea6e6b73214eb75e70e8ffe7f8cff9e811"
+    },
+    "app_emojis.py": {
+      "before": null,
+      "after": "94569b9bb5de64abbea63a7287acac54a4242bac47573c7c42402529ee71d726"
+    },
+    "web_assets/threadle_hello.png": {
+      "before": null,
+      "after": "27e2ca9ad4281435c5a3f9410cff1c0c37667d4b5b697eeb8cbf77bc86f6a0e9"
+    },
+    "web_assets/threadle_pr_sent.png": {
+      "before": null,
+      "after": "5e04eabb9df64db88952f695d5fc665c97057c5c0c4fa5a9b283abd7a56c2c83"
+    },
+    "web_assets/threadle_review_please.png": {
+      "before": null,
+      "after": "d86f251eda9de387f7087c4dd98114dcf32290957b7456d557e7d4f747c37239"
+    },
+    "web_assets/threadle_merge.png": {
+      "before": null,
+      "after": "22830fff2b43993341677b93c5ee6b1f835a0c21cf9d19d2693a68eaec24cca4"
     }
   },
   "state_encryption": true
