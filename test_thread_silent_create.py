@@ -86,4 +86,39 @@ class StarterPinTests(unittest.TestCase):
             with queue.connect() as db:
                 db.execute("UPDATE topic_thread_names SET name=replace(name,'Open','Closed') WHERE topic LIKE '%:1' OR topic LIKE '%:5'")
             refresh(threads, 'channel', 'pr')
-            api.call.assert_called_once_with('DELETE', '/channels/channel/messages/pins/1')
+            self.assertEqual(api.call.call_args_list, [
+                call('DELETE', '/channels/channel/messages/pins/1'),
+                call('GET', '/channels/channel/messages?limit=100'),
+                call('DELETE', '/channels/channel/messages/notice'),
+            ])
+
+    def test_startup_releases_inactive_cards_even_with_open_thread_names(self):
+        import tempfile
+        from pathlib import Path
+        from delivery import CachedThreads, Queue
+        from open_topic_board import refresh
+
+        with tempfile.TemporaryDirectory() as directory:
+            queue = Queue(Path(directory) / 'queue.sqlite3')
+            for kind, state in (('pr', 'Merged'), ('issue', 'Closed'), ('discussion', 'Answered')):
+                with self.subTest(kind=kind):
+                    channel = kind + '-channel'
+                    topic = f'github-thread:owner/repo:{kind}:1'
+                    api = Mock()
+                    threads = CachedThreads(api, 'guild', {kind: channel}, queue)
+                    threads.bot = {'id': 'bot'}
+                    starter = {'author': {'id': 'bot'}, 'pinned': True, 'embeds': [
+                        {'footer': {'text': topic}, 'fields': [{'name': 'Current Status', 'value': f'`{state}` by user'}]}
+                    ]}
+                    api.call.side_effect = [starter, None, [], starter]
+                    with queue.connect() as db:
+                        db.execute('CREATE TABLE IF NOT EXISTS topic_thread_names(topic TEXT PRIMARY KEY,name TEXT NOT NULL)')
+                        db.execute('CREATE TABLE IF NOT EXISTS starter_pins (channel TEXT, kind TEXT, message TEXT, managed INTEGER NOT NULL, PRIMARY KEY(channel,kind,message))')
+                        db.execute('INSERT INTO links VALUES(?,?,?)', (topic, channel, '1'))
+                        db.execute('INSERT INTO topic_thread_names VALUES(?,?)', (topic, f'[{kind.upper()} #1 · Open] repo'))
+                        db.execute('INSERT INTO starter_pins VALUES(?,?,?,1)', (channel, kind, '1'))
+                    refresh(threads, channel, kind, reconcile=True)
+                    refresh(threads, channel, kind)
+                    self.assertEqual([args.args[0] for args in api.call.call_args_list], ['GET', 'DELETE', 'GET', 'GET'])
+                    with queue.connect() as db:
+                        self.assertIsNone(db.execute('SELECT 1 FROM starter_pins WHERE channel=?', (channel,)).fetchone())

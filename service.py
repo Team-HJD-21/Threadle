@@ -353,9 +353,9 @@ class Service:
                 from open_topic_board import refresh as refresh_board
                 for kind, channel in binding.config['channels'].items():
                     if kind in ('pr', 'issue', 'discussion'):
-                        refresh_board(threads, channel, kind)
+                        refresh_board(threads, channel, kind, reconcile=True)
                 for group in binding.config.get('routing_groups', []):
-                    refresh_board(threads, group['channel'], 'pr')
+                    refresh_board(threads, group['channel'], 'pr', reconcile=True)
                 from review_repair import ReviewRepair
                 review_repair=ReviewRepair(self,binding,threads)
                 from deferred_threads import wake
