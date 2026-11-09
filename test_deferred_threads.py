@@ -60,7 +60,11 @@ class DeferredThreadTests(unittest.TestCase):
             db.execute('INSERT INTO deferred_thread_pace VALUES(1,?)',(self.now+99999,))
             db.execute('UPDATE jobs SET next=?',(self.now+99999,))
         wake(self.q);self.assertTrue(self.process())
-        self.assertEqual(self.api.starts,1);self.assertEqual(len(self.api.roots),1)
+        self.assertEqual(self.api.starts,1)
+        self.assertEqual(list(self.api.threads),[root['id']])
+        self.assertEqual([row['id'] for row in self.api.roots.values()
+                          if any(embed.get('footer',{}).get('text')==topic.key for embed in row['embeds'])],
+                         [root['id']])
         with self.q.connect() as db:
             self.assertEqual(db.execute('SELECT done FROM jobs').fetchone()[0],1)
             self.assertEqual(db.execute('SELECT count(*) FROM deferred_thread_jobs').fetchone()[0],0)
