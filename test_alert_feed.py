@@ -94,9 +94,9 @@ class AlertTests(unittest.TestCase):
         for kind, thread in [('issue', 'issue-thread'), ('pr', 'pr-thread'), ('discussion', 'discussion-thread')]:
             topic = Topic(REPO, kind, 12, kind, 'https://github.com')
             self.feed.topic(topic, 'issue_comment', {'action': 'created'}, 'same-event', thread)
-        self.assertEqual(len(self.api.posts), 1)
-        for value in ('issue-thread', 'pr-thread', 'discussion-thread'):
-            self.assertIn('https://discord.com/channels/guild/' + value, self.api.posts[0]['embeds'][0]['description'])
+        self.assertEqual(len(self.api.posts), 3)
+        for post, value in zip(self.api.posts, ('issue-thread', 'pr-thread', 'discussion-thread')):
+            self.assertIn('https://discord.com/channels/guild/' + value, post['embeds'][0]['description'])
 
     def test_ci_failure_alert_deduplicates_run_across_deliveries(self):
         run = {'id': 123, 'name': 'PR CI', 'event': 'push', 'conclusion': 'failure',

@@ -273,6 +273,7 @@ class TeamNotifications:
 
     def send_reminder_batch(self, identity, raw, open_numbers=None):
         batch=json.loads(raw)
+        from app_emojis import help_thumbnail
         en=batch['english'];hours=batch['hours']
         for channel,items in sorted(batch['channels'].items()):
             items=[pr for pr in items if open_numbers is None or pr['number'] in open_numbers]
@@ -284,7 +285,8 @@ class TeamNotifications:
                 self.feed(channel).send('open-pr-roundup:'+identity,str(index),
                     '🧵 Here are the PRs that are still open.' if en else '🧵 아직 열린 PR을 모아왔어요.',
                     ('Open PR reminders' if en else '열린 PR 현황')+' · '+self.binding.repo,
-                    page,'https://github.com/'+self.binding.repo+'/pulls',0xD29922)
+                    page,'https://github.com/'+self.binding.repo+'/pulls',0xD29922,
+                    thumbnail=help_thumbnail(self.api) if index == 0 else None)
         self.advance_reminders(batch['due'],hours)
 
     def advance_reminders(self,due,hours):

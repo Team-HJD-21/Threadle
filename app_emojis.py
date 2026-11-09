@@ -7,6 +7,7 @@ import time
 from discord_threads import Api, ApiError
 
 
+HELP_EMOJI = 'threadle_help_anim'
 NAMES = {'threadle_hello', 'threadle_pr_sent', 'threadle_review_please', 'threadle_merge'}
 _cache = {}
 _lock = threading.Lock()
@@ -14,7 +15,7 @@ ASSETS = Path(__file__).with_name('web_assets')
 
 
 def prefix(api, name):
-    if name not in NAMES or not isinstance(api, Api) or api.service != 'Discord':
+    if name not in NAMES | {HELP_EMOJI} or not isinstance(api, Api) or api.service != 'Discord':
         return ''
     with _lock:
         now = time.monotonic()
@@ -32,9 +33,18 @@ def prefix(api, name):
                         break
                 emojis = {
                     row['name']: f"<{'a' if row.get('animated') else ''}:{row['name']}:{row['id']}> "
-                    for row in rows if row['name'] in NAMES and row.get('available', True)
+                    for row in rows if row['name'] in NAMES | {HELP_EMOJI} and row.get('available', True)
                 }
             except (ApiError, KeyError, TypeError, OSError):
                 pass
             _cache[api.token] = (now + 300, emojis)
         return emojis.get(name, '')
+
+
+def help_thumbnail(api):
+    emoji = prefix(api, HELP_EMOJI).strip()
+    if not emoji:
+        return None
+    emoji_id = emoji.rsplit(':', 1)[1].removesuffix('>')
+    extension = 'gif' if emoji.startswith('<a:') else 'png'
+    return {'url': f'https://cdn.discordapp.com/emojis/{emoji_id}.{extension}?size=128'}

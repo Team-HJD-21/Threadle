@@ -1,5 +1,5 @@
 {
-  "version": "v1.0.0-beta.49",
+  "version": "v1.0.0-beta.50",
   "baseline": "2026.11.02.8",
   "files": {
     "demo_web.py": {
@@ -102,7 +102,7 @@
     },
     "changelog.py": {
       "before": "261336f2f039d63348697c8fb4f9f7ec8f25c959ad6f0e2ccd74230f8c208e28",
-      "after": "9b26064298efa33f5871089da14102e18ef8166748d2d88151726e65d4cdeebc",
+      "after": "0111ba7eef008c467f1c7224bff570ca770605420ac5706e4afecf19862f3979",
       "previous": [
         "ce59507c70872a51ef2bbd42a7ee232a5bd4e2692a6b0c8903887594a1e59b90",
         "70c46b09eeacc09189050699f22f47224d0f1b157c741d0f25f9f51bd23af677",
@@ -171,7 +171,8 @@
         "9b83742eae4d43c0f5cbd92bbf2ab713bd97d649b68d02f88cf1db4b9047cb99",
         "5f6c6b0d9308a491e378f8059e2fdd5ba3eb51fba77faf5861683f863d0fe298",
         "49f56e5dde1a4539c6207741978a92f60b958d4c122c45698ad40bd777f899c1",
-        "c0fe00d2d36a1ccd58fd9f0da9100d14dc46930e968a52640c4d2fed0ef97781"
+        "c0fe00d2d36a1ccd58fd9f0da9100d14dc46930e968a52640c4d2fed0ef97781",
+        "9b26064298efa33f5871089da14102e18ef8166748d2d88151726e65d4cdeebc"
       ]
     },
     "web_assets/preview.js": {
@@ -304,7 +305,7 @@
     },
     "alert_feed.py": {
       "before": "c617136c345ffe142d18541874c1322549d2b489fdfc8f44e356a083f3bf0516",
-      "after": "67ccd52dd57b6d1657577b0698f4b5303c42abb155a3f7948c5428d5739ee111",
+      "after": "f53bb54b62343232d2d771e44dbed23b22ffdce54e96175d8e52e82c1842ed82",
       "previous": [
         "21873e6a5f74799cdbab164298547048ad2ed7e6d04b852a365f0fc74ede9bb2",
         "5f9638e2cae12fc1e77e6129c86377a0ab45d778cf10212d49c5f067dab0b080",
@@ -313,12 +314,13 @@
         "da7fd6b9afe624a18f838455a86414e0bd5a9fc45a267f7befd812af86479fff",
         "57661b749b456c94519a695c68b0012016a8d2f95d1332a2c09095aba3634dc9",
         "c2df063bbd15bee2f884874445554df418b8b8423846029246371967732df8ae",
-        "3a5d9a2de4fcb5788936d5f439bc37504034f4e93b1cfed73651ba58970a7e6c"
+        "3a5d9a2de4fcb5788936d5f439bc37504034f4e93b1cfed73651ba58970a7e6c",
+        "67ccd52dd57b6d1657577b0698f4b5303c42abb155a3f7948c5428d5739ee111"
       ]
     },
     "team_notifications.py": {
       "before": "6904471f68f57f58851b7e4f6c1c4f3d8d72ffedb177a5c20982b5a1ebf15eb6",
-      "after": "552b5a8064f91adb0ae1c518509ea3ac9d6600b6b64790abe9ed41f4b3bb312b",
+      "after": "239de6b88b7068c7868583f2bb245a6a9d98793ff28fa37baa5e893d9ea72deb",
       "previous": [
         "8cb672fdf1523f327cc6da04a33f0a4ac02bc133733b190f66c6c64ea59fa2d6",
         "a4fbbc8c9b222ad07ad2e75d20d7baea4b1801045b8481d5612ad6eda850a607",
@@ -329,7 +331,8 @@
         "745ddec2244f4396a354ed4f9fa64cb39186a884a5b2abd65d214b372a8b4d3e",
         "becf0c6679a90ee7f89c8d789ae9366e3bc763b120258a0eefa309814c380226",
         "625299b4a9cd0912e934f89973b32f6420ac85bc08749942aea3ddb42d094ec3",
-        "8e55c75cd9c274dfeacdc0ef9c66a9eda1c5e9934cfe4f94d055f2cc6e183d0f"
+        "8e55c75cd9c274dfeacdc0ef9c66a9eda1c5e9934cfe4f94d055f2cc6e183d0f",
+        "552b5a8064f91adb0ae1c518509ea3ac9d6600b6b64790abe9ed41f4b3bb312b"
       ]
     },
     "registry.py": {
@@ -830,10 +833,11 @@
     },
     "alert_activity.py": {
       "before": null,
-      "after": "7a818dea7462f25f039ad70005039cbe4f8c9ce68a9b332c39cd4673d0c5b76f",
+      "after": "49a89009d10c900a4c0e1273fda9e48d175588a5ca79a58c13d94e0b4d7011c5",
       "previous": [
         "df18c7aadc1280361c5d8a0fd973f0beb3a3754a4e56eadbe08dfa0a05d3202d",
-        "c1cf20dd98c19d1003b6e9971a4116fa4f70938ca2804713fe44719104390e1b"
+        "c1cf20dd98c19d1003b6e9971a4116fa4f70938ca2804713fe44719104390e1b",
+        "7a818dea7462f25f039ad70005039cbe4f8c9ce68a9b332c39cd4673d0c5b76f"
       ]
     },
     "operator_accounts.py": {
@@ -881,7 +885,10 @@
     },
     "app_emojis.py": {
       "before": null,
-      "after": "94569b9bb5de64abbea63a7287acac54a4242bac47573c7c42402529ee71d726"
+      "after": "6c9a82aac4013ebf0d0652fa8042046b8c7a59f168db5946acef07c8fe7cecae",
+      "previous": [
+        "94569b9bb5de64abbea63a7287acac54a4242bac47573c7c42402529ee71d726"
+      ]
     },
     "web_assets/threadle_hello.png": {
       "before": null,
