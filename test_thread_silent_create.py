@@ -52,6 +52,13 @@ class StarterPinTests(unittest.TestCase):
             threads = CachedThreads(api, 'guild', {'pr': 'channel'}, queue)
             threads.bot = {'id': 'bot'}
             def discord(method, path):
+                if path.endswith('?limit=100'):
+                    return [
+                        {'id': 'notice', 'type': 6, 'author': {'id': 'bot'}, 'message_reference': {'message_id': '1'}},
+                        {'id': 'manual', 'type': 6, 'author': {'id': 'user'}, 'message_reference': {'message_id': '1'}},
+                        {'id': 'unrelated', 'type': 6, 'author': {'id': 'bot'}, 'message_reference': {'message_id': '5'}},
+                        {'id': 'regular', 'type': 0, 'author': {'id': 'bot'}, 'message_reference': {'message_id': '1'}},
+                    ]
                 number = path.rsplit('/', 1)[-1]
                 return {'author': {'id': 'bot'}, 'pinned': number == '5',
                         'embeds': [{'footer': {'text': f'github-thread:owner/repo:pr:{number}'}}]}
@@ -70,6 +77,8 @@ class StarterPinTests(unittest.TestCase):
                 call('GET', '/channels/channel/messages/1'),
                 call('PUT', '/channels/channel/messages/pins/1'),
                 call('GET', '/channels/channel/messages/5'),
+                call('GET', '/channels/channel/messages?limit=100'),
+                call('DELETE', '/channels/channel/messages/notice'),
             ])
             api.call.reset_mock()
             refresh(threads, 'channel', 'pr')
