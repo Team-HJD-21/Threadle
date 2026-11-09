@@ -38,33 +38,43 @@ class SilentCreateTests(unittest.TestCase):
             self.assertEqual(self.api.call.call_count,1)
 
 
-class OpenBoardTests(unittest.TestCase):
-    def test_open_board_excludes_finished_and_draft_threads_and_edits_in_place(self):
+class StarterPinTests(unittest.TestCase):
+    def test_pins_original_cards_and_preserves_manual_pins_on_close(self):
         import tempfile
         from pathlib import Path
-        from unittest.mock import Mock
+        from unittest.mock import call
         from delivery import CachedThreads, Queue
         from open_topic_board import refresh
 
         with tempfile.TemporaryDirectory() as directory:
             queue = Queue(Path(directory) / 'queue.sqlite3')
             api = Mock()
-            api.call.return_value = {'id': 'board'}
             threads = CachedThreads(api, 'guild', {'pr': 'channel'}, queue)
+            threads.bot = {'id': 'bot'}
+            def discord(method, path):
+                number = path.rsplit('/', 1)[-1]
+                return {'author': {'id': 'bot'}, 'pinned': number == '5',
+                        'embeds': [{'footer': {'text': f'github-thread:owner/repo:pr:{number}'}}]}
+            api.call.side_effect = discord
             with queue.connect() as db:
                 db.execute('CREATE TABLE topic_thread_names(topic TEXT PRIMARY KEY,name TEXT NOT NULL)')
-                for number, state in ((1, 'Open'), (2, 'Merged'), (3, 'Draft'), (4, 'Open')):
+                db.execute('CREATE TABLE open_topic_boards(channel TEXT,kind TEXT,message TEXT)')
+                db.execute("INSERT INTO open_topic_boards VALUES('channel','pr','board')")
+                for number, state in ((1, 'Open'), (2, 'Merged'), (3, 'Draft'), (4, 'Open'), (5, 'Open')):
                     key = f'github-thread:owner/repo:pr:{number}'
                     db.execute('INSERT INTO links VALUES(?,?,?)', (key, 'other' if number == 4 else 'channel', str(number)))
                     db.execute('INSERT INTO topic_thread_names VALUES(?,?)', (key, f'[PR #{number} · {state}] repo · Example'))
             refresh(threads, 'channel', 'pr')
-            description = api.call.call_args_list[0].args[2]['embeds'][0]['description']
-            assert 'PR #1' in description
-            assert not any(f'PR #{number}' in description for number in (2, 3, 4))
-            api.call.assert_called_with('PUT', '/channels/channel/messages/pins/board')
+            self.assertEqual(api.call.call_args_list, [
+                call('DELETE', '/channels/channel/messages/pins/board'),
+                call('GET', '/channels/channel/messages/1'),
+                call('PUT', '/channels/channel/messages/pins/1'),
+                call('GET', '/channels/channel/messages/5'),
+            ])
+            api.call.reset_mock()
             refresh(threads, 'channel', 'pr')
-            assert api.call.call_count == 2
+            api.call.assert_not_called()
             with queue.connect() as db:
-                db.execute("UPDATE topic_thread_names SET name='[PR #1 · Closed] repo · Example' WHERE topic LIKE '%:1'")
+                db.execute("UPDATE topic_thread_names SET name=replace(name,'Open','Closed') WHERE topic LIKE '%:1' OR topic LIKE '%:5'")
             refresh(threads, 'channel', 'pr')
-            assert api.call.call_args.args[:2] == ('PATCH', '/channels/channel/messages/board')
+            api.call.assert_called_once_with('DELETE', '/channels/channel/messages/pins/1')

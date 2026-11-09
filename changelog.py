@@ -223,6 +223,12 @@ RELEASES.insert(0, ('v1.0.0-beta.47', '진행 중인 작업을 한눈에', 'Find
 ]))
 
 
+RELEASES.insert(0, ('v1.0.0-beta.48', '원본 알림을 바로 고정', 'Pin original alerts', [
+    ('진행 중인 PR·Issue·Discussion의 원본 카드를 각각 고정하고, 작업이 끝나면 자동 고정을 풉니다.',
+     'Threadle pins the original cards for active PRs, issues and discussions and removes its pins when work ends.'),
+]))
+
+
 def content(t,admin=False):
     title=t('사이트·관리자 패치노트','Website & administration changelog') if admin else t('Threadle 패치노트','Threadle changelog')
     intro=t('사이트와 운영 관리 화면의 변경 사항입니다.','Changes to the website and operational administration.') if admin else t('Discord에서 사용하는 Threadle의 새 기능과 개선 사항입니다.','New features and improvements to Threadle in Discord.')
