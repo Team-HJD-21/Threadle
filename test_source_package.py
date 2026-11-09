@@ -40,7 +40,7 @@ class SourcePackageTests(unittest.TestCase):
         self.assertNotIn('actions/checkout@', deploy)
         self.assertNotIn('Expand-Archive', deploy.replace('# No Git/PowerShell Expand-Archive fallback on the production notebook.', ''))
         self.assertIn('needs: verify', deploy)
-        self.assertIn('name: threadle-source-${{ github.sha }}-${{ github.run_attempt }}', deploy)
+        self.assertIn('name: threadle-source-${{ github.sha }}', deploy)
         self.assertIn('digest-mismatch: error', deploy)
         self.assertLess(deploy.index('Deployment artifact commit mismatch'), deploy.index('-File $deployScript'))
         self.assertIn('source-commit.txt', deploy)
