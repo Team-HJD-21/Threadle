@@ -7,13 +7,13 @@ from discord_threads import ApiError, marker
 LOG = logging.getLogger(__name__)
 
 
-def refresh(threads, channel, kind):
+def refresh(threads, channel, kind, reconcile=False):
     from delivery import CachedThreads
 
     if not isinstance(threads, CachedThreads) or not channel:
         return
     try:
-        update(threads, str(channel), kind)
+        update(threads, str(channel), kind, reconcile)
     except ApiError as error:
         LOG.warning('Could not refresh starter pins channel=%s status=%s', channel, error.status)
 
@@ -43,7 +43,33 @@ def clean_pin_notices(api, messages, bot_id, starters):
     return True
 
 
-def update(threads, channel, kind):
+def release(threads, channel, kind, message):
+    queue = threads.queue
+    with queue.connect() as db:
+        if not db.execute("SELECT 1 FROM sqlite_master WHERE name='starter_pins'").fetchone():
+            return
+        pin = db.execute('SELECT managed FROM starter_pins WHERE channel=? AND kind=? AND message=?',
+                         (channel, kind, message)).fetchone()
+    if pin is None:
+        return
+    if pin[0]:
+        messages = f'/channels/{channel}/messages'
+        unpin(threads.api, f'{messages}/pins/{message}')
+        clean_pin_notices(threads.api, messages, threads.bot['id'], {message})
+    with queue.connect() as db:
+        db.execute('DELETE FROM starter_pins WHERE channel=? AND kind=? AND message=?',
+                   (channel, kind, message))
+
+
+def inactive_starter(starter, topic):
+    return any(field.get('name') == 'Current Status'
+               and field.get('value', '').split(' ')[0] in ('`Merged`', '`Closed`', '`Answered`', '`Draft`')
+               for embed in starter.get('embeds', [])
+               if embed.get('footer', {}).get('text', '').split('\n', 1)[0] == topic
+               for field in embed.get('fields', []))
+
+
+def update(threads, channel, kind, reconcile=False):
     queue = threads.queue
     api = threads.api
     messages = f'/channels/{channel}/messages'
@@ -67,14 +93,12 @@ def update(threads, channel, kind):
             db.execute('DELETE FROM open_topic_boards WHERE channel=? AND kind=?', (channel, kind))
 
     for message in saved.keys() - desired.keys():
-        if saved[message]:
-            unpin(api, f'{messages}/pins/{message}')
-        with queue.connect() as db:
-            db.execute('DELETE FROM starter_pins WHERE channel=? AND kind=? AND message=?', (channel, kind, message))
+        release(threads, channel, kind, message)
+        del saved[message]
 
     new_pins = set()
     for message, topic in desired.items():
-        if message in saved:
+        if message in saved and (not reconcile or not saved[message]):
             continue
         try:
             starter = api.call('GET', f'{messages}/{message}')
@@ -83,6 +107,13 @@ def update(threads, channel, kind):
                 continue
             raise
         if starter.get('author', {}).get('id') != threads.bot['id'] or topic not in marker(starter):
+            continue
+        if inactive_starter(starter, topic):
+            if saved.get(message):
+                release(threads, channel, kind, message)
+                del saved[message]
+            continue
+        if message in saved:
             continue
         # A pin already present when first seen belongs to a user, so leave it alone on closure.
         managed = not starter.get('pinned', False)

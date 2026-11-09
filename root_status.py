@@ -140,6 +140,10 @@ class TopicRoots:
             except ApiError as error:
                 if error.status!=404:raise
 
+        from topic_state import state_label
+        if self.queue is not None and state_label(topic.kind,obj) != 'Open':
+            from open_topic_board import release
+            release(self.threads, channel, topic.kind, identity)
         self.update_thread_name(topic,obj,channel,identity)
 
     def update_thread_name(self,topic,obj,channel,identity):

@@ -240,6 +240,11 @@ RELEASES.insert(0, ('v1.0.0-beta.50', '연속 활동 알림 정리', 'Group cons
 ]))
 
 
+RELEASES.insert(0, ('v1.0.0-beta.51', '완료된 항목의 자동 고정 해제', 'Unpin completed topics', [
+    ('병합된 PR, 닫힌 Issue, 답변이 채택되거나 닫힌 Discussion의 자동 고정을 해제합니다.', 'Automatically unpin merged PRs, closed issues, and answered or closed discussions.'),
+]))
+
+
 def content(t,admin=False):
     title=t('사이트·관리자 패치노트','Website & administration changelog') if admin else t('Threadle 패치노트','Threadle changelog')
     intro=t('사이트와 운영 관리 화면의 변경 사항입니다.','Changes to the website and operational administration.') if admin else t('Discord에서 사용하는 Threadle의 새 기능과 개선 사항입니다.','New features and improvements to Threadle in Discord.')
