@@ -229,6 +229,11 @@ RELEASES.insert(0, ('v1.0.0-beta.48', '원본 알림을 바로 고정', 'Pin ori
 ]))
 
 
+RELEASES.insert(0, ('v1.0.0-beta.49', '고정 시스템 알림 정리', 'Clean up pin notices', [
+    ('Threadle이 원본 카드를 고정하면 Discord의 고정 안내만 지웁니다.', 'Threadle removes the Discord system notice after pinning an original card.'),
+]))
+
+
 def content(t,admin=False):
     title=t('사이트·관리자 패치노트','Website & administration changelog') if admin else t('Threadle 패치노트','Threadle changelog')
     intro=t('사이트와 운영 관리 화면의 변경 사항입니다.','Changes to the website and operational administration.') if admin else t('Discord에서 사용하는 Threadle의 새 기능과 개선 사항입니다.','New features and improvements to Threadle in Discord.')

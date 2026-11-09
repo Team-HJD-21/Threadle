@@ -26,6 +26,23 @@ def unpin(api, path):
             raise
 
 
+def clean_pin_notices(api, messages, bot_id, starters):
+    try:
+        for notice in api.call('GET', f'{messages}?limit=100'):
+            if (
+                notice.get('type') == 6
+                and notice.get('author', {}).get('id') == bot_id
+                and (notice.get('message_reference') or {}).get('message_id') in starters
+                and notice.get('id') not in starters
+                and notice.get('id')
+            ):
+                unpin(api, f"{messages}/{notice['id']}")
+    except ApiError as error:
+        LOG.warning('Could not clean pin notices path=%s status=%s', messages, error.status)
+        return False
+    return True
+
+
 def update(threads, channel, kind):
     queue = threads.queue
     api = threads.api
@@ -34,6 +51,8 @@ def update(threads, channel, kind):
         if not db.execute("SELECT 1 FROM sqlite_master WHERE name='topic_thread_names'").fetchone():
             return
         db.execute('CREATE TABLE IF NOT EXISTS starter_pins (channel TEXT, kind TEXT, message TEXT, managed INTEGER NOT NULL, PRIMARY KEY(channel,kind,message))')
+        db.execute('CREATE TABLE IF NOT EXISTS pin_notice_cleanup (channel TEXT, kind TEXT, PRIMARY KEY(channel,kind))')
+        scanned = db.execute('SELECT 1 FROM pin_notice_cleanup WHERE channel=? AND kind=?', (channel, kind)).fetchone()
         legacy = db.execute("SELECT 1 FROM sqlite_master WHERE name='open_topic_boards'").fetchone()
         board = db.execute('SELECT message FROM open_topic_boards WHERE channel=? AND kind=?', (channel, kind)).fetchone() if legacy else None
         saved = dict(db.execute('SELECT message,managed FROM starter_pins WHERE channel=? AND kind=?', (channel, kind)))
@@ -53,6 +72,7 @@ def update(threads, channel, kind):
         with queue.connect() as db:
             db.execute('DELETE FROM starter_pins WHERE channel=? AND kind=? AND message=?', (channel, kind, message))
 
+    new_pins = set()
     for message, topic in desired.items():
         if message in saved:
             continue
@@ -68,5 +88,14 @@ def update(threads, channel, kind):
         managed = not starter.get('pinned', False)
         if managed:
             api.call('PUT', f'{messages}/pins/{message}')
+            new_pins.add(message)
         with queue.connect() as db:
             db.execute('INSERT OR IGNORE INTO starter_pins VALUES(?,?,?,?)', (channel, kind, message, managed))
+            if managed:
+                db.execute('DELETE FROM pin_notice_cleanup WHERE channel=? AND kind=?', (channel, kind))
+
+    starters = new_pins | {message for message, managed in saved.items() if managed}
+    if starters and (new_pins or not scanned):
+        if clean_pin_notices(api, messages, threads.bot['id'], starters):
+            with queue.connect() as db:
+                db.execute('INSERT OR IGNORE INTO pin_notice_cleanup VALUES(?,?)', (channel, kind))
