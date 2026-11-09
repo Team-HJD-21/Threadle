@@ -385,7 +385,7 @@ class Threads:
         if callable(before) and before(channel,root_id):
             from deferred_threads import DeferredThread
             raise DeferredThread()
-        data={"name":topic.name,"auto_archive_duration":1440}
+        data={"name":topic.name,"auto_archive_duration":10080}
         if self.notifications_suppressed():
             # Experimental for ordinary text threads; Discord may ignore this undocumented field.
             data['flags']=1<<12

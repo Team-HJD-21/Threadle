@@ -62,6 +62,12 @@ class FakeDiscord:
             else:
                 self.posts.setdefault(channel, []).append(obj)
             return copy.deepcopy(obj)
+        if method == "PUT" and "/messages/pins/" in path:
+            return None
+        if method == "PATCH" and "/channels/c/messages/" in path:
+            obj = self.roots[path.split("/")[-1]]
+            obj.update(copy.deepcopy(data))
+            return copy.deepcopy(obj)
         if method == "PATCH":
             obj = self.threads[path.split("/")[-1]]
             if "name" in data:obj["name"]=data["name"]

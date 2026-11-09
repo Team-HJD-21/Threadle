@@ -217,6 +217,12 @@ RELEASES.insert(0, ('v1.0.0-beta.45', 'PR 리뷰 무효화 알림 정리', 'Clea
 ]))
 
 
+RELEASES.insert(0, ('v1.0.0-beta.47', '진행 중인 작업을 한눈에', 'Find active work at a glance', [
+    ('PR·Issue·Discussion 채널에서 진행 중인 작업을 고정 목록으로 확인할 수 있어요. 새 스레드는 비활동 7일 후 자동 보관됩니다.',
+     'Pinned boards show active work in PR, Issue and Discussion channels. New threads archive after seven days of inactivity.'),
+]))
+
+
 def content(t,admin=False):
     title=t('사이트·관리자 패치노트','Website & administration changelog') if admin else t('Threadle 패치노트','Threadle changelog')
     intro=t('사이트와 운영 관리 화면의 변경 사항입니다.','Changes to the website and operational administration.') if admin else t('Discord에서 사용하는 Threadle의 새 기능과 개선 사항입니다.','New features and improvements to Threadle in Discord.')

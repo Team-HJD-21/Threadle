@@ -251,8 +251,17 @@ class Service:
             topics = route(route_event, payload, github)
             for topic in topics:
                 from root_status import TopicRoots
+                from open_topic_board import refresh as refresh_board
                 roots=TopicRoots(threads,github)
-                if roots.handle_deleted(topic,event,payload):continue
+                if payload.get('action') == 'deleted':
+                    with queue.connect() as db:
+                        previous_channel = db.execute('SELECT channel FROM links WHERE topic=?', (topic.key,)).fetchone()
+                else:
+                    previous_channel = None
+                if roots.handle_deleted(topic,event,payload):
+                    if previous_channel:
+                        refresh_board(threads, previous_channel[0], topic.kind)
+                    continue
                 from notification_layout import hydrate_issue_fields, resolve_changed_fields
                 resolve_changed_fields(topic,payload,github)
                 topic = hydrate_issue_fields(topic,payload,github)
@@ -312,6 +321,11 @@ class Service:
                     notices.topic(topic, event, payload, notice_key, thread, channels, dnd_until=dnd_until)
                 elif feed:
                     feed.topic(topic, event, payload, notice_key, thread)
+                if not had_thread or route_event in ('pull_request', 'pull_request_target', 'issues', 'discussion'):
+                    with queue.connect() as db:
+                        channel = db.execute('SELECT channel FROM links WHERE topic=?', (topic.key,)).fetchone()
+                    if channel:
+                        refresh_board(routed, channel[0], topic.kind)
             remember_commits(queue,event,payload)
             queue.finish_group(group_ids)
             from deferred_threads import finish
@@ -336,6 +350,12 @@ class Service:
                 api = self.discord()
                 threads = CachedThreads(api, binding.config['guild_id'], binding.config['channels'], self.queue(binding), binding.config.get('language', 'ko'))
                 threads.check()
+                from open_topic_board import refresh as refresh_board
+                for kind, channel in binding.config['channels'].items():
+                    if kind in ('pr', 'issue', 'discussion'):
+                        refresh_board(threads, channel, kind)
+                for group in binding.config.get('routing_groups', []):
+                    refresh_board(threads, group['channel'], 'pr')
                 from review_repair import ReviewRepair
                 review_repair=ReviewRepair(self,binding,threads)
                 from deferred_threads import wake

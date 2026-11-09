@@ -9,7 +9,7 @@ class SilentCreateTests(unittest.TestCase):
     def test_dnd_creation_requests_silent_without_changing_thread_shape(self):
         self.threads.silent_notifications=True;self.threads.start('c','100',self.topic)
         data=self.api.call.call_args.args[2]
-        self.assertEqual(data,{'name':self.topic.name,'auto_archive_duration':1440,'flags':4096})
+        self.assertEqual(data,{'name':self.topic.name,'auto_archive_duration':10080,'flags':4096})
     def test_normal_creation_is_unchanged(self):
         self.threads.start('c','100',self.topic)
         self.assertNotIn('flags',self.api.call.call_args.args[2])
@@ -36,3 +36,35 @@ class SilentCreateTests(unittest.TestCase):
             self.api.reset_mock();self.api.call.side_effect=ApiError('Discord',status,code)
             with self.assertRaises(ApiError):self.threads.start('c','100',self.topic)
             self.assertEqual(self.api.call.call_count,1)
+
+
+class OpenBoardTests(unittest.TestCase):
+    def test_open_board_excludes_finished_and_draft_threads_and_edits_in_place(self):
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import Mock
+        from delivery import CachedThreads, Queue
+        from open_topic_board import refresh
+
+        with tempfile.TemporaryDirectory() as directory:
+            queue = Queue(Path(directory) / 'queue.sqlite3')
+            api = Mock()
+            api.call.return_value = {'id': 'board'}
+            threads = CachedThreads(api, 'guild', {'pr': 'channel'}, queue)
+            with queue.connect() as db:
+                db.execute('CREATE TABLE topic_thread_names(topic TEXT PRIMARY KEY,name TEXT NOT NULL)')
+                for number, state in ((1, 'Open'), (2, 'Merged'), (3, 'Draft'), (4, 'Open')):
+                    key = f'github-thread:owner/repo:pr:{number}'
+                    db.execute('INSERT INTO links VALUES(?,?,?)', (key, 'other' if number == 4 else 'channel', str(number)))
+                    db.execute('INSERT INTO topic_thread_names VALUES(?,?)', (key, f'[PR #{number} · {state}] repo · Example'))
+            refresh(threads, 'channel', 'pr')
+            description = api.call.call_args_list[0].args[2]['embeds'][0]['description']
+            assert 'PR #1' in description
+            assert not any(f'PR #{number}' in description for number in (2, 3, 4))
+            api.call.assert_called_with('PUT', '/channels/channel/messages/pins/board')
+            refresh(threads, 'channel', 'pr')
+            assert api.call.call_count == 2
+            with queue.connect() as db:
+                db.execute("UPDATE topic_thread_names SET name='[PR #1 · Closed] repo · Example' WHERE topic LIKE '%:1'")
+            refresh(threads, 'channel', 'pr')
+            assert api.call.call_args.args[:2] == ('PATCH', '/channels/channel/messages/board')
