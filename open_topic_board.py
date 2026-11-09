@@ -1,15 +1,10 @@
-"""Keep one editable board per connection, channel, and topic kind."""
+"""Pin existing Threadle starter cards for active topics in their own channel."""
 import logging
-import re
 
-from discord_threads import ApiError, clip, nonce
+from discord_threads import ApiError, marker
 
 
 LOG = logging.getLogger(__name__)
-TITLES = {'pr': ('리뷰 가능한 PR', 'PRs ready for review'),
-          'issue': ('열린 Issue', 'Open issues'),
-          'discussion': ('답변을 기다리는 Discussion', 'Unanswered discussions')}
-LIMIT = 25
 
 
 def refresh(threads, channel, kind):
@@ -20,55 +15,58 @@ def refresh(threads, channel, kind):
     try:
         update(threads, str(channel), kind)
     except ApiError as error:
-        LOG.warning('Could not refresh open-topic board channel=%s status=%s', channel, error.status)
+        LOG.warning('Could not refresh starter pins channel=%s status=%s', channel, error.status)
+
+
+def unpin(api, path):
+    try:
+        api.call('DELETE', path)
+    except ApiError as error:
+        if error.status != 404:
+            raise
 
 
 def update(threads, channel, kind):
     queue = threads.queue
+    api = threads.api
+    messages = f'/channels/{channel}/messages'
     with queue.connect() as db:
         if not db.execute("SELECT 1 FROM sqlite_master WHERE name='topic_thread_names'").fetchone():
             return
-        db.execute('CREATE TABLE IF NOT EXISTS open_topic_boards (channel TEXT, kind TEXT, message TEXT, digest TEXT, pinned INTEGER, PRIMARY KEY(channel,kind))')
-        saved = db.execute('SELECT message,digest,pinned FROM open_topic_boards WHERE channel=? AND kind=?', (channel, kind)).fetchone()
-        rows = db.execute('''SELECT l.thread,n.name FROM links l JOIN topic_thread_names n ON n.topic=l.topic
-                             WHERE l.channel=? AND l.topic LIKE ? AND n.name LIKE ?
-                             ORDER BY length(l.thread), l.thread LIMIT ?''',
-                          (channel, '%:' + kind + ':%', '[' + kind.upper() + ' #% · Open]%', LIMIT + 1)).fetchall()
-    if not rows and not saved:
-        return
+        db.execute('CREATE TABLE IF NOT EXISTS starter_pins (channel TEXT, kind TEXT, message TEXT, managed INTEGER NOT NULL, PRIMARY KEY(channel,kind,message))')
+        legacy = db.execute("SELECT 1 FROM sqlite_master WHERE name='open_topic_boards'").fetchone()
+        board = db.execute('SELECT message FROM open_topic_boards WHERE channel=? AND kind=?', (channel, kind)).fetchone() if legacy else None
+        saved = dict(db.execute('SELECT message,managed FROM starter_pins WHERE channel=? AND kind=?', (channel, kind)))
+        desired = dict(db.execute('''SELECT l.thread,l.topic FROM links l JOIN topic_thread_names n ON n.topic=l.topic
+                                    WHERE l.channel=? AND l.topic LIKE ? AND n.name LIKE ?
+                                    ORDER BY length(l.thread),l.thread''',
+                                  (channel, '%:' + kind + ':%', '[' + kind.upper() + ' #% · Open]%')))
 
-    english = threads.language == 'en'
-    lines = []
-    for thread, name in rows[:LIMIT]:
-        number, _, label = name.partition(' · Open]')
-        label = label.strip().partition(' · ')[2] or label.strip()
-        label = clip(re.sub(r'([\\`*_\[\]<>~|])', r'\\\1', label), 64).rstrip('\\')
-        number = number.removeprefix('[')
-        lines.append(f'• [{number} · {label}](https://discord.com/channels/{threads.guild}/{thread})')
-    if len(rows) > LIMIT:
-        lines.append('Showing the oldest 25.' if english else '오래된 항목 25개를 표시해요.')
-    description = '\n'.join(lines) or ('Nothing open right now.' if english else '지금 표시할 항목이 없어요.')
-    title = TITLES[kind][english]
-    digest = nonce(title + '\n' + description)
-    path = f'/channels/{channel}/messages'
-    data = {'embeds': [{'title': title, 'description': description, 'color': 0x2DA44E}],
-            'allowed_mentions': {'parse': []}}
-    if saved and saved[1] != digest:
-        try:
-            threads.api.call('PATCH', f'{path}/{saved[0]}', data)
-        except ApiError as error:
-            if error.status != 404:
-                raise
-            saved = None
-    if not saved:
-        key = nonce(f'open-board:{queue.path}:{channel}:{kind}')
-        message = threads.api.call('POST', path, dict(data, flags=4096, nonce=key, enforce_nonce=True))
-        saved = (message['id'], digest, 0)
-    with queue.connect() as db:
-        if saved[1] != digest or not saved[2]:
-            db.execute('INSERT OR REPLACE INTO open_topic_boards VALUES(?,?,?,?,?)',
-                       (channel, kind, saved[0], digest, saved[2]))
-    if not saved[2]:
-        threads.api.call('PUT', f'{path}/pins/{saved[0]}')
+    if board:
+        unpin(api, f'{messages}/pins/{board[0]}')
         with queue.connect() as db:
-            db.execute('UPDATE open_topic_boards SET pinned=1 WHERE channel=? AND kind=?', (channel, kind))
+            db.execute('DELETE FROM open_topic_boards WHERE channel=? AND kind=?', (channel, kind))
+
+    for message in saved.keys() - desired.keys():
+        if saved[message]:
+            unpin(api, f'{messages}/pins/{message}')
+        with queue.connect() as db:
+            db.execute('DELETE FROM starter_pins WHERE channel=? AND kind=? AND message=?', (channel, kind, message))
+
+    for message, topic in desired.items():
+        if message in saved:
+            continue
+        try:
+            starter = api.call('GET', f'{messages}/{message}')
+        except ApiError as error:
+            if error.status == 404:
+                continue
+            raise
+        if starter.get('author', {}).get('id') != threads.bot['id'] or topic not in marker(starter):
+            continue
+        # A pin already present when first seen belongs to a user, so leave it alone on closure.
+        managed = not starter.get('pinned', False)
+        if managed:
+            api.call('PUT', f'{messages}/pins/{message}')
+        with queue.connect() as db:
+            db.execute('INSERT OR IGNORE INTO starter_pins VALUES(?,?,?,?)', (channel, kind, message, managed))
