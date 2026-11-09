@@ -1,4 +1,5 @@
 """One compact, durable repository activity card per channel and time window."""
+from collections import Counter
 import hashlib
 import json
 import threading
@@ -57,10 +58,36 @@ class ActivityCards:
                     db.execute('INSERT OR REPLACE INTO activity_windows VALUES(?,?,?,?,?)', (feed.channel, group, window, now, now))
             self.update([item], window)
 
-    def update(self, items, window):
+    def adjacent_window(self, item):
+        feed = self.feed
+        event, topic = item[:2]
+        fresh = 'adjacent:' + nonce(self.repo + ':' + str(self.english) + ':' + topic + ':' + event)
+        with feed.queue.connect() as db:
+            previous = db.execute(
+                "SELECT window FROM activity_events WHERE channel=? AND topic=? "
+                "AND window LIKE 'adjacent:%' ORDER BY rowid DESC LIMIT 1",
+                (feed.channel, topic)).fetchone()
+            if not previous:
+                return fresh
+            window = previous[0]
+            key = 'activity:' + self.repo + ':' + str(feed.channel) + ':' + window
+            message = db.execute('SELECT message FROM alerts WHERE receipt=?',
+                                 (receipt(feed, key, '0'),)).fetchone()
+        if message and message[0]:
+            try:
+                latest = feed.api.call('GET', f'/channels/{feed.channel}/messages?limit=1')
+                if latest and latest[0]['id'] == message[0]:
+                    return window
+            except ApiError:
+                pass
+        return fresh
+
+    def update(self, items, window, adjacent=False):
         """Persist before sending. Replays retain their original window across restarts."""
         feed = self.feed
         with self.lock():
+            if adjacent and len({item[1] for item in items}) == 1:
+                window = self.adjacent_window(items[0])
             windows = set()
             with feed.queue.connect() as db:
                 db.execute('BEGIN IMMEDIATE')
@@ -75,7 +102,11 @@ class ActivityCards:
                     previous = db.execute('SELECT activities FROM activity_items WHERE channel=? AND window=? AND topic=?',
                                           (feed.channel, selected, topic)).fetchone()
                     activities = json.loads(previous[0]) if previous else []
-                    if activity and activity not in activities:
+                    if selected.startswith('adjacent:'):
+                        activities = Counter(activities)
+                        if activity:
+                            activities[activity] += 1
+                    elif activity and activity not in activities:
                         activities.append(activity)
                     db.execute('INSERT INTO activity_items VALUES(?,?,?,?,?,?) ON CONFLICT(channel,window,topic) '
                                'DO UPDATE SET label=excluded.label,activities=excluded.activities,url=excluded.url',
@@ -111,8 +142,11 @@ class ActivityCards:
                 entry = f'{emoji}**[{label}]({url})**\n' + (details or '')
             else:
                 activities = json.loads(raw)
-                # Summarize kinds of activity, not duplicate webhook deliveries.
-                text = ', '.join(clip(item, 60) for item in activities[:4])
+                # Count distinct webhook events by activity kind.
+                counts = Counter(activities)
+                activities = list(counts)
+                text = ', '.join(clip(item, 60) + (f' ×{counts[item]}' if counts[item] > 1 else '')
+                                 for item in activities[:4])
                 if len(activities) > 4:
                     text += f' +{len(activities)-4}'
                 emoji = ''

@@ -234,6 +234,12 @@ RELEASES.insert(0, ('v1.0.0-beta.49', '고정 시스템 알림 정리', 'Clean u
 ]))
 
 
+RELEASES.insert(0, ('v1.0.0-beta.50', '연속 활동 알림 정리', 'Group consecutive activity alerts', [
+    ('같은 항목의 최근 활동이 연속으로 오면 기존 카드를 갱신합니다.', 'Consecutive activity for the same topic updates the latest card.'),
+    ('열린 PR 알림에 Threadle GIF 썸네일을 표시합니다.', 'Open PR reminders show the Threadle GIF thumbnail.'),
+]))
+
+
 def content(t,admin=False):
     title=t('사이트·관리자 패치노트','Website & administration changelog') if admin else t('Threadle 패치노트','Threadle changelog')
     intro=t('사이트와 운영 관리 화면의 변경 사항입니다.','Changes to the website and operational administration.') if admin else t('Discord에서 사용하는 Threadle의 새 기능과 개선 사항입니다.','New features and improvements to Threadle in Discord.')

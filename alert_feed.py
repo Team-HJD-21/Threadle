@@ -119,7 +119,7 @@ class AlertFeed:
                 raise RuntimeError('Alert history cursor did not advance')
             before = cursor
 
-    def send(self, key, event_key, content, title, description, url, color, extra_embeds=None, silent=False):
+    def send(self, key, event_key, content, title, description, url, color, extra_embeds=None, silent=False, thumbnail=None):
         if self.config.get('alert_scope'):
             key += ':channel:' + self.config['alert_scope']
         receipt = 'github-alert:' + nonce(key + ':' + event_key)
@@ -139,7 +139,8 @@ class AlertFeed:
             'content': clip(content, 500), 'allowed_mentions': {'parse': []}, **({'flags':4096} if silent else {}),
             'nonce': nonce(self.channel+':'+receipt), 'enforce_nonce': True,
             'embeds': [{'title': clip(title, 230), 'description': description, 'url': url,
-                        'color': color, 'footer': {'text': receipt}}] + (extra_embeds or [])})
+                        'color': color, 'footer': {'text': receipt},
+                        **({'thumbnail': thumbnail} if thumbnail else {})}] + (extra_embeds or [])})
         self.remember(receipt, message['id'])
         return message['id']
 
@@ -152,7 +153,7 @@ class AlertFeed:
         key = (repo, self.config.get('language') == 'en')
         if key not in self.activity_cards:
             self.activity_cards[key] = ActivityCards(self, *key)
-        self.activity_cards[key].update(items, window)
+        self.activity_cards[key].update(items, window, adjacent=True)
 
     def lifecycle(self, topic, details, event_key, thread, now=None):
         from alert_activity import ActivityCards

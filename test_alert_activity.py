@@ -55,6 +55,17 @@ class ActivityTests(unittest.TestCase):
             self.assertEqual(call.call_count, 3)
             self.assertEqual(call.call_args.args[2]['name'], 'threadle_pr_sent')
 
+    def test_adjacent_updates_count_events_and_stop_at_an_intervening_message(self):
+        cards = self.cards()
+        cards.update([self.item(1, 'first', 'New comment')], 'live:10', adjacent=True)
+        self.cards().update([self.item(1, 'second', 'New comment')], 'live:11', adjacent=True)
+        self.assertEqual(len(self.api.posts), 1)
+        self.assertIn('New comment ×2', self.api.posts[0]['embeds'][0]['description'])
+        cards.feed.send('reminder', '1', '', 'Reminder', '', 'https://example.com', 1)
+        cards.update([self.item(1, 'third')], 'live:12', adjacent=True)
+        self.assertEqual(len(self.api.posts), 3)
+        self.assertIn('New commits', self.api.posts[-1]['embeds'][0]['description'])
+
     def test_first_event_is_immediate_later_topics_and_activities_edit_one_card(self):
         cards = self.cards()
         cards.update([self.item(1)], 'live:10')
