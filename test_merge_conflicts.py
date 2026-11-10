@@ -2,7 +2,7 @@ import copy
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from service import Service
 from merge_conflicts import ConflictMonitor,key
 from test_service import config
@@ -49,6 +49,15 @@ class ConflictTests(unittest.TestCase):
         self.assertIn('Merge conflict',msg['embeds'][0]['title'])
         for text in ('owner/repo','feature/mobile','main','/pull/7'):self.assertIn(text,msg['embeds'][0]['description'])
         self.assertEqual(msg['allowed_mentions'],{'parse':[]})
+    def test_resolution_replaces_thumbnail_on_existing_message(self):
+        with patch('app_emojis.thumbnail', side_effect=lambda api, name: {'url': name}):
+            self.monitor.tick()
+            self.assertEqual(self.api.messages[0][1]['embeds'][0]['thumbnail']['url'], 'threadle_404')
+            self.rows[0]['mergeable'] = 'MERGEABLE'
+            self.again()
+        self.assertEqual(len(self.api.messages), 1)
+        self.assertEqual(self.api.messages[0][1]['embeds'][0]['thumbnail']['url'], 'threadle_fixing')
+
     def test_resolution_rearms_but_unknown_does_not(self):
         self.monitor.tick();self.rows[0]['mergeable']='UNKNOWN';self.again()
         self.rows[0]['mergeable']='CONFLICTING';self.again();self.assertEqual(len(self.api.messages),1)

@@ -245,6 +245,12 @@ RELEASES.insert(0, ('v1.0.0-beta.51', '완료된 항목의 자동 고정 해제'
 ]))
 
 
+RELEASES.insert(0, ('v1.0.0-beta.52', '알림 썸네일과 방해금지 안내', 'Alert thumbnails and quiet-hour notices', [
+    ('승인, 병합 충돌과 해결, 열린 PR 현황에 지정된 이모지 썸네일을 표시합니다.', 'Approval, merge conflicts and resolutions, and open PR reminders use dedicated emoji thumbnails.'),
+    ('방해금지를 설정한 연결은 시작과 종료 시간에 안내를 받습니다.', 'Connections with quiet hours enabled receive a notice at the start and end.'),
+]))
+
+
 def content(t,admin=False):
     title=t('사이트·관리자 패치노트','Website & administration changelog') if admin else t('Threadle 패치노트','Threadle changelog')
     intro=t('사이트와 운영 관리 화면의 변경 사항입니다.','Changes to the website and operational administration.') if admin else t('Discord에서 사용하는 Threadle의 새 기능과 개선 사항입니다.','New features and improvements to Threadle in Discord.')

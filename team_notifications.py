@@ -273,7 +273,7 @@ class TeamNotifications:
 
     def send_reminder_batch(self, identity, raw, open_numbers=None):
         batch=json.loads(raw)
-        from app_emojis import help_thumbnail
+        from app_emojis import thumbnail
         en=batch['english'];hours=batch['hours']
         for channel,items in sorted(batch['channels'].items()):
             items=[pr for pr in items if open_numbers is None or pr['number'] in open_numbers]
@@ -286,7 +286,7 @@ class TeamNotifications:
                     '🧵 Here are the PRs that are still open.' if en else '🧵 아직 열린 PR을 모아왔어요.',
                     ('Open PR reminders' if en else '열린 PR 현황')+' · '+self.binding.repo,
                     page,'https://github.com/'+self.binding.repo+'/pulls',0xD29922,
-                    thumbnail=help_thumbnail(self.api) if index == 0 else None)
+                    thumbnail=thumbnail(self.api, 'threadle_review_please') if index == 0 else None)
         self.advance_reminders(batch['due'],hours)
 
     def advance_reminders(self,due,hours):
@@ -346,6 +346,37 @@ class TeamNotifications:
         with self.queue.connect() as db:
             db.execute('INSERT OR IGNORE INTO team_schedule VALUES(?)', (period,))
 
+    def quiet_notice(self, now):
+        if not self.options.get('quiet') or not self.binding.config.get('alert_channel'):
+            return
+        offset = self.options.get('utc_offset', 9) * 3600
+        local = dt.datetime.fromtimestamp(now + offset, dt.timezone.utc)
+        if local.minute >= 5 or now < self.options.get('enabled_at', 0):
+            return
+        start, end = self.options.get('quiet_start', 22), self.options.get('quiet_end', 8)
+        if start == end or local.hour not in (start, end):
+            return
+        sleeping = local.hour == start
+        phase = 'start' if sleeping else 'end'
+        period = f'quiet:{phase}:{local.date()}'
+        with self.queue.connect() as db:
+            if db.execute('SELECT 1 FROM team_schedule WHERE period=?', (period,)).fetchone():
+                return
+        from app_emojis import thumbnail
+        if sleeping:
+            title = 'Quiet hours started' if self.english else '방해금지 시간 시작'
+            body = "I’m taking a short break. See you at {end:02d}:00!" if self.english else "잠깐 쉬고 올게요. {end:02d}:00에 다시 만나요!"
+            body = body.format(end=end)
+        else:
+            title = 'Quiet hours ended' if self.english else '방해금지 시간 종료'
+            body = 'I’m back and ready to get to work!' if self.english else '돌아왔어요! 이제 다시 일 시작할게요.'
+        self.feed(self.binding.config['alert_channel']).send(
+            'quiet-hours:' + self.binding.repo, period, '', title, body,
+            None, 0x5865F2, silent=sleeping,
+            thumbnail=thumbnail(self.api, 'threadle_sleep' if sleeping else 'threadle_wake'))
+        with self.queue.connect() as db:
+            db.execute('INSERT OR IGNORE INTO team_schedule VALUES(?)', (period,))
+
     def tick(self, github):
         if self.clock() >= self.next_flush:
             self.next_flush = self.clock() + 2
@@ -353,5 +384,6 @@ class TeamNotifications:
         if self.clock() < self.next_tick:
             return
         self.next_tick = self.clock() + 60
+        self.quiet_notice(self.clock())
         self.reminders(github)
         self.digest(github)
