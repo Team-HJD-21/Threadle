@@ -225,6 +225,11 @@ class MutableMessages:
             db.execute('UPDATE deleted_sources SET done=1 WHERE source=?',(source,))
 
     def update(self,topic,kind,obj,event,payload,event_key,embed,closed,language='ko'):
+        if event == 'pull_request_review' and str(obj.get('state', '')).lower() == 'approved' and payload.get('action') != 'dismissed':
+            from app_emojis import thumbnail
+            image = thumbnail(self.threads.api, 'threadle_good')
+            if image:
+                embed = dict(embed, thumbnail=image)
         if self.is_deleted(topic,kind):return None
         threads=self.threads;thread=threads.ensure(topic);thread_id=str(thread['id'])
         if thread.get('thread_metadata',{}).get('locked'):raise RuntimeError('The topic thread is moderator-locked')

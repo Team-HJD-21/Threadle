@@ -7,7 +7,7 @@ import time
 from discord_threads import Api, ApiError
 
 
-HELP_EMOJI = 'threadle_help_anim'
+THUMBNAIL_NAMES = {'threadle_good', 'threadle_404', 'threadle_sleep', 'threadle_wake', 'threadle_fixing'}
 NAMES = {'threadle_hello', 'threadle_pr_sent', 'threadle_review_please', 'threadle_merge'}
 _cache = {}
 _lock = threading.Lock()
@@ -15,7 +15,7 @@ ASSETS = Path(__file__).with_name('web_assets')
 
 
 def prefix(api, name):
-    if name not in NAMES | {HELP_EMOJI} or not isinstance(api, Api) or api.service != 'Discord':
+    if name not in NAMES | THUMBNAIL_NAMES or not isinstance(api, Api) or api.service != 'Discord':
         return ''
     with _lock:
         now = time.monotonic()
@@ -33,7 +33,7 @@ def prefix(api, name):
                         break
                 emojis = {
                     row['name']: f"<{'a' if row.get('animated') else ''}:{row['name']}:{row['id']}> "
-                    for row in rows if row['name'] in NAMES | {HELP_EMOJI} and row.get('available', True)
+                    for row in rows if row['name'] in NAMES | THUMBNAIL_NAMES and row.get('available', True)
                 }
             except (ApiError, KeyError, TypeError, OSError):
                 pass
@@ -41,8 +41,8 @@ def prefix(api, name):
         return emojis.get(name, '')
 
 
-def help_thumbnail(api):
-    emoji = prefix(api, HELP_EMOJI).strip()
+def thumbnail(api, name):
+    emoji = prefix(api, name).strip()
     if not emoji:
         return None
     emoji_id = emoji.rsplit(':', 1)[1].removesuffix('>')

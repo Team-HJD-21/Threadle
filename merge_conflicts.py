@@ -76,7 +76,9 @@ class ConflictMonitor:
         if resolved:
             content='🧵 The merge conflict has been resolved.' if english else '🧵 Merge conflict가 해결됐어요.'
             description=description.replace('This PR conflicts with its base branch. Resolve the conflicts before merging.','The merge conflict has been resolved.').replace('대상 브랜치와 Merge conflict가 생겼어요. 충돌을 해결한 뒤 병합해 주세요.','대상 브랜치와의 Merge conflict가 해결됐어요.')
-        feed.send(source,event,content,clip(f"PR #{number} · {label} · "+row.get('title',''),230),description,url,0x2DA44E if resolved else 0xD1242F,silent=silent)
+        from app_emojis import thumbnail
+        feed.send(source,event,content,clip(f"PR #{number} · {label} · "+row.get('title',''),230),description,url,0x2DA44E if resolved else 0xD1242F,silent=silent,
+                  thumbnail=thumbnail(feed.api, 'threadle_fixing' if resolved else 'threadle_404'))
         if config.get('alert_scope'):source+=':channel:'+config['alert_scope']
         receipt='github-alert:'+nonce(source+':'+event)
         with queue.connect() as db:
@@ -87,6 +89,7 @@ class ConflictMonitor:
     def update_posts(self,binding,number,episode,state):
         from discord_threads import ApiError,marker
         from root_status import editable_embed
+        from app_emojis import thumbnail
         queue=self.service.queue(binding);api=self.service.discord()
         from message_tracking import bind
         bind(api,queue)
@@ -100,7 +103,11 @@ class ConflictMonitor:
                 label='Conflict resolved' if state=='resolved' else 'Closed'
                 english=binding.config.get('language')=='en'
                 content=('🧵 The merge conflict has been resolved.' if english else '🧵 Merge conflict가 해결됐어요.') if state=='resolved' else ('🧵 This PR is no longer open.' if english else '🧵 이 PR은 더 이상 열려 있지 않아요.')
+                image = thumbnail(api, 'threadle_fixing') if state == 'resolved' else None
                 for embed in embeds:
+                    embed.pop('thumbnail', None)
+                    if image:
+                        embed['thumbnail'] = image
                     parts=embed.get('title','').split(' · ',2)
                     embed['title']=' · '.join([parts[0],label,*parts[2:]])
                     embed['color']=0x2DA44E if state=='resolved' else 0x8B949E

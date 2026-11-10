@@ -159,18 +159,21 @@ class ActivityCards:
             if group and (len(group) >= limit or size + units(entry) + len(separator) > 3500):
                 groups.append(group)
                 group, size = [], 0
-            group.append((entry, url))
+            group.append((entry, url, not lifecycle and label.startswith('PR #') and 'Approved' in activities))
             size += units(entry) + len(separator)
         if group:
             groups.append(group)
         return [(title + (f' ({page+1}/{len(groups)})' if len(groups) > 1 else ''),
-                 separator.join(entry for entry, _ in group), group[0][1], color)
+                 separator.join(entry for entry, _, _ in group), group[0][1], color,
+                 any(approved for _, _, approved in group))
                 for page, group in enumerate(groups)]
 
     def publish(self, window):
         feed = self.feed
-        for page, (title, body, url, color) in enumerate(self.render(window)):
-            digest = hashlib.sha256((title + '\n' + body).encode()).hexdigest()
+        from app_emojis import thumbnail
+        for page, (title, body, url, color, approved) in enumerate(self.render(window)):
+            image = thumbnail(feed.api, 'threadle_good') if approved else None
+            digest = hashlib.sha256((title + '\n' + body + (image['url'] if image else '')).encode()).hexdigest()
             key, event = 'activity:' + self.repo + ':' + str(feed.channel) + ':' + window, str(page)
             identity = receipt(feed, key, event)
             with feed.queue.connect() as db:
@@ -180,7 +183,7 @@ class ActivityCards:
             if old and old[0] == digest:
                 continue
             if not message or not message[0]:
-                message_id = feed.send(key, event, '', title, body, url, color)
+                message_id = feed.send(key, event, '', title, body, url, color, thumbnail=image)
                 # A lost POST response may have left an older version on Discord.
                 recovering = message is not None
             else:
@@ -189,7 +192,8 @@ class ActivityCards:
                 data = {
                     'content': '', 'allowed_mentions': {'parse': []},
                     'embeds': [{'title': title, 'description': body, 'url': url,
-                                'color': color, 'footer': {'text': identity}}]}
+                                'color': color, 'footer': {'text': identity},
+                                **({'thumbnail': image} if image else {})}]}
                 try:
                     feed.api.call('PATCH', '/channels/' + feed.channel + '/messages/' + str(message_id), data)
                 except ApiError as error:
@@ -197,7 +201,7 @@ class ActivityCards:
                         raise
                     with feed.queue.connect() as db:
                         db.execute('DELETE FROM alerts WHERE receipt=?', (identity,))
-                    feed.send(key, event, '', title, body, url, color)
+                    feed.send(key, event, '', title, body, url, color, thumbnail=image)
             with feed.queue.connect() as db:
                 db.execute('INSERT OR REPLACE INTO activity_pages VALUES(?,?,?,?)',
                            (feed.channel, window, page, digest))

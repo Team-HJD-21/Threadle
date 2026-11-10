@@ -21,6 +21,24 @@ class DndTests(unittest.TestCase):
         self.topic=Topic('owner/repo','pr',7,'Fix (mobile)','https://github.com/owner/repo/pull/7')
     def tearDown(self):self.temp.cleanup()
     def notices(self):return TeamNotifications(self.b,self.queue,self.api,clock=lambda:self.now)
+    def test_quiet_boundaries_use_local_time_and_send_once_across_restarts(self):
+        self.options['utc_offset'] = 9
+        self.now = dt.datetime(2026, 11, 3, 13, tzinfo=dt.timezone.utc).timestamp()
+        with patch('app_emojis.thumbnail', side_effect=lambda api, name: {'url': name}):
+            self.notices().quiet_notice(self.now - 60)
+            self.assertFalse(self.api.messages)
+            self.notices().quiet_notice(self.now)
+            self.notices().quiet_notice(self.now + 60)
+            self.notices().quiet_notice(self.now + 10 * 3600)
+        messages = [msg for _, msg in self.api.messages]
+        self.assertEqual([msg['embeds'][0]['thumbnail']['url'] for msg in messages],
+                         ['threadle_sleep', 'threadle_wake'])
+        self.assertEqual(messages[0]['flags'], 4096)
+        self.assertNotIn('flags', messages[1])
+        self.options['quiet'] = False
+        self.notices().quiet_notice(self.now + 86400)
+        self.assertEqual(len(self.api.messages), 2)
+
     def test_all_three_kinds_are_grouped_once_after_restart(self):
         n=self.notices()
         for kind,number in [('pr',7),('issue',8),('discussion',9)]:
