@@ -42,7 +42,7 @@ class DeliveryTests(unittest.TestCase):
                 options.update(digest='weekly',digest_weekday=4,utc_offset=0,enabled_at=now-86400)
                 notices=TeamNotifications(binding(options),Queue(Path(folder)/(str(index)+'.db')),Mock(),clock=lambda:now)
                 feed=Mock();notices.feed=Mock(return_value=feed)
-                with patch('team_notifications.open_prs',return_value=[]),patch('team_notifications.open_issue_digest',return_value=(0,[])):
+                with patch('team_notifications.open_prs',return_value=[]),patch('team_notifications.weekly_activity',return_value=([],[])):
                     notices.digest(Mock())
                 self.assertEqual(feed.send.call_count,expected)
     def test_settings_description_shows_effective_weekly_time(self):
