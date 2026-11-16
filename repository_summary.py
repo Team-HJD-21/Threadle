@@ -87,6 +87,23 @@ def open_prs(github, repo):
     return list(github.pages(f'/repos/{repo}/pulls?state=open&sort=created&direction=asc'))
 
 
+def weekly_activity(github, repo, start, end):
+    """Read recently updated items and select by their actual merge or close time."""
+    merged, closed = [], []
+    for endpoint, timestamp, items in (('pulls', 'merged_at', merged), ('issues', 'closed_at', closed)):
+        path = f'/repos/{repo}/{endpoint}?state=closed&sort=updated&direction=desc'
+        if endpoint == 'issues':
+            path += '&since=' + start
+        for item in github.pages(path):
+            if item['updated_at'] < start:
+                break
+            completed = item.get(timestamp)
+            if completed and start <= completed < end and 'pull_request' not in item:
+                items.append(item)
+        items.sort(key=lambda item: (item[timestamp], item['number']), reverse=True)
+    return merged, closed
+
+
 def issue_digest(github, repo):
     owner, name = repo.split('/')
     query = """query($owner:String!,$name:String!,$after:String){repository(owner:$owner,name:$name){
