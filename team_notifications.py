@@ -6,7 +6,7 @@ import time
 
 from alert_feed import AlertFeed, activity, english_activity, merge_details, closure_details
 from discord_threads import clip, nonce
-from repository_summary import open_prs, open_issue_digest, pr_counts, summary_item, summary_pages
+from repository_summary import open_prs, open_issue_digest, pr_counts, summary_item, summary_pages, summary_text, weekly_activity
 
 
 def validate_options(options):
@@ -316,6 +316,9 @@ class TeamNotifications:
         with self.queue.connect() as db:
             if db.execute('SELECT 1 FROM team_schedule WHERE period=?', (period,)).fetchone():
                 return
+        if kind == 'weekly':
+            self.send_weekly_digest(github, scheduled, offset, period)
+            return
         prs = open_prs(github, self.binding.repo)
         count, oldest = open_issue_digest(github, self.binding.repo)
         review = [p for p in prs if not p.get('draft') and (p.get('requested_reviewers') or p.get('requested_teams'))]
@@ -345,6 +348,45 @@ class TeamNotifications:
             self.feed(self.binding.config['alert_channel']).send('digest:'+self.binding.repo,period if index==0 else period+':page:'+str(index),('🧵 Here’s your team roundup.' if self.english else '🧵 오늘 확인할 개발 소식을 모아왔어요.'),first['title'],first['description'],url,first['color'],extra_embeds=cards[1:])
         with self.queue.connect() as db:
             db.execute('INSERT OR IGNORE INTO team_schedule VALUES(?)', (period,))
+
+    def send_weekly_digest(self, github, scheduled, offset, period, *, preview=False):
+        repo = self.binding.repo
+        en = self.english
+        end = scheduled - dt.timedelta(seconds=offset)
+        start = end - dt.timedelta(days=7)
+        iso = '%Y-%m-%dT%H:%M:%SZ'
+        merged, closed = weekly_activity(github, repo, start.strftime(iso), end.strftime(iso))
+        pending = [pr for pr in open_prs(github, repo)
+                   if not pr.get('draft') and (pr.get('requested_reviewers') or pr.get('requested_teams'))]
+        start_local = scheduled - dt.timedelta(days=7)
+        duration = f'{start_local:%m/%d %H:%M}–{scheduled:%m/%d %H:%M} (UTC{offset / 3600:+g})'
+        title = 'Weekly development summary' if en else '주간 개발 요약'
+        if preview:
+            title = ('[TEST] ' if en else '[테스트] ') + title
+        heading = f'**{repo}** · {duration}'
+        heading += (f'\nMerged PRs **{len(merged)}** · Closed issues **{len(closed)}** · Awaiting review **{len(pending)}**'
+                    if en else f'\n병합된 PR **{len(merged)}** · 닫힌 이슈 **{len(closed)}** · 현재 리뷰 대기 **{len(pending)}**')
+        lines = []
+        for items, section, label, path in (
+            (merged, 'Merged PRs' if en else '병합된 PR', 'PR', 'pull'),
+            (closed, 'Closed issues' if en else '닫힌 이슈', 'Issue', 'issues'),
+            (pending, 'Currently awaiting review' if en else '현재 리뷰 대기', 'PR', 'pull'),
+        ):
+            for index, item in enumerate(items[:5]):
+                link = f'https://github.com/{repo}/{path}/{int(item["number"])}'
+                entry = f'• [{label} #{item["number"]}]({link}) {summary_text(item.get("title"))}'
+                lines.append(f'**{section}**\n{entry}' if index == 0 else entry)
+            if len(items) > 5:
+                lines.append(f'… {len(items) - 5} more' if en else f'… 그 외 {len(items) - 5}개')
+        pages = summary_pages(lines, heading)
+        for index, page in enumerate(pages):
+            self.feed(self.binding.config['alert_channel']).send(
+                'weekly-digest-test:' + repo if preview else 'digest:' + repo,
+                period if index == 0 else period + ':page:' + str(index),
+                '', title, page, f'https://github.com/{repo}', 0x0969DA, silent=preview)
+        if not preview:
+            with self.queue.connect() as db:
+                db.execute('INSERT OR IGNORE INTO team_schedule VALUES(?)', (period,))
 
     def quiet_notice(self, now):
         if not self.options.get('quiet') or not self.binding.config.get('alert_channel'):

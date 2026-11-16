@@ -55,7 +55,20 @@ class DigestPolicyTests(unittest.TestCase):
             with patch('team_notifications.open_prs',return_value=[]),patch('team_notifications.open_issue_digest',return_value=(0,[])):
                 notices().digest(Mock());self.assertEqual(len(api.messages),1)
                 now[0]+=8*3600
-                notices().digest(Mock());notices().digest(Mock())
+                github = Mock()
+                github.pages.side_effect = [
+                    [{'number': 1, 'title': 'Merged feature', 'merged_at': '2026-11-06T16:00:00Z', 'updated_at': '2026-11-06T16:00:00Z'},
+                     {'number': 2, 'title': 'Boundary', 'merged_at': '2026-11-06T17:00:00Z', 'updated_at': '2026-11-06T17:00:00Z'}],
+                    [{'number': 3, 'title': 'Closed issue', 'closed_at': '2026-11-05T12:00:00Z', 'updated_at': '2026-11-05T12:00:00Z'},
+                     {'number': 4, 'title': 'PR in issues', 'closed_at': '2026-11-05T12:00:00Z', 'updated_at': '2026-11-05T12:00:00Z', 'pull_request': {}}],
+                ]
+                notices().digest(github);notices().digest(github)
+                description = api.messages[1][1]['embeds'][0]['description']
+                self.assertIn('Merged feature', description)
+                self.assertIn('Closed issue', description)
+                self.assertNotIn('Boundary', description)
+                self.assertNotIn('PR in issues', description)
+                self.assertEqual(github.pages.call_count, 2)
                 self.assertEqual(len(api.messages),2)
                 self.assertIn('일일',api.messages[0][1]['embeds'][0]['title'])
                 self.assertIn('주간',api.messages[1][1]['embeds'][0]['title'])
@@ -65,7 +78,7 @@ class DigestPolicyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             queue=Queue(Path(folder)/'queue.db');api=MessageApi();b=binding(options)
             with patch('team_notifications.open_prs',return_value=[]),patch('team_notifications.open_issue_digest',return_value=(0,[])):
-                for _ in range(2):TeamNotifications(b,queue,api,clock=lambda:now).digest(Mock())
+                for _ in range(2):TeamNotifications(b,queue,api,clock=lambda:now).digest(Mock(pages=Mock(return_value=[])))
             self.assertEqual(len(api.messages),2)
             self.assertNotEqual(api.messages[0][1]['nonce'],api.messages[1][1]['nonce'])
 

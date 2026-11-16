@@ -251,6 +251,10 @@ RELEASES.insert(0, ('v1.0.0-beta.52', '알림 썸네일과 방해금지 안내',
 ]))
 
 
+RELEASES.insert(0, ('v1.0.0-beta.53', '주간 개발 요약', 'Weekly development summary', [
+    ('지난 7일간 병합된 PR과 닫힌 이슈, 현재 리뷰 대기 PR을 모아 보여 줍니다.', 'See PRs merged and issues closed over the past seven days, plus PRs currently awaiting review.'),
+]))
+
 def content(t,admin=False):
     title=t('사이트·관리자 패치노트','Website & administration changelog') if admin else t('Threadle 패치노트','Threadle changelog')
     intro=t('사이트와 운영 관리 화면의 변경 사항입니다.','Changes to the website and operational administration.') if admin else t('Discord에서 사용하는 Threadle의 새 기능과 개선 사항입니다.','New features and improvements to Threadle in Discord.')
