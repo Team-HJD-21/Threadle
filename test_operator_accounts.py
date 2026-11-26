@@ -34,14 +34,14 @@ class LinkedAccountAdminTests(fixtures.OperatorTests):
         self.assertIn('@alice',body);self.assertNotIn('@bob',body)
         self.assertIn('https://discord.com/users/55',body)
         self.assertIn('https://github.com/alice',body)
-        self.assertIn('자동 멘션</dt><dd>사용',body)
+        self.assertIn('멘션 표시</dt><dd>사용',body)
         self.assertIn('댓글 전송</dt><dd>사용',body)
         for secret in ('PRIVATE-TOKEN','PRIVATE-GENERATION','OTHER-PRIVATE','credential','refresh_token'):
             self.assertNotIn(secret,body)
         self.assertIn('noindex',headers['X-Robots-Tag'])
         status,_,other=self.request(path='/connect/admin/accounts/2000?lang=en')
         self.assertEqual(status,200);self.assertIn('@bob',other)
-        self.assertIn('Automatic mentions</dt><dd>Off',other)
+        self.assertIn('Mention display</dt><dd>Off',other)
         self.assertIn('Comment forwarding</dt><dd>Off',other)
         self.assertNotIn('Reconnect required',other)  # Mentions-only links are valid without stored write credentials.
         self.assertIn('/connect/admin/accounts/2000?lang=ko',other)
