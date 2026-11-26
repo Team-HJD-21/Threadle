@@ -583,6 +583,14 @@ class AccountTests(unittest.TestCase):
             silent, operation = policy.prepare(method, destination, dict(data, **variant))
             self.assertEqual(silent['allowed_mentions']['users'], [])
             self.assertIsNone(operation)
+        from notification_layout import message_pages
+        repeated = {'description': ('@alice ' * 500).strip()}
+        pages = message_pages(repeated, component_limits=True)
+        self.assertGreater(len(pages), 1)
+        for page in pages:
+            value, _ = policy.prepare('POST', path, dict(data, embeds=page))
+            self.assertIsNotNone(render(value))
+            self.assertEqual(value['embeds'][0]['description'].count('<@55>'), 1)
         policy.remember(receipt)
         _, receipt = self.policy().prepare('POST', path, data)
         self.assertIsNone(receipt)

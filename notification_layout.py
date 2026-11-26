@@ -217,10 +217,10 @@ def bundle_embed(topic, payload, language):
 def message_pages(embed, *, component_limits=False):
     from notification_media import media_embeds
     from notification_text import description_embeds
-    description_limit = 2100 if component_limits else 3500
-    field_limit = 2900 if component_limits else 5400
-    page_limit = 3000 if component_limits else 5700
-    embed_limit = 2 if component_limits else 10
+    description_limit = 1950 if component_limits else 3500
+    field_limit = 2500 if component_limits else 5400
+    page_limit = 2600 if component_limits else 5700
+    embed_limit = 1 if component_limits else 10
     source=[part for original in (embed.get('_embeds') or [embed]) for item in media_embeds(original)
             for part in description_embeds(item, description_limit)]
     units=lambda value:len(str(value).encode('utf-16-le'))//2

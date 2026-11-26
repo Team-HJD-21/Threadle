@@ -109,11 +109,23 @@ class MentionPolicy:
         if not mapping:
             return data, None
         value = copy.deepcopy(data)
+        if pings or data.get('_thread_card_v2'):
+            def replace_visible(text):
+                # A single real mention per account is enough to notify. Bound
+                # growth even if a GitHub body repeats a short login many times.
+                def mention(match):
+                    login = match[1].lower() if match[1] else ''
+                    discord = mapping.pop(login, None)
+                    return '<@' + discord + '>' if discord else match[0]
+                return TOKENS.sub(mention, text)
+        else:
+            def replace_visible(text):
+                return replace(text, mapping)
         for embed in value['embeds']:
             if 'description' in embed:
-                embed['description'] = replace(embed['description'], mapping)
+                embed['description'] = replace_visible(embed['description'])
             for field in embed.get('fields', []):
-                field['value'] = replace(field.get('value', ''), mapping)
+                field['value'] = replace_visible(field.get('value', ''))
         value['allowed_mentions'] = {'parse': [], 'users': sorted(pings), 'replied_user': False}
         if pings:
             value['_thread_card_v2'] = True

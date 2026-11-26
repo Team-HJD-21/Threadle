@@ -316,7 +316,8 @@ class MutableMessages:
                 if dismissal:continue
                 if isinstance(threads.api, Api) and mention_names:
                     data['_mention_names'] = mention_names
-                silent = threads.notifications_suppressed() or (current and not known) or payload.get('action') == 'edited'
+                silent = (threads.notifications_suppressed() or payload.get('action') == 'edited'
+                          or (current and (not known or not mention_names)))
                 sent=threads.api.call('POST',f'/channels/{thread_id}/messages',dict(data,nonce=nonce(thread_id+":"+receipt),enforce_nonce=True,**({'flags':1<<12} if silent else {})))
             with self.queue.connect() as db:db.execute('INSERT INTO source_pages VALUES(?,?,?,?) ON CONFLICT(source,page) DO UPDATE SET message=excluded.message,media=excluded.media',(source,index,sent['id'],origin))
             threads.remember_delivery(receipt,sent['id'])
