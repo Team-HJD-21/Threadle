@@ -198,7 +198,12 @@ class TopicRoots:
                 if embed.get('color')!=card_color(topic.kind,obj):embed['color']=card_color(topic.kind,obj);changed=True
                 for field in embed.get('fields',[]):
                     if field.get('name')=='Current Status' and field!=status_field(topic.kind,obj):field.update(status_field(topic.kind,obj));changed=True
-            if changed:self.threads.api.call('PATCH',f'/channels/{thread}/messages/{message_id}',{'embeds':embeds,'allowed_mentions':{'parse':[]}})
+            if changed:
+                from thread_card_v2 import V2
+                data = {'embeds': embeds, 'allowed_mentions': {'parse': []}}
+                if message.get('flags', 0) & V2:
+                    data['_thread_card_v2'] = True
+                self.threads.api.call('PATCH', f'/channels/{thread}/messages/{message_id}', data)
 
         with self.queue.connect() as db:db.execute('INSERT OR REPLACE INTO topic_visuals VALUES(?,?,?)',(topic.key,visual,current[0]))
 

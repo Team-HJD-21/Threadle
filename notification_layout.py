@@ -214,10 +214,15 @@ def bundle_embed(topic, payload, language):
     return {'_embeds':embeds}
 
 
-def message_pages(embed):
+def message_pages(embed, *, component_limits=False):
     from notification_media import media_embeds
     from notification_text import description_embeds
-    source=[part for original in (embed.get('_embeds') or [embed]) for item in media_embeds(original) for part in description_embeds(item)]
+    description_limit = 1950 if component_limits else 3500
+    field_limit = 2500 if component_limits else 5400
+    page_limit = 2600 if component_limits else 5700
+    embed_limit = 1 if component_limits else 10
+    source=[part for original in (embed.get('_embeds') or [embed]) for item in media_embeds(original)
+            for part in description_embeds(item, description_limit)]
     units=lambda value:len(str(value).encode('utf-16-le'))//2
     embeds=[]
     for original in source:
@@ -227,7 +232,7 @@ def message_pages(embed):
         size=units(current.get('title',''))+units(current.get('description',''))+units(current.get('author',{}).get('name',''))
         for field in original.get('fields',[]):
             extra=units(field.get('name',''))+units(field.get('value',''))
-            if size+extra>5400 or len(current['fields'])>=25:
+            if size+extra>field_limit or len(current['fields'])>=(14 if component_limits else 25):
                 embeds.append(current)
                 current={key:value for key,value in original.items() if key not in ('description','fields','timestamp')}
                 current['fields']=[]
@@ -237,7 +242,7 @@ def message_pages(embed):
     pages=[];current=[];used=0
     for item in embeds:
         count=units(item.get('title',''))+units(item.get('description',''))+units(item.get('author',{}).get('name',''))+sum(units(f.get('name',''))+units(f.get('value','')) for f in item.get('fields',[]))
-        if current and (item.get('image') or any(e.get('image') for e in current) or len(current)>=10 or used+count>5700):
+        if current and (item.get('image') or any(e.get('image') for e in current) or len(current)>=embed_limit or used+count>page_limit):
             pages.append(current);current=[];used=0
         current.append(item);used+=count
     if current:pages.append(current)

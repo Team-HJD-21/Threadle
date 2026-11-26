@@ -188,7 +188,11 @@ class MutableMessages:
             for attachment in message.get('attachments',[]):
                 urls={attachment.get('url'),attachment.get('proxy_url'),'attachment://'+attachment.get('filename','')}
                 if not (urls&deleted_urls) or urls&kept_urls:attachments.append({'id':attachment['id']})
-            self.threads.api.call('PATCH',f"/channels/{thread}/messages/{message['id']}",{'embeds':kept,'attachments':attachments,'allowed_mentions':{'parse':[]}})
+            from thread_card_v2 import V2
+            data = {'embeds': kept, 'attachments': attachments, 'allowed_mentions': {'parse': []}}
+            if message.get('flags', 0) & V2:
+                data['_thread_card_v2'] = True
+            self.threads.api.call('PATCH',f"/channels/{thread}/messages/{message['id']}",data)
 
     def delete(self,topic,kind,obj):
         source='github-source:'+nonce(topic.key+':'+kind)
@@ -258,7 +262,13 @@ class MutableMessages:
         if kind.startswith('metadata:'):
             from metadata_notifications import render
             embed=render(embed,obj,language=='en',self.queue,topic,version)
-        pages=message_pages(embed)
+        policy = getattr(threads.api, 'mention_policy', None)
+        component_limits = getattr(getattr(policy, 'binding', None), 'auth', None) == 'app'
+        mention_names = []
+        if payload.get('action') in ('opened', 'created', 'submitted', 'snapshot'):
+            from account_mentions import names
+            mention_names = sorted(names(obj.get('body', '')) | set(payload.get('_reply_mentions', ())))
+        pages=message_pages(embed, component_limits=component_limits)
         group=self.body_group(source,event_key,pages,thread_id,payload.get('_regroup',False)) if kind=='body' else None
         if group=='complete':
             if closed():threads.api.call('PATCH','/channels/'+thread_id,{'archived':True})
@@ -295,13 +305,20 @@ class MutableMessages:
                 # card. Preserve unrelated text and never rewrite user messages.
                 data['content']=''
             if existing:
+                from thread_card_v2 import V2
+                if existing.get('flags', 0) & V2:
+                    data['_thread_card_v2'] = True
                 try:sent=threads.api.call('PATCH',f'/channels/{thread_id}/messages/{row[0]}',data)
                 except ApiError as error:
                     if error.status!=404:raise
                     existing=None
             if not existing:
                 if dismissal:continue
-                sent=threads.api.call('POST',f'/channels/{thread_id}/messages',dict(data,nonce=nonce(thread_id+":"+receipt),enforce_nonce=True,**({'flags':1<<12} if threads.notifications_suppressed() or current or payload.get('action')=='edited' else {})))
+                if isinstance(threads.api, Api) and mention_names:
+                    data['_mention_names'] = mention_names
+                silent = (threads.notifications_suppressed() or payload.get('action') == 'edited'
+                          or (current and (not known or not mention_names)))
+                sent=threads.api.call('POST',f'/channels/{thread_id}/messages',dict(data,nonce=nonce(thread_id+":"+receipt),enforce_nonce=True,**({'flags':1<<12} if silent else {})))
             with self.queue.connect() as db:db.execute('INSERT INTO source_pages VALUES(?,?,?,?) ON CONFLICT(source,page) DO UPDATE SET message=excluded.message,media=excluded.media',(source,index,sent['id'],origin))
             threads.remember_delivery(receipt,sent['id'])
         with self.queue.connect() as db:surplus=db.execute('SELECT page,message FROM source_pages WHERE source=? AND page>=?',(source,len(pages))).fetchall()
@@ -314,6 +331,22 @@ class MutableMessages:
                 if error.status!=404:raise
             with self.queue.connect() as db:db.execute('DELETE FROM source_pages WHERE source=? AND page=?',(source,page))
         if group=='replace':self.finish_body_group(source,event_key,thread_id)
+        reply_mentions = payload.get('_reply_mentions')
+        if reply_mentions and isinstance(threads.api, Api) and not threads.notifications_suppressed():
+            # New replies can be merged into an existing card. A separate card
+            # pings only recipients that the conversation post did not notify.
+            notice = {'title': '새 코드 리뷰 답글' if language != 'en' else 'New code review reply',
+                      'description': ' '.join('@' + login for login in reply_mentions),
+                      'url': payload.get('_reply_url') or obj.get('html_url') or topic.url}
+            receipt = 'github-event:' + nonce(topic.key + ':' + event_key + ':reply-mentions')
+            if not threads.delivered(thread_id, receipt):
+                notice['footer'] = {'text': receipt}
+                sent = threads.api.call('POST', f'/channels/{thread_id}/messages',
+                                        {'embeds': [notice], 'allowed_mentions': {'parse': []},
+                                         '_mention_names': reply_mentions, '_mention_only': True,
+                                         'nonce': nonce(thread_id + ':' + receipt), 'enforce_nonce': True})
+                if sent:
+                    threads.remember_delivery(receipt, sent['id'])
         if closed():threads.api.call('PATCH','/channels/'+thread_id,{'archived':True})
         return thread_id
 

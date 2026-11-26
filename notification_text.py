@@ -44,8 +44,8 @@ def split_description(text,limit=3500):
     return parts
 
 
-def description_embeds(original):
-    parts=split_description(original.get('description',''))
+def description_embeds(original, limit=3500):
+    parts=split_description(original.get('description',''), limit)
     if len(parts)==1:return [original]
     result=[]
     for index,part in enumerate(parts):
