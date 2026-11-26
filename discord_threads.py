@@ -60,6 +60,20 @@ class Api:
         operation = None
         if tracking is not None:
             data, operation = tracking.prepare(method, path, data)
+        use_components = False
+        if self.service == 'Discord' and isinstance(data, dict):
+            if data.get('_mention_only') and mention_operation is None:
+                return None
+            data = dict(data)
+            data.pop('_mention_only', None)
+            use_components = data.pop('_thread_card_v2', False)
+            data.pop('_mention_names', None)
+            if use_components:
+                from thread_card_v2 import render
+                card = render(data)
+                if card is None:
+                    raise ValueError('Thread card exceeds the Discord Components V2 limits')
+                data = card
         if isinstance(data, dict) and data.get('_files'):
             if self.service != 'Discord' or not ((method == 'POST' and re.fullmatch(r'/channels/\d+/messages', path)) or (method == 'PATCH' and re.fullmatch(r'/channels/\d+/messages/\d+', path))):
                 raise ValueError('Attachments are only supported for Discord channel messages')
@@ -95,12 +109,18 @@ class Api:
                         self.message_owner = result.get('id')
                         if tracking is not None: tracking.set_owner(self.message_owner)
                     if tracking is not None:
-                        tracking.remember(operation, result)
                         # A recovered pre-send record may precede the first saved bot identity.
                         if method == 'GET' and '/messages' in path and not tracking.owner:
                             self.call('GET', '/users/@me')
+                        owner = getattr(self, 'message_owner', None) or tracking.owner
+                        if not owner and use_components and isinstance(result, dict):
+                            owner = result.get('author', {}).get('id')
+                        if owner and '/messages' in path:
+                            from thread_card_v2 import restore
+                            result = restore(result, owner)
+                        tracking.remember(operation, result)
                         if method == 'DELETE': tracking.deleted(path)
-                        result = tracking.restore(path, result, getattr(self, 'message_owner', None))
+                        result = tracking.restore(path, result, owner)
                     if self.service=='Discord':
                         from delivery_metrics import discord_write
                         discord_write(method,path)

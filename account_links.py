@@ -22,6 +22,8 @@ def command_definition():
             'options': [{'type': 1, 'name': name, 'description': description} for name, description in (
                 ('connect', 'Privately link your GitHub account for this server.'),
                 ('status', 'Privately check your account connection for this server.'),
+                ('mentions-on', 'Enable Discord notifications for your GitHub mentions in this server.'),
+                ('mentions-off', 'Disable Discord notifications for your GitHub mentions in this server.'),
                 ('disconnect', 'Remove your account connection and pending comments in every server.'))]}
 
 
@@ -43,6 +45,8 @@ class Accounts:
                     next REAL NOT NULL DEFAULT 0, created REAL NOT NULL, remote TEXT, url TEXT,
                     error TEXT, notified INTEGER NOT NULL DEFAULT 0);
                 CREATE INDEX IF NOT EXISTS comment_outbox_ready ON comment_outbox(state,next,created);
+                CREATE TABLE IF NOT EXISTS personal_mention_prefs(discord TEXT NOT NULL, guild TEXT NOT NULL,
+                    PRIMARY KEY(discord,guild));
                 CREATE TABLE IF NOT EXISTS mention_receipts(event TEXT NOT NULL, channel TEXT NOT NULL,
                     discord TEXT NOT NULL, created REAL NOT NULL, PRIMARY KEY(event,channel,discord));
             ''')
@@ -59,12 +63,14 @@ class Accounts:
     def get(self, discord, guild=None):
         with self.db() as db:
             row = db.execute('SELECT github,login,generation,credential FROM personal_accounts WHERE discord=?', (str(discord),)).fetchone()
-            options = db.execute('SELECT mentions,comments FROM personal_guilds WHERE discord=? AND guild=?', (str(discord), str(guild))).fetchone() if guild else None
+            options = db.execute('SELECT g.mentions,g.comments,p.discord IS NOT NULL FROM personal_guilds g '
+                                 'LEFT JOIN personal_mention_prefs p USING(discord,guild) '
+                                 'WHERE g.discord=? AND g.guild=?', (str(discord), str(guild))).fetchone() if guild else None
         if row is None:
             return None
         return {'discord': str(discord), 'github': row[0], 'login': row[1], 'generation': row[2],
                 'authorized': row[3] is not None, 'mentions': bool(options and options[0]),
-                'comments': bool(options and options[1])}
+                'comments': bool(options and options[1]), 'mention_pings': bool(options and options[2])}
 
     def link(self, discord, guild, profile, credential, mentions, comments):
         import secrets
@@ -93,7 +99,7 @@ class Accounts:
                 encrypted = old[1]
             db.execute('INSERT INTO personal_accounts VALUES(?,?,?,?,?,?) ON CONFLICT(discord) DO UPDATE SET login=excluded.login,credential=excluded.credential,updated=excluded.updated',
                        (str(discord), identity, login, encrypted, generation, self.clock()))
-            db.execute('INSERT INTO personal_guilds VALUES(?,?,?,?,?) ON CONFLICT(discord,guild) DO UPDATE SET mentions=excluded.mentions,comments=excluded.comments,consent=excluded.consent',
+            db.execute('INSERT INTO personal_guilds(discord,guild,mentions,comments,consent) VALUES(?,?,?,?,?) ON CONFLICT(discord,guild) DO UPDATE SET mentions=excluded.mentions,comments=excluded.comments,consent=excluded.consent',
                        (str(discord), str(guild), int(mentions), int(comments), self.clock()))
             if not comments:
                 db.execute("UPDATE comment_outbox SET state='failed',payload=NULL,error='disconnected',notified=1 WHERE discord=? AND guild=? AND state IN ('queued','sending','uncertain')", (str(discord), str(guild)))
@@ -107,6 +113,7 @@ class Accounts:
             rows = db.execute('SELECT discord FROM personal_accounts WHERE ' + ('discord=?' if discord is not None else 'github=?'), (str(discord if discord is not None else github),)).fetchall()
             for (user,) in rows:
                 db.execute("UPDATE comment_outbox SET state='failed',payload=NULL,error='disconnected',notified=1 WHERE discord=? AND state IN ('queued','sending','uncertain')", (user,))
+                db.execute('DELETE FROM personal_mention_prefs WHERE discord=?', (user,))
                 db.execute('DELETE FROM personal_guilds WHERE discord=?', (user,))
                 db.execute('DELETE FROM personal_accounts WHERE discord=?', (user,))
 
@@ -149,12 +156,27 @@ class Accounts:
         if action == 'disconnect':
             self.disconnect(discord=user)
             return respond(say('모든 서버에서 내 GitHub 계정 연결을 해제하고 대기 중인 댓글을 취소했어요.', 'Your GitHub account is disconnected in every server. Pending comments were canceled.'))
+        if action in ('mentions-on', 'mentions-off'):
+            enabled = action == 'mentions-on'
+            with self.db() as db:
+                linked = db.execute('SELECT 1 FROM personal_guilds WHERE discord=? AND guild=?', (user, guild)).fetchone()
+                if not linked:
+                    return respond(say('이 서버에서 /account connect로 GitHub 계정을 연결해 주세요.',
+                                       'Link your GitHub account in this server with /account connect.'))
+                if enabled:
+                    db.execute('INSERT OR IGNORE INTO personal_mention_prefs VALUES(?,?)', (user, guild))
+                else:
+                    db.execute('DELETE FROM personal_mention_prefs WHERE discord=? AND guild=?', (user, guild))
+            return respond(say('이 서버의 GitHub 멘션 알림을 켰어요.', 'GitHub mention notifications are on for this server.')
+                           if enabled else
+                           say('이 서버의 GitHub 멘션 알림을 껐어요.', 'GitHub mention notifications are off for this server.'))
         if action == 'status':
             account = self.get(user, guild)
             if not account:
                 return respond(say('연결된 GitHub 계정이 없어요. /account connect로 연결해 주세요.', 'No GitHub account connected. Use /account connect.'))
             status = f"GitHub: {account['login']}\n" + say('이 서버 — 멘션: ', 'This server — mentions: ') + ('on' if account['mentions'] else 'off')
-            status += say('; 댓글 전송: ', '; comments: ') + ('on' if account['comments'] and account['authorized'] else say('off / 재연결 필요', 'off / reconnect required'))
+            status += say(' · 멘션 알림: ', ' · Mention notifications: ') + ('on' if account['mention_pings'] else 'off')
+            status += say(' · 댓글 전송: ', ' · comments: ') + ('on' if account['comments'] and account['authorized'] else say('off / 재연결 필요', 'off / reconnect required'))
             status += '\n' + say('연결 해제: /account disconnect', 'Disconnect with /account disconnect.')
             bridge = getattr(self.service, 'comment_bridge', None)
             if account['comments'] and (bridge is None or not bridge.content_enabled):

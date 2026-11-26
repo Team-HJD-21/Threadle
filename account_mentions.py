@@ -1,6 +1,7 @@
 """Explicit user-only mentions, scoped to opted-in members who can see the channel."""
 import copy
 import re
+import time
 
 from connect_auth import channel_permissions
 from discord_threads import ApiError
@@ -70,12 +71,21 @@ class MentionPolicy:
         wanted = visible & self.names
         if not wanted:
             return data, None
+        fresh = set(data.get('_mention_names', ())) if method == 'POST' and not data.get('flags', 0) & (1 << 12) else set()
         with self.accounts.db() as db:
-            rows = db.execute('SELECT a.discord,a.github,a.login FROM personal_accounts a JOIN personal_guilds g ON a.discord=g.discord WHERE g.guild=? AND g.mentions=1', (self.binding.config['guild_id'],)).fetchall()
+            rows = db.execute('SELECT a.discord,a.github,p.discord IS NOT NULL FROM personal_accounts a '
+                              'JOIN personal_guilds g ON a.discord=g.discord '
+                              'LEFT JOIN personal_mention_prefs p ON p.discord=g.discord AND p.guild=g.guild '
+                              'WHERE g.guild=? AND (g.mentions=1 OR p.discord IS NOT NULL)',
+                              (self.binding.config['guild_id'],)).fetchall()
+            already_sent = {row[0] for row in db.execute(
+                'SELECT discord FROM mention_receipts WHERE event=? AND channel=?', (self.event_id, channel)
+            )} if fresh else set()
         if not rows:
             return data, None
         by_identity = {row[1]: row for row in rows}
         mapping = {}
+        pings = set()
         for login in sorted(wanted)[:20]:
             # Resolve the current numeric identity, rather than trust a cached login:
             # renames keep working, and a reassigned old login never pings its old owner.
@@ -89,9 +99,11 @@ class MentionPolicy:
             profile = self.profiles[login]
             row = by_identity.get(str(profile.get('id')))
             if row and str(profile.get('login', '')).lower() == login:
-                discord, github, _ = row
+                discord, github, ping = row
                 if self.allowed(channel, discord, github, login):
                     mapping[login] = discord
+                    if ping and login in fresh and discord not in already_sent:
+                        pings.add(discord)
                     with self.accounts.db() as db:
                         db.execute('UPDATE personal_accounts SET login=? WHERE github=?', (profile['login'], github))
         if not mapping:
@@ -102,11 +114,15 @@ class MentionPolicy:
                 embed['description'] = replace(embed['description'], mapping)
             for field in embed.get('fields', []):
                 field['value'] = replace(field.get('value', ''), mapping)
-        # Linked names stay inside the card. Do not append a second mention line
-        # or request a real ping, including on ordinary non-silent new messages.
-        value['allowed_mentions'] = {'parse': [], 'users': [], 'replied_user': False}
-        return value, None
+        value['allowed_mentions'] = {'parse': [], 'users': sorted(pings), 'replied_user': False}
+        if pings:
+            value['_thread_card_v2'] = True
+        return value, (channel, pings) if pings else None
 
     def remember(self, operation):
-        # Keep the transport hook compatible; display-only mentions have no ping receipt.
-        pass
+        if operation is None:
+            return
+        channel, pings = operation
+        with self.accounts.db() as db:
+            db.executemany('INSERT OR IGNORE INTO mention_receipts VALUES(?,?,?,?)',
+                           [(self.event_id, channel, discord, time.time()) for discord in pings])

@@ -55,6 +55,50 @@ class TrackingTests(unittest.TestCase):
             fetched = restarted.call('GET', '/channels/123/messages/' + saved['id'])
         self.assertEqual(self.payload['embeds'][0]['footer'], fetched['embeds'][0]['footer'])
 
+
+    def test_components_transport_retains_hidden_receipts_on_post_and_patch(self):
+        api = Api('Discord', 'https://discord.invalid', 'test-token', 'Bot')
+        bind(api, self.queue)
+        requests = []
+        saved = {}
+
+        def respond(request, timeout):
+            if request.method in ('POST', 'PATCH'):
+                requests.append(json.loads(request.data))
+                saved.update(self.received(requests[-1], identity=saved.get('id')))
+            response = io.BytesIO(json.dumps(saved).encode())
+            response.headers = {}
+            return response
+
+        payload = dict(self.payload, _thread_card_v2=True)
+        payload['embeds'][0]['image'] = {'url': 'https://example.com/preview.png'}
+        payload['embeds'][0]['fields'] = [{'name': 'Title', 'value': 'Keep\nthis', 'inline': True}]
+        with patch('discord_threads.urlopen', side_effect=respond):
+            sent = api.call('POST', '/channels/123/messages', payload)
+            self.assertEqual(['github-event:receipt'], marker(sent))
+            self.assertEqual(payload['embeds'][0], sent['embeds'][0])
+            self.assertNotIn('github-event:', json.dumps(requests[0]))
+            self.assertNotIn('embeds', requests[0])
+
+            changed = copy.deepcopy(payload)
+            changed['embeds'][0]['description'] = 'Edited card.'
+            changed['allowed_mentions'] = {'parse': []}
+            api.call('PATCH', '/channels/123/messages/' + sent['id'], changed)
+            restarted = Api('Discord', 'https://discord.invalid', 'test-token', 'Bot')
+            bind(restarted, self.queue)
+            fetched = restarted.call('GET', '/channels/123/messages/' + sent['id'])
+        self.assertEqual(changed['embeds'][0], fetched['embeds'][0])
+        self.assertNotIn('embeds', requests[1])
+        self.assertEqual({'parse': []}, requests[1]['allowed_mentions'])
+
+    def test_components_receipt_recovers_after_lost_response(self):
+        from thread_card_v2 import render, restore
+        send = dict(self.payload, _thread_card_v2=True)
+        clean_data, _ = self.store.prepare('POST', '/channels/123/messages', send)
+        received = self.received(render(clean_data))
+        recovered = MessageTracking(self.queue).restore('/channels/123/messages', [restore(received)], None)[0]
+        self.assertEqual(['github-event:receipt'], marker(recovered))
+
     def test_crash_after_post_is_recovered_from_committed_expected_payload(self):
         wire, operation = self.store.prepare('POST', '/channels/123/messages', self.payload)
         received = self.received(wire)

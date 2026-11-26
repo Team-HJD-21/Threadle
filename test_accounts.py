@@ -555,6 +555,41 @@ class AccountTests(unittest.TestCase):
         with self.accounts.db() as db:
             self.assertEqual(db.execute('SELECT count(*) FROM mention_receipts').fetchone()[0],0)
 
+
+    def test_thread_ping_requires_separate_server_consent_and_only_sends_once(self):
+        from thread_card_v2 import render
+        self.link()
+        policy = self.policy()
+        data = {'embeds': [{'description': 'Hi @alice and @everyone'}], '_mention_names': ['alice']}
+        path = '/channels/7777/messages'
+        _, receipt = policy.prepare('POST', path, data)
+        self.assertIsNone(receipt)
+
+        payload = {'id': '660', 'guild_id': '1000', 'channel_id': '7777',
+                   'member': {'user': {'id': '55'}}, 'data': {'options': [{'name': 'mentions-on'}]}}
+        self.accounts.interaction(payload, self.sessions, Mock())
+        self.assertTrue(self.accounts.get('55', '1000')['mention_pings'])
+        self.assertFalse(self.accounts.get('55', '1001')['mention_pings'])
+        value, receipt = policy.prepare('POST', path, data)
+        self.assertEqual(value['allowed_mentions']['users'], ['55'])
+        wire = render({key: val for key, val in value.items() if not key.startswith('_')})
+        self.assertNotIn('embeds', wire)
+        self.assertEqual(wire['components'][0]['components'][0]['content'], 'Hi <@55> and @everyone')
+        for method, destination, variant in (
+            ('POST', path, {'flags': 4096}),
+            ('POST', path, {'_mention_names': []}),
+            ('PATCH', path + '/23', {}),
+        ):
+            silent, operation = policy.prepare(method, destination, dict(data, **variant))
+            self.assertEqual(silent['allowed_mentions']['users'], [])
+            self.assertIsNone(operation)
+        policy.remember(receipt)
+        _, receipt = self.policy().prepare('POST', path, data)
+        self.assertIsNone(receipt)
+        payload['data']['options'][0]['name'] = 'mentions-off'
+        self.accounts.interaction(payload, self.sessions, Mock())
+        self.assertFalse(self.accounts.get('55', '1000')['mention_pings'])
+
     def test_card_mentions_preserve_normal_content_and_field_names(self):
         self.link()
         data={'content':'Threadle update','embeds':[{'fields':[{'name':'Review','value':'Ask @alice'}]}]}

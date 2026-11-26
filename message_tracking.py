@@ -100,7 +100,13 @@ class MessageTracking:
             return data, None
         channel, message = match.groups()
         encoded = json.dumps(markers, sort_keys=True)
-        digest = fingerprint(sanitized)
+        projection = sanitized
+        if sanitized.get('_thread_card_v2'):
+            from thread_card_v2 import render, restore
+            wire = render(sanitized)
+            if wire is not None:
+                projection = restore(wire)
+        digest = fingerprint(projection)
         identity = hashlib.sha256(json.dumps([method, channel, message, digest, encoded]).encode()).hexdigest()
         # Commit the recovery record before Discord receives the message.
         with self.queue.connect() as db:
