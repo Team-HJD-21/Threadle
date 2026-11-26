@@ -74,14 +74,14 @@ cancel personal credentials; no new periodic repository scan is introduced.
 - A ✅ reaction confirms a GitHub write. A ⚠️ reaction and quiet reply explain a
   failure; after an ambiguous result, check GitHub before manually reposting.
 
-GitHub `@login` mentions resolve only for linked, opted-in people who currently
-belong to the destination server and can view that channel. Missing members and
-unlinked users keep their original GitHub text. Code, URLs, emails, teams, HTML
-comments, and escaped mentions are left unchanged. Linked names appear only
-inside the notification card: Threadle does not append an outside mention line
-or request a real mention notification. This applies to new messages, edits and
-Do Not Disturb alike. Explicit `allowed_mentions` disables users, roles,
-everyone and reply pings. Ordinary channel notification preferences still apply.
+GitHub `@login` mentions resolve for linked members who enabled mentions in this
+server and can view the destination. New Discord thread cards send a mention
+notification by default for those accounts. Use `/account mentions-off` to keep
+the name in the card and turn off the notification. Use `/account status` to check
+both preferences. Existing-card edits, alert-channel copies, and cards sent
+during Do Not Disturb keep mentions quiet. Code, URLs, emails, teams, HTML
+comments, and escaped mentions retain their original text. Discord notification
+settings apply to desktop and mobile delivery.
 
 In the other direction, native Discord user mentions (`<@id>`) become the linked
 person's current GitHub `@login`. Stable account IDs and current server membership

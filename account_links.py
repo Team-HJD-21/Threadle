@@ -47,6 +47,8 @@ class Accounts:
                 CREATE INDEX IF NOT EXISTS comment_outbox_ready ON comment_outbox(state,next,created);
                 CREATE TABLE IF NOT EXISTS personal_mention_prefs(discord TEXT NOT NULL, guild TEXT NOT NULL,
                     PRIMARY KEY(discord,guild));
+                CREATE TABLE IF NOT EXISTS personal_mention_opt_outs(discord TEXT NOT NULL, guild TEXT NOT NULL,
+                    PRIMARY KEY(discord,guild));
                 CREATE TABLE IF NOT EXISTS mention_receipts(event TEXT NOT NULL, channel TEXT NOT NULL,
                     discord TEXT NOT NULL, created REAL NOT NULL, PRIMARY KEY(event,channel,discord));
             ''')
@@ -63,9 +65,13 @@ class Accounts:
     def get(self, discord, guild=None):
         with self.db() as db:
             row = db.execute('SELECT github,login,generation,credential FROM personal_accounts WHERE discord=?', (str(discord),)).fetchone()
-            options = db.execute('SELECT g.mentions,g.comments,p.discord IS NOT NULL FROM personal_guilds g '
-                                 'LEFT JOIN personal_mention_prefs p USING(discord,guild) '
-                                 'WHERE g.discord=? AND g.guild=?', (str(discord), str(guild))).fetchone() if guild else None
+            options = db.execute(
+                'SELECT g.mentions,g.comments,o.discord IS NULL AND (g.mentions=1 OR p.discord IS NOT NULL) '
+                'FROM personal_guilds g '
+                'LEFT JOIN personal_mention_prefs p ON p.discord=g.discord AND p.guild=g.guild '
+                'LEFT JOIN personal_mention_opt_outs o ON o.discord=g.discord AND o.guild=g.guild '
+                'WHERE g.discord=? AND g.guild=?', (str(discord), str(guild))
+            ).fetchone() if guild else None
         if row is None:
             return None
         return {'discord': str(discord), 'github': row[0], 'login': row[1], 'generation': row[2],
@@ -114,6 +120,7 @@ class Accounts:
             for (user,) in rows:
                 db.execute("UPDATE comment_outbox SET state='failed',payload=NULL,error='disconnected',notified=1 WHERE discord=? AND state IN ('queued','sending','uncertain')", (user,))
                 db.execute('DELETE FROM personal_mention_prefs WHERE discord=?', (user,))
+                db.execute('DELETE FROM personal_mention_opt_outs WHERE discord=?', (user,))
                 db.execute('DELETE FROM personal_guilds WHERE discord=?', (user,))
                 db.execute('DELETE FROM personal_accounts WHERE discord=?', (user,))
 
@@ -159,14 +166,17 @@ class Accounts:
         if action in ('mentions-on', 'mentions-off'):
             enabled = action == 'mentions-on'
             with self.db() as db:
+                db.execute('BEGIN IMMEDIATE')
                 linked = db.execute('SELECT 1 FROM personal_guilds WHERE discord=? AND guild=?', (user, guild)).fetchone()
                 if not linked:
                     return respond(say('이 서버에서 /account connect로 GitHub 계정을 연결해 주세요.',
                                        'Link your GitHub account in this server with /account connect.'))
                 if enabled:
+                    db.execute('DELETE FROM personal_mention_opt_outs WHERE discord=? AND guild=?', (user, guild))
                     db.execute('INSERT OR IGNORE INTO personal_mention_prefs VALUES(?,?)', (user, guild))
                 else:
                     db.execute('DELETE FROM personal_mention_prefs WHERE discord=? AND guild=?', (user, guild))
+                    db.execute('INSERT OR IGNORE INTO personal_mention_opt_outs VALUES(?,?)', (user, guild))
             return respond(say('이 서버의 GitHub 멘션 알림을 켰어요.', 'GitHub mention notifications are on for this server.')
                            if enabled else
                            say('이 서버의 GitHub 멘션 알림을 껐어요.', 'GitHub mention notifications are off for this server.'))
@@ -174,7 +184,7 @@ class Accounts:
             account = self.get(user, guild)
             if not account:
                 return respond(say('연결된 GitHub 계정이 없어요. /account connect로 연결해 주세요.', 'No GitHub account connected. Use /account connect.'))
-            status = f"GitHub: {account['login']}\n" + say('이 서버 — 멘션: ', 'This server — mentions: ') + ('on' if account['mentions'] else 'off')
+            status = f"GitHub: {account['login']}\n" + say('이 서버 — 멘션 표시: ', 'This server — Mention display: ') + ('on' if account['mentions'] else 'off')
             status += say(' · 멘션 알림: ', ' · Mention notifications: ') + ('on' if account['mention_pings'] else 'off')
             status += say(' · 댓글 전송: ', ' · comments: ') + ('on' if account['comments'] and account['authorized'] else say('off / 재연결 필요', 'off / reconnect required'))
             status += '\n' + say('연결 해제: /account disconnect', 'Disconnect with /account disconnect.')

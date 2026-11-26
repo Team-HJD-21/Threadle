@@ -73,11 +73,14 @@ class MentionPolicy:
             return data, None
         fresh = set(data.get('_mention_names', ())) if method == 'POST' and not data.get('flags', 0) & (1 << 12) else set()
         with self.accounts.db() as db:
-            rows = db.execute('SELECT a.discord,a.github,p.discord IS NOT NULL FROM personal_accounts a '
-                              'JOIN personal_guilds g ON a.discord=g.discord '
-                              'LEFT JOIN personal_mention_prefs p ON p.discord=g.discord AND p.guild=g.guild '
-                              'WHERE g.guild=? AND (g.mentions=1 OR p.discord IS NOT NULL)',
-                              (self.binding.config['guild_id'],)).fetchall()
+            rows = db.execute(
+                'SELECT a.discord,a.github,o.discord IS NULL AND (g.mentions=1 OR p.discord IS NOT NULL) '
+                'FROM personal_accounts a JOIN personal_guilds g ON a.discord=g.discord '
+                'LEFT JOIN personal_mention_prefs p ON p.discord=g.discord AND p.guild=g.guild '
+                'LEFT JOIN personal_mention_opt_outs o ON o.discord=g.discord AND o.guild=g.guild '
+                'WHERE g.guild=? AND (g.mentions=1 OR (p.discord IS NOT NULL AND o.discord IS NULL))',
+                (self.binding.config['guild_id'],)
+            ).fetchall()
             already_sent = {row[0] for row in db.execute(
                 'SELECT discord FROM mention_receipts WHERE event=? AND channel=?', (self.event_id, channel)
             )} if fresh else set()

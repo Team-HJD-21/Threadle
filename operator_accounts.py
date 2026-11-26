@@ -70,7 +70,8 @@ def members(registry,guild,page):
         try:stamp=dt.datetime.fromtimestamp(consent,dt.timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
         except (ValueError,TypeError,OverflowError,OSError):stamp='—'
         body+='<article class="admin-account-member"><div class="admin-account-person"><strong translate="no">'+identity+'</strong><span>'+say('연결됨','Linked')+'</span><small>Discord '+discord_link+'</small></div><dl>'
-        body+='<div><dt>'+say('자동 멘션','Automatic mentions')+'</dt><dd>'+say('사용','On')+'</dd></div>' if mentions else '<div><dt>'+say('자동 멘션','Automatic mentions')+'</dt><dd>'+say('끔','Off')+'</dd></div>'
+        mention_display = say('사용','On') if mentions else say('끔','Off')
+        body += '<div><dt>' + say('멘션 표시','Mention display') + '</dt><dd>' + mention_display + '</dd></div>'
         body+='<div><dt>'+say('댓글 전송','Comment forwarding')+'</dt><dd>'+status+'</dd></div><div><dt>'+say('이 서버 연결 시각','Linked for this server')+'</dt><dd>'+stamp+'</dd></div></dl></article>'
     if not rows:body+='<p class="muted">'+say('아직 계정을 연결한 사용자가 없습니다.','No accounts have been linked yet.')+'</p>'
     body+='</div>'
