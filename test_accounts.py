@@ -556,21 +556,18 @@ class AccountTests(unittest.TestCase):
             self.assertEqual(db.execute('SELECT count(*) FROM mention_receipts').fetchone()[0],0)
 
 
-    def test_thread_ping_requires_separate_server_consent_and_only_sends_once(self):
+    def test_thread_ping_defaults_to_the_server_mention_preference_and_only_sends_once(self):
         from thread_card_v2 import render
         self.link()
         policy = self.policy()
         data = {'embeds': [{'description': 'Hi @alice and @everyone'}], '_mention_names': ['alice']}
         path = '/channels/7777/messages'
-        _, receipt = policy.prepare('POST', path, data)
-        self.assertIsNone(receipt)
-
-        payload = {'id': '660', 'guild_id': '1000', 'channel_id': '7777',
-                   'member': {'user': {'id': '55'}}, 'data': {'options': [{'name': 'mentions-on'}]}}
-        self.accounts.interaction(payload, self.sessions, Mock())
         self.assertTrue(self.accounts.get('55', '1000')['mention_pings'])
         self.assertFalse(self.accounts.get('55', '1001')['mention_pings'])
         value, receipt = policy.prepare('POST', path, data)
+        self.assertIsNotNone(receipt)
+        payload = {'id': '660', 'guild_id': '1000', 'channel_id': '7777',
+                   'member': {'user': {'id': '55'}}, 'data': {'options': [{'name': 'mentions-off'}]}}
         self.assertEqual(value['allowed_mentions']['users'], ['55'])
         wire = render({key: val for key, val in value.items() if not key.startswith('_')})
         self.assertNotIn('embeds', wire)
@@ -594,8 +591,26 @@ class AccountTests(unittest.TestCase):
         policy.remember(receipt)
         _, receipt = self.policy().prepare('POST', path, data)
         self.assertIsNone(receipt)
-        payload['data']['options'][0]['name'] = 'mentions-off'
         self.accounts.interaction(payload, self.sessions, Mock())
+        self.link(guild='1001')
+        self.link()
+        self.assertFalse(self.accounts.get('55', '1000')['mention_pings'])
+        self.assertTrue(self.accounts.get('55', '1001')['mention_pings'])
+        silent_policy = self.policy()
+        silent_policy.event_id = 'delivery-after-opt-out'
+        silent, receipt = silent_policy.prepare('POST', path, data)
+        self.assertIsNone(receipt)
+        self.assertEqual(silent['allowed_mentions']['users'], [])
+        self.assertIn('<@55>', silent['embeds'][0]['description'])
+        self.link(guild='1001', mentions=False)
+        self.assertFalse(self.accounts.get('55', '1001')['mention_pings'])
+        payload['data']['options'][0]['name'] = 'mentions-on'
+        self.accounts.interaction(payload, self.sessions, Mock())
+        self.link(mentions=False)
+        self.assertTrue(self.accounts.get('55', '1000')['mention_pings'])
+        self.assertIsNotNone(silent_policy.prepare('POST', path, data)[1])
+        self.accounts.disconnect(discord='55')
+        self.link(mentions=False)
         self.assertFalse(self.accounts.get('55', '1000')['mention_pings'])
 
     def test_card_mentions_preserve_normal_content_and_field_names(self):

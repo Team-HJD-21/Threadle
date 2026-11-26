@@ -260,6 +260,11 @@ RELEASES.insert(0, ('v1.0.0-beta.54', '스레드 카드 멘션 알림', 'Thread 
    'After linking, use /account mentions-on to receive notifications from mentions inside cards in this server.'),
 ]))
 
+RELEASES.insert(0, ('v1.0.0-beta.55', '기본 멘션 알림', 'Mention notifications by default', [
+  ('계정 연결 시 멘션을 선택한 사용자는 별도 명령 없이 새 스레드 카드의 멘션 알림을 받습니다. /account mentions-off로 끌 수 있습니다.',
+   'Linked users who enabled mentions receive notifications from new thread cards by default. Use /account mentions-off to turn them off.'),
+]))
+
 def content(t,admin=False):
     title=t('사이트·관리자 패치노트','Website & administration changelog') if admin else t('Threadle 패치노트','Threadle changelog')
     intro=t('사이트와 운영 관리 화면의 변경 사항입니다.','Changes to the website and operational administration.') if admin else t('Discord에서 사용하는 Threadle의 새 기능과 개선 사항입니다.','New features and improvements to Threadle in Discord.')

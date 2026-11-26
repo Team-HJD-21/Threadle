@@ -1,5 +1,5 @@
 {
-  "version": "v1.0.0-beta.54",
+  "version": "v1.0.0-beta.55",
   "baseline": "2026.11.02.8",
   "files": {
     "demo_web.py": {
@@ -102,7 +102,7 @@
     },
     "changelog.py": {
       "before": "261336f2f039d63348697c8fb4f9f7ec8f25c959ad6f0e2ccd74230f8c208e28",
-      "after": "399e9cbb05f4217fda450f37dcd659388f84d1c7dbf046023274ce228059312c",
+      "after": "5fbe99331e760939a6ec6aa44e4a1e149192bb509c740006c1371ffb78cc6067",
       "previous": [
         "ce59507c70872a51ef2bbd42a7ee232a5bd4e2692a6b0c8903887594a1e59b90",
         "70c46b09eeacc09189050699f22f47224d0f1b157c741d0f25f9f51bd23af677",
@@ -176,7 +176,8 @@
         "0111ba7eef008c467f1c7224bff570ca770605420ac5706e4afecf19862f3979",
         "193bea7671af3e1c2c32db9e38cad71493456fe4ff8691a160504ae10253c9f1",
         "c62c7cdf595792ae4d685d6e78cc72261873a2eed0baa3ed4f595c923394c14a",
-        "007780e166408a5b33a9cea455a651a76594b43a87c51cd393d36f8fc3ef03d1"
+        "007780e166408a5b33a9cea455a651a76594b43a87c51cd393d36f8fc3ef03d1",
+        "399e9cbb05f4217fda450f37dcd659388f84d1c7dbf046023274ce228059312c"
       ]
     },
     "web_assets/preview.js": {
@@ -779,27 +780,30 @@
     },
     "account_links.py": {
       "before": null,
-      "after": "535a6ac69e570074bfe759752cf92213633de597984ee82192aab48e329fb962",
+      "after": "03fccb926d49afdf895907611c9d3b50b56470410ba7c6f1d47945908dd4d2c7",
       "previous": [
-        "b7a1fbbd70cd1aa67b46466518f503b1d56088eb1db2f9f799d6e85bc71d510f"
+        "b7a1fbbd70cd1aa67b46466518f503b1d56088eb1db2f9f799d6e85bc71d510f",
+        "535a6ac69e570074bfe759752cf92213633de597984ee82192aab48e329fb962"
       ]
     },
     "account_web.py": {
       "before": null,
-      "after": "e9a4fe119aafecf27d2d029b9e34719c279d0f29ee53aa19ef9b6227cbf0fb03",
+      "after": "1eaffc3feda040b015e63b4ffe3d88d54fa92b83b6fdb29597b9d6d43824ec62",
       "previous": [
         "c26612794a628821ec86df0a32d3f4d7a284d2f8dadf91ff76760e814da6861d",
         "14c659aa468174776f1baa37dbccd36251cf9efeddf3ac7742abb62888820ecb",
         "3a262f77369ba13d50b612ebc6f7e3e7a86ef81983b21036ada6eb532f45f541",
-        "c9682c9dd809e66d9b98151e3d8a016285dc7025f36cf68c5444bbb11b3fef06"
+        "c9682c9dd809e66d9b98151e3d8a016285dc7025f36cf68c5444bbb11b3fef06",
+        "e9a4fe119aafecf27d2d029b9e34719c279d0f29ee53aa19ef9b6227cbf0fb03"
       ]
     },
     "account_mentions.py": {
       "before": null,
-      "after": "8fae5035235c6002cf5753ec876c9bf26ba0311e97573dd2a37ac12b2e970177",
+      "after": "fba4e1ac4e58ab901d4398bd7bf7059a5115d203ebe5eec9fd3230f5b8aa764b",
       "previous": [
         "502892b797073cb5a404e61d208d4d293a2c81fb862b00911dd73baa28fe6a1b",
-        "956328bfcd9df73ad91f53a2172ae76ad7675dd8f9a5a2b4070ee47707326381"
+        "956328bfcd9df73ad91f53a2172ae76ad7675dd8f9a5a2b4070ee47707326381",
+        "8fae5035235c6002cf5753ec876c9bf26ba0311e97573dd2a37ac12b2e970177"
       ]
     },
     "comment_bridge.py": {
@@ -868,7 +872,10 @@
     },
     "operator_accounts.py": {
       "before": null,
-      "after": "de98e7f4987e3005a3442aef6ef50aa4efdaf7621eec6ea07d92ccd74d0442a6"
+      "after": "b989cd62a42fbdccf8c7665d9f3a57907e9ba7adcd5e9f93d62faa7707afedd2",
+      "previous": [
+        "de98e7f4987e3005a3442aef6ef50aa4efdaf7621eec6ea07d92ccd74d0442a6"
+      ]
     },
     "chat_events.py": {
       "before": null,
