@@ -222,7 +222,7 @@ def message_pages(embed, *, component_limits=False):
     page_limit = 2600 if component_limits else 5700
     embed_limit = 1 if component_limits else 10
     source=[part for original in (embed.get('_embeds') or [embed]) for item in media_embeds(original)
-            for part in description_embeds(item, description_limit)]
+            for part in description_embeds(item, description_limit, preserve_mentions=component_limits)]
     units=lambda value:len(str(value).encode('utf-16-le'))//2
     embeds=[]
     for original in source:

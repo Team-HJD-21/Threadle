@@ -265,6 +265,11 @@ RELEASES.insert(0, ('v1.0.0-beta.55', '기본 멘션 알림', 'Mention notificat
    'Linked users who enabled mentions receive notifications from new thread cards by default. Use /account mentions-off to turn them off.'),
 ]))
 
+RELEASES.insert(0, ('v1.0.0-beta.56', '긴 카드의 멘션 처리', 'Mentions in long cards', [
+  ('긴 스레드 카드를 여러 장으로 나눌 때 GitHub 멘션이 잘려 알림이 누락되는 문제를 수정했습니다.',
+   'Fixed missing notifications when a GitHub mention fell across pages of a long thread card.'),
+]))
+
 def content(t,admin=False):
     title=t('사이트·관리자 패치노트','Website & administration changelog') if admin else t('Threadle 패치노트','Threadle changelog')
     intro=t('사이트와 운영 관리 화면의 변경 사항입니다.','Changes to the website and operational administration.') if admin else t('Discord에서 사용하는 Threadle의 새 기능과 개선 사항입니다.','New features and improvements to Threadle in Discord.')

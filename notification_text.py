@@ -1,6 +1,7 @@
 """Lossless Discord description pagination with balanced fenced code blocks."""
 import copy
 import re
+from bisect import bisect_left
 from discord_threads import clip
 
 
@@ -20,9 +21,17 @@ def fence_after(text,state,final):
     return state
 
 
-def split_description(text,limit=3500):
+def split_description(text, limit=3500, *, preserve_mentions=False):
     text=str(text or '')
     if units(text)<=limit:return [text]
+    mention_spans = []
+    if preserve_mentions:
+        from account_mentions import TOKENS
+        # Check the whole description so a code span or link containing @ is
+        # kept intact too, even when that login is also mentioned elsewhere.
+        mention_spans = [match.span() for match in TOKENS.finditer(text)
+                         if '@' in match[0] and units(match[0]) <= limit]
+    consumed = 0
     parts=[];state=None
     while text:
         prefix=(state[1]+'\n') if state else ''
@@ -32,6 +41,12 @@ def split_description(text,limit=3500):
             if len(part)<len(text):
                 boundary=part.rfind('\n')
                 if boundary>=len(part)//2:part=part[:boundary+1]
+                cut = consumed + len(part)
+                index = bisect_left(mention_spans, (cut,)) - 1
+                if index >= 0:
+                    start, end = mention_spans[index]
+                    if consumed < start < cut < end:
+                        part = part[:start - consumed]
             final=len(part)==len(text)
             after=fence_after(part,state,final)
             suffix=('\n'+after[0]) if after and not final else ''
@@ -40,12 +55,13 @@ def split_description(text,limit=3500):
             available-=excess
         if not part:raise ValueError('Could not paginate description')
         parts.append(prefix+part+suffix)
+        consumed += len(part)
         text=text[len(part):];state=after
     return parts
 
 
-def description_embeds(original, limit=3500):
-    parts=split_description(original.get('description',''), limit)
+def description_embeds(original, limit=3500, *, preserve_mentions=False):
+    parts=split_description(original.get('description',''), limit, preserve_mentions=preserve_mentions)
     if len(parts)==1:return [original]
     result=[]
     for index,part in enumerate(parts):

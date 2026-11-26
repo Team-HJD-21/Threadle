@@ -78,6 +78,26 @@ class FullTextTests(unittest.TestCase):
         chunks=split_description(body)
         self.assertEqual(''.join(chunks),body)
         self.assertTrue(all(units(x)<=3500 for x in chunks))
+    def test_components_pages_keep_complete_mentions_and_inline_code(self):
+        from account_mentions import names
+        cases = (
+            ('\U0001f9ea' * 970 + ' aa @example-person `@literal` [@link](https://github.com/link)',
+             [' aa ', '@example-person']),
+            ('a' * 1933 + ' `@example-person` then mention @example-person',
+             [' ', '`@example-person`']),
+            ('a' * 1941 + ' [@example-person](https://github.com/example-person) then @example-person',
+             [' ', '[@example-person]']),
+        )
+        for body, boundaries in cases:
+            with self.subTest(boundary=boundaries[1]):
+                descriptions = [card['description'] for page in message_pages(
+                    {'description': body}, component_limits=True) for card in page]
+                self.assertEqual(''.join(descriptions), body)
+                self.assertTrue(all(units(text) <= 1950 for text in descriptions))
+                self.assertTrue(descriptions[0].endswith(boundaries[0]))
+                self.assertTrue(descriptions[1].startswith(boundaries[1]))
+                self.assertEqual([names(text) for text in descriptions], [set(), {'example-person'}])
+
     def test_code_fences_are_reopened_and_every_code_line_remains(self):
         body='```python\n'+''.join(f'print("code_{n:04d}")\n' for n in range(800))+'```'
         chunks=split_description(body)
