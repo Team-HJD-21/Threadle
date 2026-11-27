@@ -56,14 +56,15 @@ class Api:
         mention_operation = None
         if mention_policy is not None:
             data, mention_operation = mention_policy.prepare(method, path, data)
+        if (self.service == 'Discord' and isinstance(data, dict)
+                and data.get('_mention_only') and mention_operation is None):
+            return None
         tracking = getattr(self, 'message_tracking', None) if self.service == 'Discord' else None
         operation = None
         if tracking is not None:
             data, operation = tracking.prepare(method, path, data)
         use_components = False
         if self.service == 'Discord' and isinstance(data, dict):
-            if data.get('_mention_only') and mention_operation is None:
-                return None
             data = dict(data)
             data.pop('_mention_only', None)
             use_components = data.pop('_thread_card_v2', False)
