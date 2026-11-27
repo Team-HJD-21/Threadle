@@ -278,24 +278,35 @@ class ReviewConversations:
             self.parent(topic,thread['comments'][0].get('review') or {},entries,event_key,mutable,closed,language)
             version=dt.datetime.now(dt.timezone.utc).timestamp()
             if previous:version=max(version,previous[0]+0.001)
-            from account_mentions import names
+            from account_mentions import added_names, names
             reply_mentions = set()
+            edited_mentions = set()
             reply_url = None
             for kind_event, entry in entries:
-                if kind_event == 'pull_request_review_comment' and entry.get('action') == 'created':
-                    comment = entry.get('comment') or {}
-                    if members.get(str(comment.get('id'))) == node:
-                        found = names(comment.get('body', ''))
-                        if found:
-                            reply_mentions.update(found)
-                            reply_url = comment.get('html_url') or reply_url
+                if kind_event != 'pull_request_review_comment' or entry.get('action') not in ('created', 'edited'):
+                    continue
+                comment = entry.get('comment') or {}
+                if members.get(str(comment.get('id'))) != node:
+                    continue
+                if entry['action'] == 'created':
+                    found = names(comment.get('body', ''))
+                    reply_mentions.update(found)
+                else:
+                    found = added_names(entry, comment.get('body', ''))
+                    current_body = next((row.get('body') for row in thread['comments']
+                                         if str(row['databaseId']) == str(comment.get('id'))), None)
+                    found.intersection_update(names(current_body))
+                    edited_mentions.update(found)
+                if found:
+                    reply_url = comment.get('html_url') or reply_url
             obj={'html_url':thread['comments'][0].get('url'),
                  'created_at':thread['comments'][0].get('createdAt'),
                  'updated_at':dt.datetime.fromtimestamp(version,dt.timezone.utc).isoformat()}
             rendered=render(topic,thread)
             fingerprint=nonce(rendered['description']+str(rendered['color']))
             delivered=mutable.update(topic,kind,obj,'threadle_review_conversation',{'action':'snapshot' if node in new_targets else 'edited',
-                                       '_reply_mentions': sorted(reply_mentions), '_reply_url': reply_url},
+                                       '_reply_mentions': sorted(reply_mentions), '_edited_mentions': sorted(edited_mentions),
+                                       '_reply_url': reply_url},
                                      event_key+':conversation:'+node+':'+fingerprint,rendered,closed,language)
             if delivered is not None and reply_context is not None:reply_context.applied(topic,thread,delivered)
             # Older versions sent replies separately. Remove only those owned reply cards.

@@ -78,7 +78,8 @@ GitHub `@login` mentions resolve for linked members who enabled mentions in this
 server and can view the destination. New Discord thread cards send a mention
 notification by default for those accounts. Use `/account mentions-off` to keep
 the name in the card and turn off the notification. Use `/account status` to check
-both preferences. Existing-card edits, alert-channel copies, and cards sent
+both preferences. When a GitHub edit adds a mention, a new card in the same
+thread notifies only people who were added. Alert-channel copies and cards sent
 during Do Not Disturb keep mentions quiet. Code, URLs, emails, teams, HTML
 comments, and escaped mentions retain their original text. Discord notification
 settings apply to desktop and mobile delivery.
