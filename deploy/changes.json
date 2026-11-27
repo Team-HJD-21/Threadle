@@ -1,5 +1,5 @@
 {
-  "version": "v1.0.0-beta.57",
+  "version": "v1.0.0-beta.58",
   "baseline": "2026.11.02.8",
   "files": {
     "demo_web.py": {
@@ -257,7 +257,7 @@
     },
     "discord_threads.py": {
       "before": "0b353710016c6563fda1178e599cacca7ab802854803040f0866ef940dcbec94",
-      "after": "9a065e23eddb97d523bb928573a7d4db60e1ee000ba601b547b71d464d3f44d3",
+      "after": "c909a3d77f0f0d85901bbe941693e7152cfd031f8fa49a2c4f1e8d45f4f5eaca",
       "previous": [
         "7db8a83427bc41833c8673eb12f23da21cad41888357873706070557c0d50cd5",
         "11914c2dee5b538656765b97ba424055a2ed686dd6e543be11390b0c20dcd7a5",
@@ -282,7 +282,8 @@
         "e98bd9f388c0406edc207df785d538b021dd5dcef5483ee760d261ce2700356e",
         "9b52ff56256da6dd3eb7e2f6ed632b3e70e638cd0bc8f70833d5e571ad5ec7fc",
         "23f759f18be2d1c81ad80654bfe2f63e2ca9842117034b89877785309be94d63",
-        "1b3cf3a5ae57782d450e5c8f58eb988a57f7d104f00d927d38ad1b2ede79d914"
+        "1b3cf3a5ae57782d450e5c8f58eb988a57f7d104f00d927d38ad1b2ede79d914",
+        "9a065e23eddb97d523bb928573a7d4db60e1ee000ba601b547b71d464d3f44d3"
       ]
     },
     "notification_media.py": {

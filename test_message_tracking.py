@@ -33,6 +33,18 @@ class TrackingTests(unittest.TestCase):
     def received(self, payload, identity=None, owner='900'):
         return dict(copy.deepcopy(payload), id=identity or message_id(), author={'id': owner})
 
+    def test_unsent_mention_notice_does_not_leave_a_pending_marker(self):
+        api = Api('Discord', 'https://discord.invalid', 'test-token', 'Bot')
+        bind(api, self.queue)
+        payload = dict(self.payload, _mention_only=True, _thread_card_v2=True)
+
+        with patch('discord_threads.urlopen') as send:
+            self.assertIsNone(api.call('POST', '/channels/123/messages', payload))
+
+        send.assert_not_called()
+        with self.queue.connect() as db:
+            self.assertEqual(0, db.execute('SELECT count(*) FROM pending_message_markers').fetchone()[0])
+
     def test_transport_hides_markers_but_recovers_them_after_restart(self):
         api = Api('Discord', 'https://discord.invalid', 'test-token', 'Bot')
         bind(api, self.queue)
