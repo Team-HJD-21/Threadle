@@ -6,12 +6,23 @@ import time
 from connect_auth import channel_permissions
 from discord_threads import ApiError
 
+MAX_RECIPIENTS = 20
+
 # Ignore code, Markdown links/URLs, email addresses, and GitHub team mentions.
 TOKENS = re.compile(r'```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`|<!--[\s\S]*?-->|<[^>\n]*>|!?\[[^\]]*\]\([^)]*\)|https?://\S+|(?<![\w/@\\])@([A-Za-z0-9](?:[A-Za-z0-9-]{0,38}))(?![\w/-])')
 
 
 def names(text):
     return {match[1].lower() for match in TOKENS.finditer(text or '') if match[1]}
+
+
+def added_names(payload, body):
+    if payload.get('action') != 'edited':
+        return set()
+    change = (payload.get('changes') or {}).get('body') or {}
+    if 'from' not in change:
+        return set()
+    return names(body) - names(change['from'])
 
 
 def replace(text, mapping):
@@ -89,7 +100,7 @@ class MentionPolicy:
         by_identity = {row[1]: row for row in rows}
         mapping = {}
         pings = set()
-        for login in sorted(wanted)[:20]:
+        for login in sorted(wanted)[:MAX_RECIPIENTS]:
             # Resolve the current numeric identity, rather than trust a cached login:
             # renames keep working, and a reassigned old login never pings its old owner.
             if login not in self.profiles:

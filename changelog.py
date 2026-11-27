@@ -270,6 +270,11 @@ RELEASES.insert(0, ('v1.0.0-beta.56', '긴 카드의 멘션 처리', 'Mentions i
    'Fixed missing notifications when a GitHub mention fell across pages of a long thread card.'),
 ]))
 
+RELEASES.insert(0, ('v1.0.0-beta.57', '수정으로 추가한 GitHub 멘션', 'Mentions added in GitHub edits', [
+  ('GitHub에서 글이나 댓글을 수정해 새로 멘션한 사람에게 Discord 스레드에서 알림을 보냅니다.',
+   'When a GitHub edit adds a mention, the newly mentioned person gets a notification in the Discord thread.'),
+]))
+
 def content(t,admin=False):
     title=t('사이트·관리자 패치노트','Website & administration changelog') if admin else t('Threadle 패치노트','Threadle changelog')
     intro=t('사이트와 운영 관리 화면의 변경 사항입니다.','Changes to the website and operational administration.') if admin else t('Discord에서 사용하는 Threadle의 새 기능과 개선 사항입니다.','New features and improvements to Threadle in Discord.')

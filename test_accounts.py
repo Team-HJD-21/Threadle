@@ -630,6 +630,83 @@ class AccountTests(unittest.TestCase):
             self.assertFalse(value['allowed_mentions']['users'])
             self.assertNotIn('content', value)
 
+
+    def test_edited_pr_comment_pings_only_new_people_in_its_existing_thread(self):
+        import io
+        from delivery import CachedThreads
+        from discord_threads import Api, Topic
+        from message_edits import deliver_events
+        from thread_card_v2 import V2, restore
+
+        self.link()
+        self.link(discord='56', profile={'id': 92, 'login': 'bob'})
+        self.link(discord='57', profile={'id': 93, 'login': 'carol'})
+        self.github.call.side_effect = lambda method, path: {
+            '/users/alice': self.profile, '/users/bob': {'id': 92, 'login': 'bob'},
+            '/users/carol': {'id': 93, 'login': 'carol'},
+        }[path]
+        transport = Api('Discord', 'https://discord.invalid', 'fake-token', 'Bot')
+        threads = CachedThreads(transport, '1000', {'pr': '1002'}, self.service.queue(self.binding))
+        threads.ensure = Mock(return_value={'id': '7777'})
+        threads.bot = {'id': '99'}
+        transport.message_tracking.set_owner('99')
+        topic = Topic('one/repo', 'pr', 7, 'PR title', 'https://github.com/one/repo/pull/7')
+        messages = {}
+        writes = []
+
+        def respond(request, timeout):
+            path = urlsplit(request.full_url).path
+            parent = '/channels/7777/messages'
+            if request.method == 'POST' and path == parent:
+                wire = json.loads(request.data)
+                identity = str(9000 + len(messages))
+                messages[identity] = dict(wire, id=identity, author=threads.bot)
+                writes.append(('POST', identity, wire))
+                result = messages[identity]
+            elif path.startswith(parent + '/'):
+                identity = path.rsplit('/', 1)[-1]
+                if request.method == 'PATCH':
+                    wire = json.loads(request.data)
+                    messages[identity].update(wire)
+                    writes.append(('PATCH', identity, wire))
+                result = messages[identity]
+            elif request.method == 'GET' and path == parent:
+                result = list(reversed(messages.values()))
+            else:
+                raise AssertionError((request.method, path))
+            response = io.BytesIO(json.dumps(result).encode())
+            response.headers = {}
+            return response
+
+        def deliver(identity, body, earlier=None, minute=0):
+            payload = {'action': 'created' if earlier is None else 'edited',
+                       'comment': {'id': 7, 'body': body, 'html_url': topic.url + '#issuecomment-7',
+                                   'updated_at': f'2026-11-27T00:{minute:02d}:00Z'}}
+            if earlier is not None:
+                payload['changes'] = {'body': {'from': earlier}}
+            transport.mention_policy = self.policy(body)
+            transport.mention_policy.event_id = identity
+            self.assertEqual(deliver_events(threads, topic, 'issue_comment', payload, identity, lambda: False, 'en'),
+                             '7777')
+
+        original = 'Please check @bob.'
+        edited = 'Please check @bob and @alice.'
+        with patch('discord_threads.urlopen', side_effect=respond):
+            deliver('created', original)
+            deliver('edit-1', edited, original, 1)
+            deliver('edit-1', edited, original, 1)
+            deliver('edit-2', edited + ' Thanks!', edited, 2)
+            threads.silent_notifications = True
+            deliver('edit-3', edited + ' Thanks! @carol', edited + ' Thanks!', 3)
+        posts = [row for method, _, row in writes if method == 'POST']
+        self.assertEqual([row['allowed_mentions']['users'] for row in posts], [['56'], ['55']])
+        self.assertTrue(all(row['flags'] & V2 for row in posts))
+        edit_notice = restore(posts[1])['embeds'][0]
+        self.assertEqual(edit_notice['description'], '<@55>')
+        self.assertEqual(edit_notice['url'], topic.url + '#issuecomment-7')
+        self.assertTrue(all(not wire['allowed_mentions'].get('users') for method, _, wire in writes if method == 'PATCH'))
+        self.assertIn('<@57>', restore(messages['9000'])['embeds'][0]['description'])
+
     def test_scheduled_notifications_cannot_inherit_another_threads_mention_policy(self):
         import threading
         from discord_threads import Api

@@ -330,23 +330,28 @@ class MutableMessages:
             except ApiError as error:
                 if error.status!=404:raise
             with self.queue.connect() as db:db.execute('DELETE FROM source_pages WHERE source=? AND page=?',(source,page))
-        if group=='replace':self.finish_body_group(source,event_key,thread_id)
-        reply_mentions = payload.get('_reply_mentions')
-        if reply_mentions and isinstance(threads.api, Api) and not threads.notifications_suppressed():
-            # New replies can be merged into an existing card. A separate card
-            # pings only recipients that the conversation post did not notify.
-            notice = {'title': '새 코드 리뷰 답글' if language != 'en' else 'New code review reply',
-                      'description': ' '.join('@' + login for login in reply_mentions),
+        from account_mentions import MAX_RECIPIENTS, added_names
+        edited_mentions = added_names(payload, obj.get('body', '')) | set(payload.get('_edited_mentions', ()))
+        reply_mentions = set(payload.get('_reply_mentions', ()))
+        notice_mentions = sorted(edited_mentions | reply_mentions)[:MAX_RECIPIENTS]
+        if notice_mentions and isinstance(threads.api, Api) and not threads.notifications_suppressed():
+            # Message edits do not send a ping. Post a card in the same thread
+            # for recipients who did not receive a mention on a new source card.
+            title = ('GitHub에서 새로 멘션됨' if language != 'en' else 'New GitHub mention') if edited_mentions else (
+                '새 코드 리뷰 답글' if language != 'en' else 'New code review reply')
+            notice = {'title': title, 'description': ' '.join('@' + login for login in notice_mentions),
                       'url': payload.get('_reply_url') or obj.get('html_url') or topic.url}
-            receipt = 'github-event:' + nonce(topic.key + ':' + event_key + ':reply-mentions')
+            suffix = ':reply-mentions' if reply_mentions else ':edited-mentions'
+            receipt = 'github-event:' + nonce(topic.key + ':' + event_key + suffix)
             if not threads.delivered(thread_id, receipt):
                 notice['footer'] = {'text': receipt}
                 sent = threads.api.call('POST', f'/channels/{thread_id}/messages',
                                         {'embeds': [notice], 'allowed_mentions': {'parse': []},
-                                         '_mention_names': reply_mentions, '_mention_only': True,
+                                         '_mention_names': notice_mentions, '_mention_only': True,
                                          'nonce': nonce(thread_id + ':' + receipt), 'enforce_nonce': True})
                 if sent:
                     threads.remember_delivery(receipt, sent['id'])
+        if group=='replace':self.finish_body_group(source,event_key,thread_id)
         if closed():threads.api.call('PATCH','/channels/'+thread_id,{'archived':True})
         return thread_id
 
